@@ -1,0 +1,55 @@
+-- test bad arg
+create function test_err1(dat text)
+returns text as $$
+    cluster 'testcluster';
+    run on hashtext(username);
+$$ language plproxy;
+select * from test_err1('dat');
+ERROR:  column "username" does not exist
+LINE 1: select * from hashtext(username)
+                               ^
+QUERY:  select * from hashtext(username)
+create function test_err2(dat text)
+returns text as $$
+    cluster 'testcluster';
+    run on hashtext($2);
+$$ language plproxy;
+select * from test_err2('dat');
+ERROR:  PL/Proxy function public.test_err2(1): Compile error at line 3: invalid argument reference: $2
+create function test_err3(dat text)
+returns text as $$
+    cluster 'nonexists';
+    run on hashtext($1);
+$$ language plproxy;
+select * from test_err3('dat');
+ERROR:  no such cluster: nonexists
+CONTEXT:  SQL statement "select * from plproxy.get_cluster_version($1)"
+--- result map errors
+create function test_map_err1(dat text)
+returns text as $$ cluster 'testcluster'; run on 0;
+    select dat as "foo", 'asd' as "bar";
+$$ language plproxy;
+select * from test_map_err1('dat');
+ERROR:  PL/Proxy function public.test_map_err1(1): single field function but got record
+create function test_map_err2(dat text, out res1 text, out res2 text)
+returns record as $$ cluster 'testcluster'; run on 0;
+    select dat as res1;
+$$ language plproxy;
+select * from test_map_err2('dat');
+ERROR:  PL/Proxy function public.test_map_err2(1): Got too few fields from remote end
+create function test_map_err3(dat text, out res1 text, out res2 text)
+returns record as $$ cluster 'testcluster'; run on 0;
+    select dat as res1, 'foo' as res_none;
+$$ language plproxy;
+select * from test_map_err3('dat');
+ERROR:  PL/Proxy function public.test_map_err3(1): Field res2 does not exists in result
+create function test_map_err4(dat text, out res1 text, out res2 text)
+returns record as $$ cluster 'testcluster'; run on 0;
+    select dat as res2, 'foo' as res1;
+$$ language plproxy;
+select * from test_map_err4('dat');
+ res1 | res2 
+------+------
+ foo  | dat
+(1 row)
+

@@ -1,0 +1,68 @@
+#pragma section-numbers 2
+
+= PL/Proxy =
+
+[[TableOfContents]]
+
+== What is pl/proxy - a short history ==
+
+Short version - pl/proxy is a proxy language used for remote database 
+procedure calls and data partitioning between databases based on hashing
+field values.
+
+
+Longer version - 
+
+== subpages ==
+
+Downloads: http://pgfoundry.org/projects/PlProxy
+
+Detailed info: ./LanguageSyntax  ./ClusterConfig
+
+
+== Short intro ==
+
+=== Simple remote function call ===
+
+Connect to `dbname=users` and run following SQL there: `SELECT * from get_user_email($1);`
+
+{{{
+CREATE FUNCTION get_user_email(username text)
+RETURNS text AS $$
+    CONNECT 'dbname=users';
+$$ LANGUAGE plproxy;
+}}}
+
+=== Partitioned remote call ===
+
+Users are spread over several databases,
+partition number is aquired by taking hashtext(username).  This
+needs also configuring the cluster, described later.  After this
+is done, actual proxy function looks following:
+
+{{{
+CREATE FUNCTION get_user_email(username text)
+RETURNS text AS $$
+    CLUSTER 'userdb';
+    RUN ON hashtext(username);
+$$ LANGUAGE plproxy;
+}}}
+
+=== Run user-specified SELECT statement remotely ===
+
+{{{
+CREATE FUNCTION get_user_location(text) RETURNS text AS $$
+    CLUSTER 'userdb';
+    RUN ON hashtext($1);
+    SELECT email FROM users WHERE user = $1;
+$$ LANGUAGE plproxy;
+}}}
+
+
+
+== Restrictions ==
+
+ * All SELECTs/functions are run in autocommit mode on the remote server
+
+ * Only one SELECT statement is allowed, if you need to do more, then you have to 
+ write a pl function on remote side

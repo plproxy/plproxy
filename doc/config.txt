@@ -1,0 +1,73 @@
+#pragma section-numbers 2
+
+= PL/Proxy Cluster Configuration API =
+
+[[TableOfContents]]
+
+When running plproxy calls these functions:
+
+
+== plproxy.get_cluster_version(cluster) ==
+
+{{{
+plproxy.get_cluster_version(cluster_name text)
+returns integer
+}}}
+
+It is called on each request, it should return version of particular
+cluster config.  If version is higher than cached, config and partitions
+are reloaded.
+
+
+== plproxy.get_cluster_partitions(cluster) ==
+
+{{{
+plproxy.get_cluster_partitions(cluster_name text)
+returns setof text
+}}}
+
+This is called when new partitions need to be loaded.  Should returns
+connstrings to partitions, in right order.  Total count must
+be power of 2.  If connstrings are equal, they will use same connection.
+
+If the string "user=" does not appear in connstring there will be
+user=CURRENT_USER appended to connection string to forward current
+user name.  As plproxy does not know any passwords, partition database
+should be using "trust" authentication method then.
+
+
+== plproxy.get_cluster_config(cluster) ==
+
+{{{
+plproxy.get_cluster_config(cluster_name text,
+			   out key text, out val text)
+returns setof record
+}}}
+
+Should return pairs of key-value pairs. All of them are optional.
+Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
+
+  connection_lifetime::
+
+	PL/Proxy will drop older connections.
+
+  connect_timeout::
+
+	Initial connect is canceled, if it takes more that this.
+	Duplicated connstring setting (should be just added to connstr?)
+
+  statement_timeout::
+
+	If set, then SET statement_timeout = X command is sent to remote
+	database.
+	
+  query_timeout::
+
+	If query result does not appear in this time, the connection
+	is closed.  If set then also statement_timeout should be set
+	and to somewhat smaller value, so it takes effect earlier.
+	It is meant for surviving network problems, not long queries.
+
+  disable_binary::
+
+	Do not use binary I/O for connections to this cluster.

@@ -1,0 +1,24 @@
+## debian/packages for plproxy 2
+
+Source: plproxy2
+Section: contrib/misc
+Priority: extra
+Maintainer: Marko Kreen <marko.kreen@skype.net>
+Standards-Version: 3.6.2
+Description: Query partitioner for PostgreSQL
+Copyright: BSD
+ Copyright 2006 Marko Kreen
+Build: sh
+ make
+Clean: sh
+ make clean || true
+Build-Depends: postgresql-server-dev-8.2
+
+Package: plproxy2
+Architecture: any
+Depends: []
+Description: Query partitioner for PostgreSQL
+ .
+Install: sh
+ make install DESTDIR=$ROOT
+

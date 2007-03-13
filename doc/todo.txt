@@ -1,0 +1,17 @@
+
+= pl/proxy todo list =
+
+== Priority items ==
+
+ * Clean up the binary-or-not decision.  There should be possible
+   to have partitions with different versions.  That may mean
+   lazy typeout generations.
+
+== Just thoughts ==
+
+ * A way to give config to CONNECT functions.
+   * SET param = xxx;
+ * RUN ON ALL: sort by?
+ * RUN ON ALL: ignore errors?
+ * RUN ON ANY: if one con failed, try another
+

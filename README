@@ -1,0 +1,19 @@
+
+PL/Proxy 2.0
+============
+
+Sven Suursoho & Marko Kreen
+
+Installation
+------------
+
+For installation there must be PostgreSQL dev environment installed
+and pg_config in the PATH.   Then just run:
+
+	$ make
+	$ make install
+
+To run regression tests:
+
+	$ make installcheck
+

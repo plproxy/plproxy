@@ -1,0 +1,37 @@
+#pragma section-numbers 2
+
+== Language Syntax ==
+
+The language contains only 4 statements: CONNECT, CLUSTER, RUN and SELECT.
+
+Each function needs to have either CONNECT or CLUSTER+RUN statement
+to specify where to run the function.  The SELECT statement is optional,
+if it is missing, there will be default query generated based on proxy
+function signature.
+
+=== CONNECT ===
+`CONNECT 'libpq connstr';`
+}}}
+
+=== CLUSTER ===
+
+`CLUSTER 'cluster_name' | cluster_func(..);`
+
+=== RUN ON ===
+{{{
+
+RUN ON (partition_func(..) | ALL | ANY | <NR>) ;
+
+}}}
+ * Arguments for hashfunc and SELECT can be both $1 and full name.
+ * Hashfunc can return "setof int4", several servers are tagged then.
+ * If query is ran on several server, the execution will happen in parallel.
+
+=== SELECT ===
+{{{
+SELECT .... ;
+}}}
+
+By default runs SELECT * from funcname(..); on remote side
+where funcname is name of plproxy function.  
+ * Result fields will be mapped on name.
