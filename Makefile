@@ -17,9 +17,9 @@ PG_CPPFLAGS = -I$(PQINC)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
 DIST_FILES = Makefile src/plproxy.h src/scanner.l src/parser.y \
-	     sql/*.sql expected/*.out db/*.sql doc/*.txt doc/Makefile \
+	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
 	     AUTHORS COPYRIGHT README
-DIST_DIRS = src sql expected db doc
+DIST_DIRS = src sql expected config doc
 TARNAME = plproxy-$(PLPROXY_VERSION)
 
 # regression testing setup

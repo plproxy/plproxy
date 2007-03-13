@@ -10,28 +10,57 @@ if it is missing, there will be default query generated based on proxy
 function signature.
 
 === CONNECT ===
-`CONNECT 'libpq connstr';`
+{{{
+CONNECT 'libpq connstr';
 }}}
 
-=== CLUSTER ===
+Specifies exact location where to connect and execute the query.
+If several functions have same connstr, they will use same connection.
 
-`CLUSTER 'cluster_name' | cluster_func(..);`
+=== CLUSTER ===
+{{{
+CLUSTER 'cluster_name';
+}}}
+
+Specifies exact cluster name to be run on.  The cluster name will
+be passed to plproxy.get_cluster_* functions.
+
+{{{
+CLUSTER cluster_func(..);
+}}}
+Cluster name can be dynamically decided upon proxy function arguments.
+`cluster_func` should returns text value for final cluster name.
 
 === RUN ON ===
 {{{
-
-RUN ON (partition_func(..) | ALL | ANY | <NR>) ;
-
+RUN ON ALL;
 }}}
- * Arguments for hashfunc and SELECT can be both $1 and full name.
- * Hashfunc can return "setof int4", several servers are tagged then.
- * If query is ran on several server, the execution will happen in parallel.
+Query will be run on all partitions in cluster in parallel.
+
+{{{
+RUN ON ANY;
+}}}
+Query will be run on random partition.
+
+{{{
+RUN ON <NR>;
+}}}
+Run on partition number `<NR>`.
+
+{{{
+RUN ON partition_func(..);
+}}}
+Run partition_func() which should return one or more hash values.  (int4)
+Query will be run on tagged partitions.  If more than one partition was
+tagged, query will be sent in parallel to them.
+
 
 === SELECT ===
 {{{
 SELECT .... ;
 }}}
 
-By default runs SELECT * from funcname(..); on remote side
-where funcname is name of plproxy function.  
- * Result fields will be mapped on name.
+=== Argument substitution ===
+
+Proxy function arguments can be referenced using name or `$n` syntax.
+Everything that is not argument reference is just passed on.
