@@ -660,14 +660,14 @@ char *plproxy_yytext;
 
 /*
  * PL/Proxy - easy access to partitioned database.
- * 
+ *
  * Copyright (c) 2006 Sven Suursoho, Skype Technologies OÜ
  * Copyright (c) 2007 Marko Kreen, Skype Technologies OÜ
- * 
+ *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -683,7 +683,7 @@ char *plproxy_yytext;
 /* point to parser value */
 #define yylval plproxy_yylval
 
-/* 
+/*
  * Allocate in CurrentMemoryContext.  That means plproxy_yylex_destroy()
  * must be called before SPI_finish().
  */
@@ -732,7 +732,7 @@ static const char *unquote(const char *qstr, bool std);
 /* argument ref by val: $1 */
 /* regular int value for hash spec */
 /* SQL numeric value */
-/* 
+/*
  * Symbols that may exist in sql.   They must be matched one-by-one,
  * to avoid conflics with combos.
  *

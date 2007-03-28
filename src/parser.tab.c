@@ -114,14 +114,14 @@
 
 /*
  * PL/Proxy - easy access to partitioned database.
- * 
+ *
  * Copyright (c) 2006 Sven Suursoho, Skype Technologies OÜ
  * Copyright (c) 2007 Marko Kreen, Skype Technologies OÜ
- * 
+ *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
  * copyright notice and this permission notice appear in all copies.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
  * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
@@ -1768,7 +1768,7 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	/* store sql */
 	if (select_sql)
 		xfunc->remote_sql = plproxy_query_finish(select_sql);
-	
+
 	if (cluster_sql)
 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
 
