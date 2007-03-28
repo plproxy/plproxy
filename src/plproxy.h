@@ -80,7 +80,7 @@ typedef struct RowStamp {
 static inline void plproxy_set_stamp(RowStamp *stamp, HeapTuple tup)
 {
 	stamp->xmin = HeapTupleHeaderGetXmin(tup->t_data);
-	stamp->tid = procTup->t_self;
+	stamp->tid = tup->t_self;
 }
 
 static inline bool plproxy_check_stamp(RowStamp *stamp, HeapTuple tup)
