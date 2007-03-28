@@ -45,6 +45,51 @@
 
 #include <libpq-fe.h>
 
+#if PG_VERSION_NUM < 80300
+
+/*
+ * Row version check for 8.2
+ */
+typedef struct RowStamp {
+	TransactionId	xmin;
+	CommandId		cmin;
+} RowStamp;
+
+static inline void plproxy_set_stamp(RowStamp *stamp, HeapTuple tup)
+{
+	stamp->xmin = HeapTupleHeaderGetXmin(tup->t_data);
+	stamp->cmin = HeapTupleHeaderGetCmin(tup->t_data);
+}
+
+static inline bool plproxy_check_stamp(RowStamp *stamp, HeapTuple tup)
+{
+	return stamp->xmin == HeapTupleHeaderGetXmin(tup->t_data)
+		&& stamp->cmin == HeapTupleHeaderGetCmin(tup->t_data);
+}
+
+#else /* ver >= 8.3 */
+
+/*
+ * Row version check for PG >= 8.3
+ */
+typedef struct RowStamp {
+	TransactionId		xmin;
+	ItemPointerData		tid;
+} RowStamp;
+
+static inline void plproxy_set_stamp(RowStamp *stamp, HeapTuple tup)
+{
+	stamp->xmin = HeapTupleHeaderGetXmin(tup->t_data);
+	stamp->tid = procTup->t_self;
+}
+
+static inline bool plproxy_check_stamp(RowStamp *stamp, HeapTuple tup)
+{
+	return stamp->xmin == HeapTupleHeaderGetXmin(tup->t_data)
+		&& ItemPointerEquals(&stamp->tid, &tup->t_self);
+}
+#endif
+
 /*
  * Maintenece period in seconds.  Connnections will be freed
  * from stale results, and checked for lifetime.
@@ -199,8 +244,7 @@ typedef struct ProxyFunction
 	Oid			oid;			/* Function OID */
 	MemoryContext ctx;			/* Where runtime allocations should happen */
 
-	TransactionId xmin;			/* pg_proc xmin for cache validation */
-	CommandId	cmin;			/* pg_proc cmin for cache validation */
+	RowStamp	stamp;			/* for pg_proc cache validation */
 
 	int			arg_count;		/* Argument count of proxy function */
 	ProxyType **arg_types;		/* Info about arguments */

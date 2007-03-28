@@ -155,8 +155,7 @@ fn_new(FunctionCallInfo fcinfo, HeapTuple proc_tuple)
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
 	f->oid = fcinfo->flinfo->fn_oid;
-	f->xmin = HeapTupleHeaderGetXmin(proc_tuple->t_data);
-	f->cmin = HeapTupleHeaderGetCmin(proc_tuple->t_data);
+	plproxy_set_stamp(&f->stamp, proc_tuple);
 
 	MemoryContextSwitchTo(old_ctx);
 
@@ -376,25 +375,11 @@ plproxy_compile(FunctionCallInfo fcinfo, bool validate)
 	/* fn_extra not used, do lookup */
 	f = fn_cache_lookup(oid);
 
-	/* got, but is it still valid? */
-	if (f)
+	/* if cached, is it still valid? */
+	if (f && !plproxy_check_stamp(&f->stamp, proc_tuple))
 	{
-		bool		drop = 0;
-
-		if (f->xmin != HeapTupleHeaderGetXmin(proc_tuple->t_data))
-		{
-			drop = 1;
-		}
-		else if (f->cmin == HeapTupleHeaderGetCmin(proc_tuple->t_data))
-		{
-			drop = 1;
-		}
-
-		if (drop)
-		{
-			fn_delete(f, true);
-			f = NULL;
-		}
+		fn_delete(f, true);
+		f = NULL;
 	}
 
 	if (!f)
