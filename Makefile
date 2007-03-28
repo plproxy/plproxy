@@ -38,7 +38,7 @@ gen:
 	cd src; flex -o scanner.c scanner.l
 
 # dependencies
-$(OBJS): src/plproxy.h
+$(OBJS): src/plproxy.h src/rowstamp.h
 
 # utility rules
 
