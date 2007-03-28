@@ -77,9 +77,6 @@ check_valid_partcount(int n)
 void
 plproxy_cluster_cache_init(void)
 {
-	void	   *plan;
-	Oid			types[] = {TEXTOID};
-
 	/*
 	 * create long-lived memory context
 	 */
@@ -89,6 +86,19 @@ plproxy_cluster_cache_init(void)
 										ALLOCSET_SMALL_MINSIZE,
 										ALLOCSET_SMALL_INITSIZE,
 										ALLOCSET_SMALL_MAXSIZE);
+}
+
+/* initialize plans on demand */
+static void
+plproxy_cluster_plan_init(void)
+{
+	void	   *plan;
+	Oid			types[] = {TEXTOID};
+	static int	init_done = 0;
+
+	if (init_done)
+		return;
+	init_done = 1;
 
 	/*
 	 * prepare plans for fetching configuration.
@@ -388,9 +398,6 @@ fake_cluster(ProxyFunction *func)
 	cluster->next = fake_cluster_list;
 	fake_cluster_list = cluster;
 
-	if (0)
-		get_config(cluster, (Datum) NULL, func);
-
 	return cluster;
 }
 
@@ -436,8 +443,12 @@ plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 	const char *name;
 	Datum		dname;
 
+	/* functions used CONNECT */
 	if (func->connect_str)
 		return fake_cluster(func);
+
+	/* initialize plans on demand only */
+	plproxy_cluster_plan_init();
 
 	if (func->cluster_sql)
 		name = cluster_resolve_name(func, fcinfo);
