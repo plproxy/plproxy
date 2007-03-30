@@ -17,7 +17,6 @@ Downloads: http://pgfoundry.org/projects/plproxy
 
 Detailed info: ./LanguageSyntax  ./ClusterConfig
 
-
 == Short intro ==
 
 === Simple remote function call ===
@@ -64,3 +63,9 @@ $$ LANGUAGE plproxy;
 
  * Only one SELECT statement is allowed, if you need to do more, then you have to 
  write a pl function on remote side
+
+ * PL/Proxy launches connections into each part from each backend, so in
+ heavy-duty environment it is useful to put pooler between PL/Proxy
+ and partitions.  We have specially for that developed ../PgBouncer
+ which pooler that can do statement-based pooling - release server
+ after each SQL statement.
