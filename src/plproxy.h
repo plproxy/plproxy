@@ -128,7 +128,7 @@ typedef struct ProxyCluster
 	int			ret_total;		/* Result walking: total rows left */
 } ProxyCluster;
 
-/**
+/*
  * Type info cache.
  *
  * As the decision to send/receive binary may
