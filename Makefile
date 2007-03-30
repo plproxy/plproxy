@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0
+PLPROXY_VERSION = 2.0.1
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
@@ -12,11 +12,11 @@ SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 DATA_built = plproxy.sql
-EXTRA_CLEAN = #src/scanner.[ch] src/parser.tab.[ch]
+EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch]
 PG_CPPFLAGS = -I$(PQINC)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-DIST_FILES = Makefile src/plproxy.h src/scanner.l src/parser.y \
+DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
 	     AUTHORS COPYRIGHT README
 DIST_DIRS = src sql expected config doc
@@ -32,9 +32,15 @@ PGXS = $(shell pg_config --pgxs)
 include $(PGXS)
 
 # parser rules
+src/scanner.o: src/scanner.h src/parser.tab.h
+src/parser.tab.o: src/scanner.h src/parser.tab.h
+src/parser.tab.c: src/parser.tab.h
 
-gen:
+src/parser.tab.h: src/parser.y
 	cd src; bison -d parser.y
+
+src/scanner.h: src/scanner.c
+src/scanner.c: src/scanner.l
 	cd src; flex -o scanner.c scanner.l
 
 # dependencies
@@ -66,4 +72,7 @@ deb:
 		echo " -- BuildDaemon <dev@null>  $$stamp") > debian/changelog
 	yada rebuild
 	debuild -uc -us -b
+
+mainteiner-clean: clean
+	rm -f src/scanner.[ch] src/parser.tab.[ch]
 
