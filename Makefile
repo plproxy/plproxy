@@ -18,7 +18,7 @@ SHLIB_LINK = -L$(PQLIB) -lpq
 
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
-	     AUTHORS COPYRIGHT README
+	     AUTHORS COPYRIGHT README plproxy.sql.in
 DIST_DIRS = src sql expected config doc
 TARNAME = plproxy-$(PLPROXY_VERSION)
 
