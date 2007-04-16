@@ -1,0 +1,6 @@
+2007-04-16  -  PlProxy 2.0.2  -  "No news is good news?"
+
+    * Include plproxy.sql.in in tgz.
+    * Clean add_connection() function by using StringInfo instead
+      open-coded string shuffling.
+

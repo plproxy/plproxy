@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0.1
+PLPROXY_VERSION = 2.0.2
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
@@ -18,7 +18,7 @@ SHLIB_LINK = -L$(PQLIB) -lpq
 
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
-	     AUTHORS COPYRIGHT README plproxy.sql.in
+	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS
 DIST_DIRS = src sql expected config doc
 TARNAME = plproxy-$(PLPROXY_VERSION)
 
