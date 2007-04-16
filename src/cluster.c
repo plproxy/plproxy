@@ -158,38 +158,32 @@ free_connlist(ProxyCluster *cluster)
 static ProxyConnection *
 add_connection(ProxyCluster *cluster, char *connstr)
 {
-	int			i,
-				len;
+	int			i;
 	ProxyConnection *conn;
-	MemoryContext old_ctx;
-	char	   *username,
-			   *newstr;
+	char	   *username;
+	StringInfo	final;
+
+	final = makeStringInfo();
+	appendStringInfoString(final, connstr);
 
 	/* append current user if not specified in connstr */
 	if (strstr(connstr, "user=") == NULL)
 	{
 		username = GetUserNameFromId(GetSessionUserId());
-		len = strlen(connstr) + strlen(username) + 6 + 1;
-		newstr = palloc(len);
-		strcpy(newstr, connstr);
-		strcat(newstr, " user=");
-		strcat(newstr, username);
-		connstr = newstr;
+		appendStringInfo(final, " user=%s", username);
 	}
 
 	/* check if already have it */
 	for (i = 0; i < cluster->conn_count; i++)
 	{
 		conn = &cluster->conn_list[i];
-		if (strcmp(conn->connstr, connstr) == 0)
+		if (strcmp(conn->connstr, final->data) == 0)
 			return conn;
 	}
 
 	/* add new connection */
-	old_ctx = MemoryContextSwitchTo(cluster_mem);
 	conn = &cluster->conn_list[cluster->conn_count++];
-	conn->connstr = pstrdup(connstr);
-	MemoryContextSwitchTo(old_ctx);
+	conn->connstr = MemoryContextStrdup(cluster_mem, final->data);
 
 	return conn;
 }
