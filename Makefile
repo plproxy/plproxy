@@ -18,8 +18,8 @@ SHLIB_LINK = -L$(PQLIB) -lpq
 
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
-	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS
-DIST_DIRS = src sql expected config doc
+	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS debian/packages
+DIST_DIRS = src sql expected config doc debian
 TARNAME = plproxy-$(PLPROXY_VERSION)
 
 # regression testing setup
