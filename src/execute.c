@@ -250,6 +250,7 @@ static void
 prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 {
 	struct timeval now;
+	StringInfoData connstr;
 
 	gettimeofday(&now, NULL);
 
@@ -277,6 +278,14 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 
 	conn->connect_time = now.tv_sec;
 
+	/*
+	 * Force client_encoding on server side
+	 * to same as current client_encoding.
+	 */
+	initStringInfo(&connstr);
+	appendStringInfo(&connstr, "%s client_encoding=%s", conn->connstr,
+					 pg_get_client_encoding_name());
+
 	/* launch new connection */
 	conn->db = PQconnectStart(conn->connstr);
 	if (conn->db == NULL)
@@ -287,6 +296,9 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 
 	if (PQstatus(conn->db) == CONNECTION_BAD)
 		conn_error(func, conn, "PQconnectStart");
+
+	/* free connstr early */
+	pfree(connstr.data);
 }
 
 /*
