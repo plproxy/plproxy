@@ -210,7 +210,6 @@ fn_set_name(ProxyFunction *func, HeapTuple proc_tuple)
 	ReleaseSysCache(ns_tup);
 }
 
-
 /*
  * Parse source.
  *
@@ -220,13 +219,22 @@ static void
 fn_parse(ProxyFunction *func, HeapTuple proc_tuple)
 {
 	bool		isnull;
-	Datum		source;
+	Datum		src_raw, src_detoast;
+	char		*data;
+	int			size;
 
-	source = SysCacheGetAttr(PROCOID, proc_tuple, Anum_pg_proc_prosrc, &isnull);
+	src_raw = SysCacheGetAttr(PROCOID, proc_tuple, Anum_pg_proc_prosrc, &isnull);
 	if (isnull)
 		plproxy_error(func, "procedure source datum is null");
 
-	plproxy_run_parser(func, VARDATA(source), VARSIZE(source) - VARHDRSZ);
+	src_detoast = PointerGetDatum(PG_DETOAST_DATUM_PACKED(src_raw));
+	data = VARDATA_ANY(src_detoast);
+	size = VARSIZE_ANY_EXHDR(src_detoast);
+
+	plproxy_run_parser(func, data, size);
+
+	if (src_raw != src_detoast)
+		pfree(DatumGetPointer(src_detoast));
 }
 
 /*

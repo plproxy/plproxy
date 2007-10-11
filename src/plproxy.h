@@ -26,6 +26,7 @@
 
 #include <postgres.h>
 #include <funcapi.h>
+#include <fmgr.h>
 #include <executor/spi.h>
 
 #include <access/tupdesc.h>
@@ -46,6 +47,19 @@
 #include "rowstamp.h"
 
 #include <libpq-fe.h>
+
+/*
+ * backwards compat with 8.2
+ */
+#ifndef VARDATA_ANY
+#define VARDATA_ANY(x) VARDATA(x)
+#endif
+#ifndef VARSIZE_ANY_EXHDR
+#define VARSIZE_ANY_EXHDR(x) (VARSIZE(x) - VARHDRSZ)
+#endif
+#ifndef PG_DETOAST_DATUM_PACKED
+#define PG_DETOAST_DATUM_PACKED(x) PG_DETOAST_DATUM(x)
+#endif
 
 
 /*
