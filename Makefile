@@ -6,6 +6,9 @@ PLPROXY_VERSION = 2.0.2
 PQINC = $(shell pg_config --includedir)
 PQLIB = $(shell pg_config --libdir)
 
+FLEX = flex
+BISON = bison 
+
 # module setup
 MODULE_big = plproxy
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
@@ -32,16 +35,14 @@ PGXS = $(shell pg_config --pgxs)
 include $(PGXS)
 
 # parser rules
-src/scanner.o: src/scanner.h src/parser.tab.h
-src/parser.tab.o: src/scanner.h src/parser.tab.h
-src/parser.tab.c: src/parser.tab.h
+src/scanner.o: src/parser.tab.h
+src/parser.tab.h: src/parser.tab.c
 
-src/parser.tab.h: src/parser.y
-	cd src; bison -d parser.y
+src/parser.tab.c: src/parser.y
+	cd src; $(BISON) -d parser.y
 
-src/scanner.h: src/scanner.c
 src/scanner.c: src/scanner.l
-	cd src; flex -o scanner.c scanner.l
+	cd src; $(FLEX) -oscanner.c scanner.l
 
 # dependencies
 $(OBJS): src/plproxy.h src/rowstamp.h
@@ -63,7 +64,7 @@ tgzclean:
 	rm -rf $(TARNAME) $(TARNAME).tar.gz
 
 test: install
-	make installcheck || { cat regression.diffs; exit 1; }
+	make installcheck || { less regression.diffs; exit 1; }
 
 deb:
 	(stamp=`date -R 2>/dev/null` || stamp=`gdate -R`; \
