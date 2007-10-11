@@ -119,6 +119,7 @@ typedef struct
 	time_t		query_time;		/* When last query was sent */
 	unsigned	run_on:1;		/* True it this connection should be used */
 	unsigned	same_ver:1;		/* True if dest backend has same X.Y ver */
+	unsigned	tuning:1;		/* True if tuning query is running on conn */
 } ProxyConnection;
 
 /* Info about one cluster */
