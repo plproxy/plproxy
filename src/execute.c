@@ -38,7 +38,7 @@
 static void
 conn_error(ProxyFunction *func, ProxyConnection *conn, const char *desc)
 {
-	plproxy_error(func, "libpq error in %s: %s",
+	plproxy_error(func, "%s: %s",
 				  desc, PQerrorMessage(conn->db));
 }
 
@@ -320,7 +320,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 			break;
 		default:
 			PQclear(res);
-			conn_error(func, conn, "weird result");
+			conn_error(func, conn, "remote error");
 	}
 	return true;
 }
