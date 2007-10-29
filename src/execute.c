@@ -97,27 +97,14 @@ tune_connection(ProxyFunction *func, ProxyConnection *conn)
 {
 	ProxyConfig *cf = &func->cur_cluster->config;
 	const char *this_enc, *dst_enc;
-	const char *q_server;
 	const char *dst_ver;
-	int			srvquotes = 0;
 	StringInfo	sql = NULL;
 
+	/*
+	 * check if target server has same backend version.
+	 */
 	dst_ver = PQparameterStatus(conn->db, "server_version");
 	conn->same_ver = cmp_branch(dst_ver, PG_VERSION);
-
-	/*
-	 * sync standard_conforming_strings
-	 */
-	q_server = PQparameterStatus(conn->db, "standard_conforming_strings");
-	if (q_server && strcasecmp(q_server, "off") != 0)
-		srvquotes = 1;
-	if (standard_conforming_strings != srvquotes)
-	{
-		if (!sql)
-			sql = makeStringInfo();
-		appendStringInfo(sql, "set standard_conforming_strings = '%s'; ",
-						 standard_conforming_strings ? "on" : "off");
-	}
 
 	/*
 	 * sync client_encoding
@@ -132,12 +119,12 @@ tune_connection(ProxyFunction *func, ProxyConnection *conn)
 	}
 
 	/*
-	 * if second time in this function, there should have been
-	 * active already.
+	 * if second time in this function, they should be active already.
 	 */
 	if (sql && conn->tuning)
 	{
-		appendStringInfo(sql, "-- those parameters does not seem to apply");
+		/* display SET query */
+		appendStringInfo(sql, "-- does not seem to apply");
 		conn_error(func, conn, sql->data);
 	}
 
