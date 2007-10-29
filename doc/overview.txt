@@ -15,7 +15,7 @@ info needs to be specified inside proxy function body.
 
 Downloads: http://pgfoundry.org/projects/plproxy
 
-Detailed info: ./LanguageSyntax  ./ClusterConfig
+Detailed info: ./LanguageSyntax  ./ClusterConfig ./ToDo
 
 == Short intro ==
 
