@@ -44,12 +44,10 @@ $$ language plproxy;
 select * from test_map_err3('dat');
 ERROR:  PL/Proxy function public.test_map_err3(1): Field res2 does not exists in result
 create function test_map_err4(dat text, out res1 text, out res2 text)
-returns record as $$ cluster 'testcluster'; run on 0;
+returns record as $$
+    --cluster 'testcluster';
+    run on hashtext(dat);
     select dat as res2, 'foo' as res1;
 $$ language plproxy;
 select * from test_map_err4('dat');
- res1 | res2 
-------+------
- foo  | dat
-(1 row)
-
+ERROR:  PL/Proxy function public.test_map_err4(1): Compile error at line 5: CLUSTER statement missing

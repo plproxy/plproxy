@@ -42,7 +42,9 @@ $$ language plproxy;
 select * from test_map_err3('dat');
 
 create function test_map_err4(dat text, out res1 text, out res2 text)
-returns record as $$ cluster 'testcluster'; run on 0;
+returns record as $$
+    --cluster 'testcluster';
+    run on hashtext(dat);
     select dat as res2, 'foo' as res1;
 $$ language plproxy;
 select * from test_map_err4('dat');
