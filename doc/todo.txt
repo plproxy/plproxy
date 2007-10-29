@@ -1,7 +1,22 @@
 
 = pl/proxy todo list =
 
-== Priority items ==
+== next version: 2.0.3 ==
+
+=== done ===
+
+* support 8.3
+* fix "make deb"
+* client_encoding: before sending query, sync if needed
+* client_encoding: the warning is not necessary anymore
+* support both older (2.5.4) and newer (2.5.33) flex
+
+=== todo ===
+
+* error handling with old flex 
+* testing
+
+== Should be checked ==
 
  * Clean up the binary-or-not decision.  There should be possible
    to have partitions with different versions.  That may mean
@@ -15,3 +30,5 @@
  * RUN ON ALL: ignore errors?
  * RUN ON ANY: if one con failed, try another
 
+ * Streaming for big resultsets, to avoid loading them fully in memory.
+   Needs also backend changes.
