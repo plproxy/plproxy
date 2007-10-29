@@ -22,8 +22,6 @@
 #include "plproxy.h"
 #include "parser.tab.h"
 
-#include "dbgmalloc.h"
-
 /* shut down crappy flex warnings */
 int yyget_lineno(void);
 int yyget_leng(void);
@@ -43,30 +41,55 @@ int plproxy_yylex_destroy(void);
 /*
  * Allocate in CurrentMemoryContext.  That means plproxy_yylex_destroy()
  * must be called before SPI_finish().
- */
-/*
+ *
  * If we want to support flex 2.5.4, we cannot use
  * options noyyalloc, noyyrealloc, noyyfree.
  *
- * Thus such hack.
+ * Thus such need to hack malloc() et al.
+ */
+#undef FLXMALLOCLOG
+
+static inline void *my_malloc(const char *pfx, int len) {
+	void *p = palloc(len);
+#ifdef FLXMALLOCLOG
+	elog(NOTICE, "%s:%s(%d) = %p", pfx, __FUNCTION__, len, p);
+#endif
+	return p;
+}
+static inline void *my_realloc(const char *pfx, void *old, int len) {
+	void *p = repalloc(old, len);
+#ifdef FLXMALLOCLOG
+	elog(NOTICE, "%s:%s(%p, %d) = %p", pfx, __FUNCTION__, old, len, p);
+#endif
+	return p;
+}
+static inline void my_free(const char *pfx, void *p) {
+	pfree(p);
+#ifdef FLXMALLOCLOG
+	elog(NOTICE, "%s:%s(%p)", pfx, __FUNCTION__, p);
+#endif
+}
+
+#define malloc(x)  my_malloc(__FILE__, x)
+#define realloc(x, y)  my_realloc(__FILE__, x, y)
+#define free(x)  my_free(__FILE__, x)
+
+
+/*
+ * Calculare numeric flex version.
  */
 #if !defined(YY_FLEX_MAJOR_VERSION) || !defined(YY_FLEX_MINOR_VERSION)
 #error Flex required
 #endif
-
 #ifndef YY_FLEX_SUBMINOR_VERSION
 #define YY_FLEX_SUBMINOR_VERSION 0
 #endif
-
-/* calculate single number for ver */
 #define FLXVER ((YY_FLEX_MAJOR_VERSION*1000 + YY_FLEX_MINOR_VERSION)*1000 + YY_FLEX_SUBMINOR_VERSION)
 
 /*
  * compat stuff for older flex
  */
 #if FLXVER < 2005031
-
-#warning Old Flex
 
 /* old flex */
 
@@ -86,10 +109,6 @@ void plproxy_yyset_lineno(int new_lineno)
 {
 	yylineno = new_lineno;
 }
-
-#else
-
-#warning New Flex
 
 #endif
 

@@ -20,9 +20,8 @@
 
 #include "plproxy.h"
 
-#include "dbgmalloc.h"
-
-void plproxy_yy_scan_bytes (const char *bytes, int len);
+/* define scanner.c functions */
+void plproxy_yy_scan_bytes(const char *bytes, int len);
 void plproxy_yyset_lineno(int);
 
 /* avoid permanent allocations */
