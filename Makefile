@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0.2
+PLPROXY_VERSION = 2.0.3
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
@@ -21,7 +21,8 @@ SHLIB_LINK = -L$(PQLIB) -lpq
 
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
-	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS debian/packages
+	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS \
+		 debian/packages debian/changelog
 DIST_DIRS = src sql expected config doc debian
 TARNAME = plproxy-$(PLPROXY_VERSION)
 
@@ -67,10 +68,6 @@ test: install
 	make installcheck || { less regression.diffs; exit 1; }
 
 deb:
-	(stamp=`date -R 2>/dev/null` || stamp=`gdate -R`; \
-		echo "plproxy2 ($(PLPROXY_VERSION)) unstable; urgency=low"; \
-		echo ""; echo "  * New build"; echo ""; \
-		echo " -- BuildDaemon <dev@null>  $$stamp") > debian/changelog
 	yada rebuild
 	debuild -uc -us -b
 
