@@ -22,22 +22,7 @@
 #include "plproxy.h"
 #include "parser.tab.h"
 
-/* point to parser value */
-#define yylval plproxy_yylval
-
-/*
- * Allocate in CurrentMemoryContext.  That means plproxy_yylex_destroy()
- * must be called before SPI_finish().
- */
-void *yyalloc(yy_size_t len) { return palloc(len); }
-void *yyrealloc(void *ptr, yy_size_t len) { return repalloc(ptr, len); }
-void yyfree(void *ptr) { pfree(ptr); }
-
-/* own error handling */
-#define YY_FATAL_ERROR(msg) plproxy_yyerror(msg)
-
-/* disable stdio related code */
-#define YY_INPUT(buf, res, maxlen) { res = 0; }
+#include "dbgmalloc.h"
 
 /* shut down crappy flex warnings */
 int yyget_lineno(void);
@@ -52,6 +37,68 @@ int plproxy_yyget_debug(void);
 void plproxy_yyset_debug(int);
 int plproxy_yylex_destroy(void);
 
+/* point to parser value */
+#define yylval plproxy_yylval
+
+/*
+ * Allocate in CurrentMemoryContext.  That means plproxy_yylex_destroy()
+ * must be called before SPI_finish().
+ */
+/*
+ * If we want to support flex 2.5.4, we cannot use
+ * options noyyalloc, noyyrealloc, noyyfree.
+ *
+ * Thus such hack.
+ */
+#if !defined(YY_FLEX_MAJOR_VERSION) || !defined(YY_FLEX_MINOR_VERSION)
+#error Flex required
+#endif
+
+#ifndef YY_FLEX_SUBMINOR_VERSION
+#define YY_FLEX_SUBMINOR_VERSION 0
+#endif
+
+/* calculate single number for ver */
+#define FLXVER ((YY_FLEX_MAJOR_VERSION*1000 + YY_FLEX_MINOR_VERSION)*1000 + YY_FLEX_SUBMINOR_VERSION)
+
+/*
+ * compat stuff for older flex
+ */
+#if FLXVER < 2005031
+
+#warning Old Flex
+
+/* old flex */
+
+int plproxy_yylex_destroy(void)
+{
+	plproxy_yy_delete_buffer(YY_CURRENT_BUFFER);
+	YY_CURRENT_BUFFER = NULL;
+	return 0;
+}
+
+int plproxy_yyget_lineno(void)
+{
+	return yylineno;
+}
+
+void plproxy_yyset_lineno(int new_lineno)
+{
+	yylineno = new_lineno;
+}
+
+#else
+
+#warning New Flex
+
+#endif
+
+/* own error handling */
+#define YY_FATAL_ERROR(msg) plproxy_yyerror(msg)
+
+/* disable stdio related code */
+#define YY_INPUT(buf, res, maxlen) { res = 0; }
+
 /* shortcut for returning CONST */
 #define RETPART do { yylval.str = yytext; return SQLPART; } while (0)
 
@@ -65,9 +112,8 @@ static const char *unquote(const char *qstr, bool std);
 
 %option 8bit case-insensitive
 %option warn nodefault yylineno
-%option nounput noyywrap never-interactive batch
-%option prefix="plproxy_yy" header="scanner.h"
-%option noyyalloc noyyrealloc noyyfree
+%option nounput noyywrap never-interactive
+%option prefix="plproxy_yy"
 
 /* states */
 %x sql
@@ -233,7 +279,6 @@ static char *dlr_token = NULL;
 static void dlr_start(const char *txt)
 {
 	dlr_token = pstrdup(txt);
-	if (0) yy_fatal_error("silence 'unused' warning");
 }
 
 /* check if matches stored name */
