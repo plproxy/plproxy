@@ -143,5 +143,51 @@ create function test_connect1() returns text
 as $$ connect 'dbname=test_part'; select current_database(); $$ language plproxy;
 select * from test_connect1();
 
+-- test timeout
+create or replace function
+plproxy.get_cluster_config(cluster_name text, out key text, out val text)
+returns setof record as $$
+begin
+    key := 'statement_timeout';
+    val := 10; -- ms
+    return next;
+    return;
+end; $$ language plpgsql;
+
+create or replace function plproxy.get_cluster_version(cluster_name text)
+returns integer as $$
+begin
+    if cluster_name = 'testcluster' then
+        return 6;
+    end if;
+    raise exception 'no such cluster: %', cluster_name;
+end; $$ language plpgsql;
+
+create function test_timeout()
+returns text as $$
+    cluster 'testcluster';
+    run on 0;
+    select 'asd' from pg_sleep(3);
+$$ language plproxy;
+select * from test_timeout();
+
+create or replace function
+plproxy.get_cluster_config(cluster_name text, out key text, out val text)
+returns setof record as $$
+begin
+    key := 'statement_timeout';
+    val := 0;
+    return next;
+    return;
+end; $$ language plpgsql;
+
+create or replace function plproxy.get_cluster_version(cluster_name text)
+returns integer as $$
+begin
+    if cluster_name = 'testcluster' then
+        return 7;
+    end if;
+    raise exception 'no such cluster: %', cluster_name;
+end; $$ language plpgsql;
 
 
