@@ -21,6 +21,14 @@ returns text as $$
 $$ language plproxy;
 select * from test_err3('dat');
 
+-- should work
+create function test_err_none(dat text)
+returns text as $$
+    cluster 'testcluster';
+    run on hashtext($1);
+    select 'ok';
+$$ language plproxy;
+select * from test_err_none('dat');
 
 --- result map errors
 create function test_map_err1(dat text)
