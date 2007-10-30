@@ -97,6 +97,8 @@ int plproxy_yylex_destroy(void)
 {
 	plproxy_yy_delete_buffer(YY_CURRENT_BUFFER);
 	YY_CURRENT_BUFFER = NULL;
+	yy_start = 0;
+	yy_init = 1;
 	return 0;
 }
 
