@@ -22,7 +22,6 @@
 
 /* define scanner.c functions */
 void plproxy_yy_scan_bytes(const char *bytes, int len);
-void plproxy_yyset_lineno(int);
 
 /* avoid permanent allocations */
 #define YYSTACK_USE_ALLOCA 1
@@ -150,8 +149,6 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	got_run = got_cluster = got_connect = 0;
 
 	cur_sql = select_sql = NULL;
-
-	plproxy_yyset_lineno(1);
 
 	/* setup scanner */
 	plproxy_yy_scan_bytes(body, len);

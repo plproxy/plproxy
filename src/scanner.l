@@ -99,17 +99,13 @@ int plproxy_yylex_destroy(void)
 	YY_CURRENT_BUFFER = NULL;
 	yy_start = 0;
 	yy_init = 1;
+	yylineno = 1;
 	return 0;
 }
 
 int plproxy_yyget_lineno(void)
 {
 	return yylineno;
-}
-
-void plproxy_yyset_lineno(int new_lineno)
-{
-	yylineno = new_lineno;
 }
 
 #endif
