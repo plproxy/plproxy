@@ -164,8 +164,20 @@ plproxy_query_finish(QueryBuffer *q)
 	return pq;
 }
 
+/* look if all return type columns are named */
+static bool if_type_has_names(ProxyComposite *t)
+{
+	int i;
+	if (!t->name_list)
+		return false;
+	for (i = 0; i < t->tupdesc->natts; i++)
+		if (!t->name_list[i])
+			return false;
+	return true;
+}
+
 /*
- * Generate a functioncall based on own signature.
+ * Generate a function call based on own signature.
  */
 ProxyQuery *
 plproxy_standard_query(ProxyFunction *func, bool add_types)
@@ -183,7 +195,27 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 	pq->arg_lookup = plproxy_func_alloc(func, len);
 
 	initStringInfo(&sql);
-	appendStringInfo(&sql, "select * from %s(", func->name);
+	appendStringInfo(&sql, "select ");
+
+	/* try to fill in all result column names */
+	if (func->ret_composite && if_type_has_names(func->ret_composite))
+	{
+		ProxyComposite *t = func->ret_composite;
+		for (i = 0; i < t->tupdesc->natts; i++)
+		{
+			appendStringInfo(&sql, "%s%s",
+							 ((i > 0) ? ", " : ""),
+							 t->name_list[i]);
+		}
+	}
+	else
+		/* names not available, do a simple query */
+		appendStringInfo(&sql, "*");
+
+	/* function call */
+	appendStringInfo(&sql, " from %s(", func->name);
+
+	/* fill in function arguments */
 	for (i = 0; i < func->arg_count; i++)
 	{
 		if (i > 0)
