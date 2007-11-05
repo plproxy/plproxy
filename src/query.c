@@ -165,7 +165,7 @@ plproxy_query_finish(QueryBuffer *q)
 }
 
 /* look if all return type columns are named */
-static bool if_type_has_names(ProxyComposite *t)
+static bool check_if_type_has_names(ProxyComposite *t)
 {
 	int i;
 	if (!t->name_list)
@@ -198,19 +198,22 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 	appendStringInfo(&sql, "select ");
 
 	/* try to fill in all result column names */
-	if (func->ret_composite && if_type_has_names(func->ret_composite))
+	if (func->ret_composite)
 	{
 		ProxyComposite *t = func->ret_composite;
+		if (!check_if_type_has_names(t))
+			elog(ERROR, "composite type without field names?");
 		for (i = 0; i < t->tupdesc->natts; i++)
 		{
-			appendStringInfo(&sql, "%s%s",
+			appendStringInfo(&sql, "%s%s::%s",
 							 ((i > 0) ? ", " : ""),
-							 t->name_list[i]);
+							 t->name_list[i],
+							 t->type_list[i]->name);
 		}
 	}
 	else
 		/* names not available, do a simple query */
-		appendStringInfo(&sql, "*");
+		appendStringInfo(&sql, "r::%s", func->ret_scalar->name);
 
 	/* function call */
 	appendStringInfo(&sql, " from %s(", func->name);
@@ -225,6 +228,9 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 		pq->arg_lookup[i] = i;
 	}
 	appendStringInfoChar(&sql, ')');
+
+	if (func->ret_scalar)
+		appendStringInfo(&sql, " r");
 
 	pq->sql = plproxy_func_strdup(func, sql.data);
 	pfree(sql.data);
