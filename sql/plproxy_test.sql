@@ -191,3 +191,21 @@ begin
 end; $$ language plpgsql;
 
 
+-- test quoting function
+create type "RetWeird" as (
+    "ColId" int4,
+    "ColData" text
+);
+
+create function "testQuoting"(username text, id integer, data text)
+returns "RetWeird" as $$ cluster 'testcluster'; run on hashtext(username); $$ language plproxy;
+\c test_part
+create type "RetWeird" as (
+    "ColId" int4,
+    "ColData" text
+);
+create function "testQuoting"(username text, id integer, data text)
+returns "RetWeird" as $$ select 1::int4, 'BazOoka'::text $$ language sql;
+\c regression
+select * from "testQuoting"('user', '1', 'dat');
+
