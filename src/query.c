@@ -164,18 +164,6 @@ plproxy_query_finish(QueryBuffer *q)
 	return pq;
 }
 
-/* look if all return type columns are named */
-static bool check_if_type_has_names(ProxyComposite *t)
-{
-	int i;
-	if (!t->name_list)
-		return false;
-	for (i = 0; i < t->tupdesc->natts; i++)
-		if (!t->name_list[i])
-			return false;
-	return true;
-}
-
 /*
  * Generate a function call based on own signature.
  */
@@ -201,8 +189,6 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 	if (func->ret_composite)
 	{
 		ProxyComposite *t = func->ret_composite;
-		if (!check_if_type_has_names(t))
-			elog(ERROR, "composite type without field names?");
 		for (i = 0; i < t->tupdesc->natts; i++)
 		{
 			appendStringInfo(&sql, "%s%s::%s",
