@@ -33,7 +33,7 @@ name_matches(ProxyFunction *func, const char *aname, PGresult *res, int col)
 
 	if (fname == NULL)
 		plproxy_error(func, "Unnamed result column %d", col + 1);
-	if (strcasecmp(aname, fname) == 0)
+	if (strcmp(aname, fname) == 0)
 		return true;
 	return false;
 }
@@ -65,6 +65,7 @@ map_results(ProxyFunction *func, PGresult *res)
 
 	for (i = 0; i < natts; i++)
 	{
+		/* ->name_list has quoted names, take unquoted from ->tupdesc */
 		a = func->ret_composite->tupdesc->attrs[i];
 		aname = NameStr(a->attname);
 

@@ -86,7 +86,7 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 		if (a->attisdropped)
 			plproxy_error(func, "dropped attrs not supported");
 
-		name = NameStr(a->attname);
+		name = quote_identifier(NameStr(a->attname));
 		ret->name_list[i] = plproxy_func_strdup(func, name);
 
 		type = plproxy_find_type_info(func, a->atttypid, 0);
@@ -157,7 +157,7 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 				t_nsp;
 	Form_pg_type s_type;
 	Form_pg_namespace s_nsp;
-	char		namebuf[NAMEDATALEN * 2 + 3];
+	char		namebuf[NAMEDATALEN * 4 + 2 + 1 + 2 + 1];
 	Oid			nsoid;
 
 	/* fetch pg_type row */
@@ -175,12 +175,14 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 		if (!HeapTupleIsValid(t_nsp))
 			plproxy_error(func, "cache lookup failed for namespace %u", nsoid);
 		s_nsp = (Form_pg_namespace) GETSTRUCT(t_nsp);
-		sprintf(namebuf, "%s.%s", NameStr(s_nsp->nspname), NameStr(s_type->typname));
+		snprintf(namebuf, sizeof(namebuf), "%s.%s",
+				quote_identifier(NameStr(s_nsp->nspname)),
+				quote_identifier(NameStr(s_type->typname)));
 		ReleaseSysCache(t_nsp);
 	}
 	else
 	{
-		sprintf(namebuf, "%s", NameStr(s_type->typname));
+		snprintf(namebuf, sizeof(namebuf), "%s", quote_identifier(NameStr(s_type->typname)));
 	}
 
 	/* sanity check */

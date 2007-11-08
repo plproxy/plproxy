@@ -188,7 +188,8 @@ fn_delete(ProxyFunction *func, bool in_cache)
 static void
 fn_set_name(ProxyFunction *func, HeapTuple proc_tuple)
 {
-	char		namebuf[NAMEDATALEN * 2 + 3];
+	/* 2 names, size can double, "" + . + "" + NUL */
+	char		namebuf[NAMEDATALEN * 4 + 2 + 1 + 2 + 1];
 	Form_pg_proc proc_struct;
 	Form_pg_namespace ns_struct;
 	HeapTuple	ns_tup;
@@ -203,8 +204,9 @@ fn_set_name(ProxyFunction *func, HeapTuple proc_tuple)
 		plproxy_error(func, "Cannot find namespace %u", nsoid);
 	ns_struct = (Form_pg_namespace) GETSTRUCT(ns_tup);
 
-	sprintf(namebuf, "%s.%s", NameStr(ns_struct->nspname),
-			NameStr(proc_struct->proname));
+	snprintf(namebuf, sizeof(namebuf), "%s.%s",
+			quote_identifier(NameStr(ns_struct->nspname)),
+			quote_identifier(NameStr(proc_struct->proname)));
 	func->name = plproxy_func_strdup(func, namebuf);
 
 	ReleaseSysCache(ns_tup);

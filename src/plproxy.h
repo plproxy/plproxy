@@ -187,7 +187,7 @@ typedef struct ProxyComposite
 {
 	TupleDesc	tupdesc;		/* Return tuple descriptor */
 	ProxyType **type_list;		/* Column type info */
-	char	  **name_list;		/* Column names */
+	char	  **name_list;		/* Quoted column names */
 	unsigned	use_binary:1;	/* True if all columns support binary recv */
 } ProxyComposite;
 
@@ -213,7 +213,7 @@ typedef struct ProxyQuery
  */
 typedef struct ProxyFunction
 {
-	const char *name;			/* Fully-quelified function name */
+	const char *name;			/* Fully-qualified and quoted function name */
 	Oid			oid;			/* Function OID */
 	MemoryContext ctx;			/* Where runtime allocations should happen */
 
