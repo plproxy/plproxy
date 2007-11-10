@@ -10,11 +10,8 @@
  * client_encoding: before sending query, sync if needed
  * client_encoding: the warning is not necessary anymore
  * support both older (2.5.4) and newer (2.5.33) flex
-
-=== todo ===
-
- * error handling with old flex 
- * testing
+ * quoting for function name and result columns
+ * fetch columns explicitly
 
 == Needs to be checked ==
 

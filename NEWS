@@ -1,3 +1,30 @@
+2007-11-xx  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
+
+    = Features =
+
+    * Explicitly specify result column names and types in query.
+
+      Lets say there is function somefunc(out id int4, out data text).
+      Previously pl/proxy issued following query:
+
+        SELECT * FROM somefunc()
+      
+      And later tried to work out which column goes where.  Now it issues:
+
+        SELECT id::int4, data::text from somefunc()
+      
+      
+
+    * Quote function and result column names properly.
+    * Set client_encoding on remote database to be equal to local one.
+    * Now setting 'statement_timeout' from plproxy.works, but 
+
+    = Fixes =
+
+    * Support 8.3 (short varlena header)
+    * Support old flex (2.5.4)
+    * Fix 'make deb'
+
 2007-04-16  -  PlProxy 2.0.2  -  "No news is good news?"
 
     * Include plproxy.sql.in in tgz.
