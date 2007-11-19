@@ -12,8 +12,15 @@
  * support both older (2.5.4) and newer (2.5.33) flex
  * quoting for function name and result columns
  * fetch columns explicitly
+ * drop statement_timeout
 
-== Needs to be checked ==
+=== todo ===
+
+ * updated docs
+   - move docs to asciidoc
+   - include Steve's intro
+
+== Near future ==
 
  * Clean up the binary-or-not decision.  There should be possible
  to have partitions with different versions.  That may mean
@@ -22,10 +29,11 @@
 == Just thoughts ==
 
  * A way to give config to CONNECT functions.
-  * SET param = xxx;
+   - SET param = xxx; ???
  * Dynamic connstr loading for CONNECT functions?
  * RUN ON ALL: sort by?
  * RUN ON ALL: ignore errors?
  * RUN ON ANY: if one con failed, try another
  * Streaming for big resultsets, to avoid loading them fully in memory.
- Needs also backend changes.
+   This needs also backend changes.
+

@@ -1,30 +1,35 @@
-#pragma section-numbers 2
 
 = PL/Proxy Cluster Configuration API =
 
-[[TableOfContents]]
+For `CONNECT` functions, no configuration is used.
 
-When running plproxy calls these functions:
+For `CLUSTER` functions, following configuration functions are called.
 
+== plproxy.get_cluster_version(cluster_name) ==
 
-== plproxy.get_cluster_version(cluster) ==
+  plproxy.get_cluster_version(cluster_name text)
+  returns integer
 
-{{{
-plproxy.get_cluster_version(cluster_name text)
-returns integer
-}}}
-
-It is called on each request, it should return version of particular
+It is called on each request, it should return version number of particular
 cluster config.  If version is higher than cached, config and partitions
 are reloaded.
 
+Example function without use of separate tables:
 
-== plproxy.get_cluster_partitions(cluster) ==
+  CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
+  RETURNS int4 AS $$
+  BEGIN
+      IF cluster_name = 'a_cluster' THEN
+          RETURN 1;
+      END IF;
+      RAISE EXCEPTION 'Unknown cluster';
+  END;
+  $$ LANGUAGE plpgsql;
 
-{{{
-plproxy.get_cluster_partitions(cluster_name text)
-returns setof text
-}}}
+== plproxy.get_cluster_partitions(cluster_name) ==
+
+  plproxy.get_cluster_partitions(cluster_name text)
+  returns setof text
 
 This is called when new partitions need to be loaded.  Should returns
 connstrings to partitions, in right order.  Total count must
@@ -35,14 +40,27 @@ user=CURRENT_USER appended to connection string to forward current
 user name.  As plproxy does not know any passwords, partition database
 should be using "trust" authentication method then.
 
+Example function without use of separate tables:
+
+  CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
+  RETURNS SETOF text AS $$
+  BEGIN
+      IF cluster_name = 'a_cluster' THEN
+          RETURN NEXT 'dbname=part00 host=127.0.0.1';
+          RETURN NEXT 'dbname=part01 host=127.0.0.1';
+          RETURN NEXT 'dbname=part02 host=127.0.0.1';
+          RETURN NEXT 'dbname=part03 host=127.0.0.1';
+	  RETURN;
+      END IF;
+      RAISE EXCEPTION 'Unknown cluster';
+  END;
+  $$ LANGUAGE plpgsql;
 
 == plproxy.get_cluster_config(cluster) ==
 
-{{{
-plproxy.get_cluster_config(cluster_name text,
-			   out key text, out val text)
-returns setof record
-}}}
+  plproxy.get_cluster_config(in cluster_name text,
+			     out key text, out val text)
+  returns setof record
 
 Should return pairs of key-value pairs. All of them are optional.
 Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
@@ -50,11 +68,6 @@ Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
   connection_lifetime::
 
 	PL/Proxy will drop older connections.
-
-  connect_timeout::
-
-	Initial connect is canceled, if it takes more that this.
-	Duplicated connstring setting (should be just added to connstr?)
 
   query_timeout::
 
@@ -66,3 +79,28 @@ Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
   disable_binary::
 
 	Do not use binary I/O for connections to this cluster.
+
+  connect_timeout::
+
+	Initial connect is canceled, if it takes more that this.
+	Deprecated - it duplicates libpq connect string parameter
+	with same name.  Its better to just add the parameter to
+	connect string.
+
+Example function without use of separate tables:
+
+  CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
+      in cluster_name text,
+      out key text,
+      out val text)
+  RETURNS SETOF record AS $$
+  BEGIN
+      -- lets use same config for all clusters
+      key := 'connection_lifetime';
+      val := 30*60; -- 30m
+      RETURN NEXT;
+      RETURN;
+  END;
+  $$ LANGUAGE plpgsql;
+
+

@@ -1,66 +1,64 @@
-#pragma section-numbers 2
 
-== Language Syntax ==
+= PL/Proxy Language Syntax =
 
-The language contains only 4 statements: CONNECT, CLUSTER, RUN and SELECT.
+The language is similar to plpgsql - string quoting, comments,
+semicolon at the statements end.
 
-Each function needs to have either CONNECT or CLUSTER+RUN statement
-to specify where to run the function.  The SELECT statement is optional,
-if it is missing, there will be default query generated based on proxy
-function signature.
+It contains only 4 statements: `CONNECT`, `CLUSTER`, `RUN` and `SELECT`.
 
-=== CONNECT ===
-{{{
-CONNECT 'libpq connstr';
-}}}
+Each function needs to have either `CONNECT` or pair of `CLUSTER` + `RUN` statements
+to specify where to run the function.
+
+The `SELECT` statement is optional, if it is missing, there will be default
+query generated based on proxy function signature.
+
+== CONNECT ==
+
+  CONNECT 'libpq connstr';
 
 Specifies exact location where to connect and execute the query.
 If several functions have same connstr, they will use same connection.
 
-=== CLUSTER ===
-{{{
-CLUSTER 'cluster_name';
-}}}
+== CLUSTER ==
+
+  CLUSTER 'cluster_name';
 
 Specifies exact cluster name to be run on.  The cluster name will
 be passed to plproxy.get_cluster_* functions.
 
-{{{
-CLUSTER cluster_func(..);
-}}}
-Cluster name can be dynamically decided upon proxy function arguments.
-`cluster_func` should returns text value for final cluster name.
+  CLUSTER cluster_func(..);
 
-=== RUN ON ===
-{{{
-RUN ON ALL;
-}}}
+Cluster name can be dynamically decided upon proxy function arguments.
+`cluster_func` should return text value of final cluster name.
+
+== RUN ON ==
+
+  RUN ON ALL;
+
 Query will be run on all partitions in cluster in parallel.
 
-{{{
-RUN ON ANY;
-}}}
+  RUN ON ANY;
+
 Query will be run on random partition.
 
-{{{
-RUN ON <NR>;
-}}}
+  RUN ON <NR>;
+
 Run on partition number `<NR>`.
 
-{{{
-RUN ON partition_func(..);
-}}}
+  RUN ON partition_func(..);
+
 Run partition_func() which should return one or more hash values.  (int4)
 Query will be run on tagged partitions.  If more than one partition was
 tagged, query will be sent in parallel to them.
 
+== SELECT ==
 
-=== SELECT ===
-{{{
-SELECT .... ;
-}}}
+  SELECT .... ;
 
-=== Argument substitution ===
+
+== Argument substitution ==
 
 Proxy function arguments can be referenced using name or `$n` syntax.
 Everything that is not argument reference is just passed on.
+
+
