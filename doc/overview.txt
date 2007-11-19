@@ -17,6 +17,20 @@ Downloads: http://pgfoundry.org/projects/plproxy
 
 Detailed info: ./LanguageSyntax  ./ClusterConfig ./ToDo
 
+== Installation ==
+
+ 1. Download PL/Proxy from http://pgfoundry.org/projects/plproxy and extract.
+
+ 2. Build PL/Proxy by running `make` and `make install` inside of the plproxy 
+ directory. If your having problems make sure that pg_config from the
+ postgresql bin directory is in your path.
+
+ Steps 1 and 2 can be skipped if your installed pl/proxy from a packaging system
+ such as RPM.
+
+ 3. To install PL/Proxy in a database execute the commands in the `plproxy.sql` 
+ file.  For example `psql -f $SHAREDIR/contrib/plproxy.sql mydatabase`
+
 == Short intro ==
 
 === Simple remote function call ===
