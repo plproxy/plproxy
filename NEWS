@@ -1,6 +1,6 @@
 2007-11-xx  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
 
-    = Features =
+  = Features =
 
     * Explicitly specify result column names and types in query.
 
@@ -11,19 +11,36 @@
       
       And later tried to work out which column goes where.  Now it issues:
 
-        SELECT id::int4, data::text from somefunc()
-      
-      
+        SELECT id::int4, data::text FROM somefunc()
+
+      For functions without named return paramenters, eg. just "RETURNS text":
+
+        SELECT r::text FROM anotherfunc() r
+
+      This gives better type safety when using binary I/O, allows signatures
+      differ in deterministic ways and creates safe upgrade path for signatures.
+
+      Only downside is that existing functions with wildly different signatures
+      stop working, but as they work on pure luck anyway, I'm not worried.
 
     * Quote function and result column names properly.
+
     * Set client_encoding on remote database to be equal to local one.
-    * Now setting 'statement_timeout' from plproxy.works, but 
 
-    = Fixes =
+  = Fixes =
 
-    * Support 8.3 (short varlena header)
-    * Support old flex (2.5.4)
-    * Fix 'make deb'
+    * Support 8.3 (handle short varlena header)
+
+    * Support old flex (2.5.4)  Previously flex >= 2.5.33 was required.
+
+    * Fix 'make deb', include actual debian/changelog.
+
+    * Remove config paramenter 'statement_timeout'.
+    
+      It was ignored previously and it cannot be made work in live env
+      when working thru pgbouncer, so its better to drop it completely.
+      The setting can be always set via normal ways.
+      
 
 2007-04-16  -  PlProxy 2.0.2  -  "No news is good news?"
 
