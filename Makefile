@@ -67,6 +67,9 @@ tgzclean:
 test: install
 	make installcheck || { less regression.diffs; exit 1; }
 
+ack:
+	cp results/*.out expected/
+
 deb:
 	yada rebuild
 	debuild -uc -us -b
