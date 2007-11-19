@@ -101,7 +101,6 @@ typedef struct ProxyConfig
 	int			connect_timeout;		/* How long connect may take (secs) */
 	int			query_timeout;			/* How long query may take (secs) */
 	int			connection_lifetime;	/* How long the connection may live (secs) */
-	int			statement_timeout;		/* Do remotely: SET statement_timeout */
 	int			disable_binary;			/* Avoid binary I/O */
 } ProxyConfig;
 

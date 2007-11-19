@@ -56,11 +56,6 @@ Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
 	Initial connect is canceled, if it takes more that this.
 	Duplicated connstring setting (should be just added to connstr?)
 
-  statement_timeout::
-
-	If set, then SET statement_timeout = X command is sent to remote
-	database.
-	
   query_timeout::
 
 	If query result does not appear in this time, the connection

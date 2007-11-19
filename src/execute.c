@@ -95,7 +95,6 @@ flush_connection(ProxyFunction *func, ProxyConnection *conn)
 static int
 tune_connection(ProxyFunction *func, ProxyConnection *conn)
 {
-	ProxyConfig *cf = &func->cur_cluster->config;
 	const char *this_enc, *dst_enc;
 	const char *dst_ver;
 	StringInfo	sql = NULL;
@@ -126,15 +125,6 @@ tune_connection(ProxyFunction *func, ProxyConnection *conn)
 		/* display SET query */
 		appendStringInfo(sql, "-- does not seem to apply");
 		conn_error(func, conn, sql->data);
-	}
-
-	/* add statement_timeout to query */
-	if (cf->statement_timeout >= 0 && !conn->tuning)
-	{
-		if (!sql)
-			sql = makeStringInfo();
-		appendStringInfo(sql, "set statement_timeout = %d; ",
-						 cf->statement_timeout);
 	}
 
 	/*

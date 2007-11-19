@@ -259,7 +259,7 @@ get_config(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 			plproxy_error(func, "val must not be NULL");
 
 		if (strcasecmp(key, "statement_timeout") == 0)
-			cf->statement_timeout = atoi(val);
+			/* ignore */ ;
 		else if (strcasecmp("connection_lifetime", key) == 0)
 			cf->connection_lifetime = atoi(val);
 		else if (strcasecmp("query_timeout", key) == 0)
@@ -340,8 +340,6 @@ new_cluster(const char *name)
 	cluster = palloc0(sizeof(*cluster));
 	cluster->name = pstrdup(name);
 
-	cluster->config.statement_timeout = -1;
-
 	MemoryContextSwitchTo(old_ctx);
 
 	return cluster;
@@ -384,8 +382,6 @@ fake_cluster(ProxyFunction *func)
 
 	conn->connstr = pstrdup(cluster->name);
 	conn->state = C_NONE;
-
-	cluster->config.statement_timeout = -1;
 
 	MemoryContextSwitchTo(old_ctx);
 
