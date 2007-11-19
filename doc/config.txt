@@ -59,8 +59,8 @@ Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
   query_timeout::
 
 	If query result does not appear in this time, the connection
-	is closed.  If set then also statement_timeout should be set
-	and to somewhat smaller value, so it takes effect earlier.
+	is closed.  If set then also `statement_timeout` should be set
+	remotely to somewhat smaller value, so it takes effect earlier.
 	It is meant for surviving network problems, not long queries.
 
   disable_binary::

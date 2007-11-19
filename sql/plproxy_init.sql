@@ -29,9 +29,6 @@ create or replace function
 plproxy.get_cluster_config(cluster_name text, out key text, out val text)
 returns setof record as $$
 begin
-    key := 'statement_timeout';
-    val := 0;
-    return next;
     return;
 end; $$ language plpgsql;
 
