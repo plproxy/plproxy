@@ -3,18 +3,16 @@
 
 PL/Proxy can be used in either CONNECT mode or CLUSTER mode.
 
-In CONNECT mode PL/Proxy acts
-as a pass through proxy to another database.  Each PL/Proxy
-function contains a dbconn string for the connection to a database it will
-proxy the request to.
+In CONNECT mode PL/Proxy acts as a pass through proxy to another database.
+Each PL/Proxy function contains a libpq connect string for the connection
+to a database it will proxy the request to.
 
 PL/Proxy can also be used in CLUSTER mode where it provides support for
 partitioning data across multiple databases based on a clustering function.
 
-When using PL/Proxy in CONNECT mode no configuration functions are required
-however, using PL/Proxy
-in CLUSTER mode requires the following configuration functions to be defined.
-
+When using PL/Proxy in CONNECT mode no configuration functions are required.
+However, using PL/Proxy in CLUSTER mode requires the following configuration
+functions to be defined.
 
 
 == plproxy.get_cluster_version(cluster_name) ==
@@ -49,22 +47,23 @@ external source such as a configuration table.
   returns setof text
 
 This is called when a new partition configuration needs to be loaded. 
-It should return connstrings to the partitions in the cluster. The connstrings 
-should be returned in the correct order. The total number of 
-connstrings returned must
-be a power of 2.  If two or more connstrings are equal then they will use the 
-same connection.
+It should return connect strings to the partitions in the cluster.
+The connstrings should be returned in the correct order.  The total
+number of connstrings returned must be a power of 2.  If two or more
+connstrings are equal then they will use the same connection.
 
-If the string "user=" does not appear in a connstring then
+If the string "user=" does not appear in a connect string then
 user=CURRENT_USER will be appended to the connection string by PL/Proxy.  
 This will cause PL/Proxy to connect to the partition database using
 the same username as was used to connect to the proxy database.
 Since plproxy does not know any passwords, the partition databases
 should be using "trust" authentication for connections from the proxy database
 to allow connections to the proxy database without requiring a password.  
-If the connstring's contain
-an explicit username then an explicit password can also be set in the connstring.
+If the connect strings contain an explicit username then an explicit
+password can also be set in the connstring.
 
+Best way to set explicit passwords is to add them to .pgpass file
+in home dir of the user Postgres server runs at.
 
 An example function without the use of separate configuration tables:
 
@@ -98,15 +97,15 @@ or NULL then the parameter is disabled (a default value will be used)
 
   
 	The maximum age a connection (in seconds) to a remote database will be kept
-	open for. If this is disabled(0) then connections to remote databases will 
+	open for. If this is disabled (0) then connections to remote databases will 
 	be kept open as long as they are valid. Otherwise once a connection reaches 
-    the age indicated it will be closed.
+	the age indicated it will be closed.
 
   query_timeout::
 
 	If a query result does not appear in this time, the connection
 	is closed.  If set then `statement_timeout` should also be set
-	to a somewhat smaller value, so it takes effect earlier.
+	on remote server to a somewhat smaller value, so it takes effect earlier.
 	It is meant for surviving network problems, not long queries.
 
   disable_binary::
@@ -116,8 +115,8 @@ or NULL then the parameter is disabled (a default value will be used)
   connect_timeout::
 
 	Initial connect is canceled, if it takes more that this.
-	
-	Deprecated - it duplicates libpq connect string parameter
+	+
+	*Deprecated*: it duplicates libpq connect string parameter
 	with same name.  Its better to just add the parameter to
 	connect string.
 
