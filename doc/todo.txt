@@ -1,30 +1,14 @@
 
-= pl/proxy todo list =
-
-== next version: 2.0.3 ==
-
-=== done ===
-
- * support 8.3
- * fix "make deb"
- * client_encoding: before sending query, sync if needed
- * client_encoding: the warning is not necessary anymore
- * support both older (2.5.4) and newer (2.5.33) flex
- * quoting for function name and result columns
- * fetch columns explicitly
- * drop statement_timeout
-
-=== todo ===
-
- * updated docs
-   - move docs to asciidoc
-   - include Steve's intro
+= PL/Proxy todo list =
 
 == Near future ==
 
  * Clean up the binary-or-not decision.  There should be possible
- to have partitions with different versions.  That may mean
- lazy typeout generations.
+   to have partitions with different versions.  That may mean
+   lazy typeout generations.
+
+ * Allow missing RUN in CLUSTER functions, which would mean `RUN ON 0;`
+   This should be useful for single-partition clusters.
 
 == Just thoughts ==
 
@@ -36,4 +20,4 @@
  * RUN ON ANY: if one con failed, try another
  * Streaming for big resultsets, to avoid loading them fully in memory.
    This needs also backend changes.
-
+ * Drop CONNECT, SELECT, plproxy.get_cluster_config()...
