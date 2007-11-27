@@ -1,20 +1,35 @@
 
 = PL/Proxy Cluster Configuration API =
 
-For `CONNECT` functions, no configuration is used.
+PL/Proxy can be used in either CONNECT mode or CLUSTER mode.
 
-For `CLUSTER` functions, following configuration functions are called.
+In CONNECT mode PL/Proxy acts
+as a pass through proxy to another database.  Each PL/Proxy
+function contains a dbconn string for the connection to a database it will
+proxy the request to.
+
+PL/Proxy can also be used in CLUSTER mode where it provides support for
+partitioning data across multiple databases based on a clustering function.
+
+When using PL/Proxy in CONNECT mode no configuration functions are required
+however, using PL/Proxy
+in CLUSTER mode requires the following configuration functions to be defined.
+
+
 
 == plproxy.get_cluster_version(cluster_name) ==
 
   plproxy.get_cluster_version(cluster_name text)
   returns integer
 
-It is called on each request, it should return version number of particular
-cluster config.  If version is higher than cached, config and partitions
-are reloaded.
+The get_cluster_version function is called on each request, it should return 
+the version number of the current configuration for a particular cluster.  
+If the version number returned by this function is higher than the one plproxy 
+has cached, then the configuration and partition information will be reloaded
+by calling the get_cluster_config() and get_cluster_paritions() functions.
 
-Example function without use of separate tables:
+This is an example function that does not lookup the version number for an 
+external source such as a configuration table.
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
   RETURNS int4 AS $$
@@ -26,21 +41,32 @@ Example function without use of separate tables:
   END;
   $$ LANGUAGE plpgsql;
 
+
+
 == plproxy.get_cluster_partitions(cluster_name) ==
 
   plproxy.get_cluster_partitions(cluster_name text)
   returns setof text
 
-This is called when new partitions need to be loaded.  Should returns
-connstrings to partitions, in right order.  Total count must
-be power of 2.  If connstrings are equal, they will use same connection.
+This is called when a new partition configuration needs to be loaded. 
+It should return connstrings to the partitions in the cluster. The connstrings 
+should be returned in the correct order. The total number of 
+connstrings returned must
+be a power of 2.  If two or more connstrings are equal then they will use the 
+same connection.
 
-If the string "user=" does not appear in connstring there will be
-user=CURRENT_USER appended to connection string to forward current
-user name.  As plproxy does not know any passwords, partition database
-should be using "trust" authentication method then.
+If the string "user=" does not appear in a connstring then
+user=CURRENT_USER will be appended to the connection string by PL/Proxy.  
+This will cause PL/Proxy to connect to the partition database using
+the same username as was used to connect to the proxy database.
+Since plproxy does not know any passwords, the partition databases
+should be using "trust" authentication for connections from the proxy database
+to allow connections to the proxy database without requiring a password.  
+If the connstring's contain
+an explicit username then an explicit password can also be set in the connstring.
 
-Example function without use of separate tables:
+
+An example function without the use of separate configuration tables:
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
   RETURNS SETOF text AS $$
@@ -62,18 +88,25 @@ Example function without use of separate tables:
 			     out key text, out val text)
   returns setof record
 
-Should return pairs of key-value pairs. All of them are optional.
-Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
+The get_cluster_config function returns a set of key-value pairs that can 
+consist of any of the following configuration parameters.  All of them are 
+optional. Timeouts/lifetime values are given in seconds.  If the value is 0
+or NULL then the parameter is disabled (a default value will be used)
+
 
   connection_lifetime::
 
-	PL/Proxy will drop older connections.
+  
+	The maximum age a connection (in seconds) to a remote database will be kept
+	open for. If this is disabled(0) then connections to remote databases will 
+	be kept open as long as they are valid. Otherwise once a connection reaches 
+    the age indicated it will be closed.
 
   query_timeout::
 
-	If query result does not appear in this time, the connection
-	is closed.  If set then also `statement_timeout` should be set
-	remotely to somewhat smaller value, so it takes effect earlier.
+	If a query result does not appear in this time, the connection
+	is closed.  If set then `statement_timeout` should also be set
+	to a somewhat smaller value, so it takes effect earlier.
 	It is meant for surviving network problems, not long queries.
 
   disable_binary::
@@ -83,11 +116,13 @@ Timeouts/lifetime are given in seconds. If 0 or NULL then disabled.
   connect_timeout::
 
 	Initial connect is canceled, if it takes more that this.
+	
 	Deprecated - it duplicates libpq connect string parameter
 	with same name.  Its better to just add the parameter to
 	connect string.
 
-Example function without use of separate tables:
+
+Example function without the use of separate tables for storing parameters.
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
       in cluster_name text,

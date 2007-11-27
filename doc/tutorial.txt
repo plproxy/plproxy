@@ -1,43 +1,50 @@
 
 = Short tutorial =
 
-This section explains how to use PL/Proxy to proxy queries for a users email 
-address across a set of remote databases. For purposes of this intro we assume
-each remote database has a users table that contains a username and email column.
+This section explains how to use PL/Proxy to proxy queries across a set of 
+remote databases. For purposes of this intro we assume 
+each remote database has a "user" table that contains a username and an email 
+column.
 
-We also assume that the data is paritioned across remote databases by taking
+We also assume that the data is partitioned across remote databases by taking
 a hash of the username and assigning it to one of 2 servers. Real applications 
-should use a partitioning scheme that is approriate to their requirments.
+should use a partitioning scheme that is appropriate to their requirements.
 
-For the purposes of this example assume that the partition databases plproxy_1
-and plproxy_2 both contain a table resembling
+For the purposes of this example assume that the partition databases part00
+and part01 both contain a table resembling
 
   CREATE TABLE user ("user" text,email text);
 
-PL/Proxy is installed on the proxy database.
+We also assume that PL/Proxy is installed on the proxy database.
+
+
 
 
 == Simple remote function call ==
 
-Here we will create a plproxy function that connects to the database named
-'plproxy_1' and returns a users email address.
+Here we will create a plproxy function that will run on the proxy database which
+will connect to a remote database named
+'part00' and return a users email address.
 
-Connect to `dbname=plproxy_1` and run following SQL there: `SELECT * from get_user_email($1);`
+This example  uses plproxy in CONNECT mode, it will 
+connect to `dbname=part00` and run following SQL there:
 
 
   CREATE FUNCTION get_user_email(username text)
   RETURNS text AS $$
-    CONNECT 'dbname=plproxy_1';
+    CONNECT 'dbname=part00';
     SELECT email FROM users WHERE user = $1;
   $$ LANGUAGE plproxy;
 
-The above example uses plproxy to proxy the query to the remote datababase but 
-performs no partitioning.  It assumes that the entire users table is in the
-remote users database.  The next few steps will describe how to partition data 
-with PL/Proxy.
+ `SELECT * from get_user_email($1);`.
+
+The above example uses plproxy to proxy the query to the remote database but 
+doesn't handle partitioning of data.  It assumes that the entire users table is 
+in the remote users database.  The next few steps will describe how to partition 
+data with PL/Proxy.
 
 
-== Create a configuration functions ==
+== Create  configuration functions ==
 
 Using PL/Proxy for partitioning requires setting up some configuration functions.
 
@@ -49,10 +56,18 @@ The following is an example
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
   RETURNS SETOF text AS $$
-    VALUES ( 'host=localhost dbname=plproxy_1'), 
-           ( 'host=localhost dbname=plproxy_2') 
-  $$ LANGUAGE SQL
+  BEGIN
+      IF cluster_name = 'usercluster' THEN
+          RETURN NEXT 'dbname=part00 host=127.0.0.1';
+          RETURN NEXT 'dbname=part01 host=127.0.0.1';
+          RETURN;
+      END IF;
+      RAISE EXCEPTION 'Unknown cluster';
+  END;
+  $$ LANGUAGE plpgsql;
 
+
+ 
 A production application might query some configuration tables to return the
 connstrings. The number of partitions must be a power of 2.
 
@@ -60,45 +75,75 @@ Next define a plproxy.get_cluster_version(cluster_name) function.  This is
 called on each request and determines if the output from a cached
 result from plproxy.get_cluster_partitions can be reused. 
 
-  CREATE FUNCTION plproxy.get_cluster_version(cluster_name text)
-  RETURNS integer AS $$
-    SELECT 1;
-  $$ LANGUAGE SQL
 
-We also need to provide a plproxy.get_cluster_config function. Ours will provide
-nothing.  See the configuration section for details on what this function can do.
+  CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
+  RETURNS int4 AS $$
+  BEGIN
+      IF cluster_name = 'usercluster' THEN
+          RETURN 1;
+      END IF;
+      RAISE EXCEPTION 'Unknown cluster';
+  END;
+  $$ LANGUAGE plpgsql;
 
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(in cluster_name text, out key text, out val text)
+
+
+We also need to provide a plproxy.get_cluster_config function, ours will provide
+a value for the connection lifetime.  See the configuration section for details 
+on what this function can do. 
+
+
+
+
+  CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
+    in cluster_name text,
+    out key text,
+    out val text)
   RETURNS SETOF record AS $$
-    SELECT 'connection_lifetime'::text AS key, '0'::text as val;
-  $$ LANGUAGE SQL;
+  BEGIN
+      -- lets use same config for all clusters
+      key := 'connection_lifetime';
+      val := 30*60; -- 30m
+      RETURN NEXT;
+      RETURN;
+  END;
+  $$ LANGUAGE plpgsql;
 
-See config.txt for a more detailed desciption of the above functions.
+
+The config section contains more information on all of these functions.
 
 
 == Partitioned remote call ==
 
-Here we assume that the users table is spread over several databases based
-a hash of the users name. The connection string for these databases is 
-contained in the get_cluster_partitions function described above.
+Here we assume that the user table is spread over several databases based
+on a hash of the username. The connection string for the partitioned databases 
+are contained in the get_cluster_partitions function described above.
 
-Below is a get_user_email function that when execute on the proxy server,
-a remote connection to the approriate partitioned database will be made and
-the users email address will be returned.
+Below is a get_user_email function that is executed on the proxy server,which
+will make a remote connection to the appropriate partitioned database. The
+user's email address will be returned.
+
+This function should be created in the proxy database.
 
   CREATE OR REPLACE FUNCTION get_user_email(username text)
   RETURNS text AS $$
-    CLUSTER 'userdb';
+    CLUSTER 'usercluster';
     RUN ON hashtext(username) ;
     SELECT email FROM users WHERE "user" = $1;
   $$ LANGUAGE plproxy;
+
+
+
 
 == Inserting into the proper partition ==
 
 Next we provide a simple INSERT function.  
 
-We define this function on both plproxy_1 and plproxy_2
+Inserting data through plproxy requires functions to be defined on the proxy 
+databases that will perform the insert.
+
+We define this function on both part00 and part01
 
   CREATE OR REPLACE FUNCTION insert_user(username text, emailaddress text)
   RETURNS integer AS $$
@@ -106,13 +151,13 @@ We define this function on both plproxy_1 and plproxy_2
        SELECT 1;
   $$ LANGUAGE SQL;
 
-Now we define a proxy function in the proxy database to send the 
-INSERT's to the approriate target.
+Now we define a proxy function inside the proxy database to send the 
+INSERT's to the appropriate target.
 
 
   CREATE OR REPLACE FUNCTION insert_user(username text, emailaddress text)
   RETURNS integer AS $$
-    CLUSTER 'userdb';
+    CLUSTER 'usercluster';
     RUN ON hashtext(username);
   $$ LANGUAGE plproxy;
 
