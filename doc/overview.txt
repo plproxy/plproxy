@@ -15,23 +15,33 @@ info needs to be specified inside proxy function body.
 
 Downloads: http://pgfoundry.org/projects/plproxy
 
-Detailed info: ./LanguageSyntax  ./ClusterConfig ./ToDo
+== Documentation ==
 
-== Installation ==
+ * [http://plproxy.projects.postgresql.org/doc/tutorial.html	Tutorial ]
+ * [http://plproxy.projects.postgresql.org/doc/syntax.html	Language reference ]
+ * [http://plproxy.projects.postgresql.org/doc/config.html	Cluster configuration ]
+ * [http://plproxy.projects.postgresql.org/doc/todo.html	TODO list ]
 
- 1. Download PL/Proxy from http://pgfoundry.org/projects/plproxy and extract.
+== Features ==
 
- 2. Build PL/Proxy by running `make` and `make install` inside of the plproxy 
- directory. If your having problems make sure that pg_config from the
- postgresql bin directory is in your path.
+ * PL/Proxy functions detect remote functions to be called from their own signature.
+ * Function can be run on one, some or all members of the cluster.
+ * If query is executed on several partitions, it will happen in parallel.
+ * Queries are run in auto-commit mode on the remote server.
+ * Query parameters are sent separately from query body, thus avoiding
+ quoting/unquoting overhead on both sides.
+ * If proxy and partition backend versions match,
+ PL/Proxy tries to use binary I/O if possible.
 
- Steps 1 and 2 can be skipped if your installed pl/proxy from a packaging system
- such as RPM.
+== Restrictions ==
 
- 3. To install PL/Proxy in a database execute the commands in the `plproxy.sql` 
- file.  For example `psql -f $SHAREDIR/contrib/plproxy.sql mydatabase`
+ * PL/Proxy launches connections into each part from each backend, so in
+ heavy-duty environment is necessary to put pooler between PL/Proxy
+ and partitions.  We have specially for that developed ../PgBouncer
+ which is a pooler that can do statement-based pooling - release server
+ after each SQL statement.
 
-== Short intro ==
+== Language examples ==
 
 === Simple remote function call ===
 
@@ -40,46 +50,41 @@ Connect to `dbname=users` and run following SQL there: `SELECT * from get_user_e
 {{{
 CREATE FUNCTION get_user_email(username text)
 RETURNS text AS $$
+
     CONNECT 'dbname=users';
+
 $$ LANGUAGE plproxy;
 }}}
 
 === Partitioned remote call ===
 
-Users are spread over several databases,
-partition number is acquired by taking hashtext(username).  This
-needs also configuring the cluster, described later.  After this
-is done, actual proxy function looks following:
+Users are spread over several databases, partition number is acquired
+by taking hashtext(username).  This needs also configuring the cluster,
+described in documentation.  After this is done, actual proxy function
+looks following:
 
 {{{
 CREATE FUNCTION get_user_email(username text)
 RETURNS text AS $$
+
     CLUSTER 'userdb';
     RUN ON hashtext(username);
+
 $$ LANGUAGE plproxy;
 }}}
 
 === Run user-specified SELECT statement remotely ===
 
+By default, PL/Proxy generates query based on its own signature.
+But this can be overrided by giving explicit `SELECT` statement to run.
+
 {{{
-CREATE FUNCTION get_user_location(text) RETURNS text AS $$
+CREATE FUNCTION get_user_location(text)
+RETURNS text AS $$
+
     CLUSTER 'userdb';
     RUN ON hashtext($1);
     SELECT email FROM users WHERE user = $1;
+
 $$ LANGUAGE plproxy;
 }}}
-
-
-
-== Restrictions ==
-
- * All SELECTs/functions are run in auto-commit mode on the remote server
-
- * Only one SELECT statement is allowed, if you need to do more, then you have to 
- write a pl function on remote side
-
- * PL/Proxy launches connections into each part from each backend, so in
- heavy-duty environment it is useful to put pooler between PL/Proxy
- and partitions.  We have specially for that developed ../PgBouncer
- which pooler that can do statement-based pooling - release server
- after each SQL statement.
