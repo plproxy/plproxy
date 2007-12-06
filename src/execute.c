@@ -23,10 +23,6 @@
  * - Tag particural databases, where query must be sent.
  * - Send the query.
  * - Fetch the results.
- *
- * Fixme:
- * - should also loop over untagged connections, waiting for READ events?
- *	 that would allow to track conn status better.
  */
 
 #include "plproxy.h"
@@ -220,19 +216,12 @@ check_old_conn(ProxyFunction *func, ProxyConnection *conn, struct timeval * now)
 
 	/* how long ts been idle */
 	t = now->tv_sec - conn->query_time;
-#ifdef PLPROXY_IDLE_CONN_CHECK
 	if (t < PLPROXY_IDLE_CONN_CHECK)
-#else
-	if (1)
-#endif
 		return true;
 
 	/*
-	 * There was a idea to call PQconsumeInput couple of times on a long-idle
-	 * connections, to see if they are still alive.
-	 *
-	 * As this is complicated, then ATM just do a select(,,,0) on fd.
-	 * Stable conn should have no events pending.
+	 * Simple way to check if old connection is stable - look if there
+	 * are events pending.  If there are drop the connection.
 	 */
 intr_loop:
 	fd = PQsocket(conn->db);

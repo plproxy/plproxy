@@ -70,9 +70,9 @@
 
 /*
  * Check connections that are idle more than this many seconds.
- * Undefine to disable.
+ * Set 0 to always check.
  */
-#define PLPROXY_IDLE_CONN_CHECK		10
+#define PLPROXY_IDLE_CONN_CHECK		2
 
 /* Flag indicating where function should be executed */
 typedef enum RunOnType
