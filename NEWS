@@ -1,4 +1,4 @@
-2007-11-xx  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
+2007-12-10  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
 
   = Features =
 
@@ -26,6 +26,8 @@
     * Quote function and result column names properly.
 
     * Set client_encoding on remote database to be equal to local one.
+
+    * Tutorial by Steve Singer.
 
   = Fixes =
 
