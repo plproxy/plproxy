@@ -55,10 +55,19 @@ tagged, query will be sent in parallel to them.
 
   SELECT .... ;
 
+By default, PL/Proxy generates query based on its own signature.
+But this can be overrided by giving explicit `SELECT` statement to run.
+
+Everything after `SELECT` until semicolon is taken as SQL to be passed on.
+Only argument substitution is done on the contents, otherwise the text
+is unparsed.  To avoid a table column to be parsed as function argument,
+table aliases should be used.
+
+Query result should have same number of columns as function result
+and same names too.
 
 == Argument substitution ==
 
 Proxy function arguments can be referenced using name or `$n` syntax.
 Everything that is not argument reference is just passed on.
-
 
