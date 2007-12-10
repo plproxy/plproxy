@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0.3
+PLPROXY_VERSION = 2.0.4cvs
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
@@ -19,12 +19,15 @@ EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch]
 PG_CPPFLAGS = -I$(PQINC)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
-	     sql/*.sql expected/*.out config/*.sql doc/*.txt doc/Makefile \
-	     AUTHORS COPYRIGHT README plproxy.sql.in NEWS \
-		 debian/packages debian/changelog
-DIST_DIRS = src sql expected config doc debian
 TARNAME = plproxy-$(PLPROXY_VERSION)
+DIST_DIRS = src sql expected config doc debian
+DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
+			 $(foreach t,$(REGRESS),sql/$(t).sql expected/$(t).out) \
+			 config/simple.config.sql \
+			 doc/Makefile doc/config.txt doc/overview.txt \
+			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
+			 AUTHORS COPYRIGHT README plproxy.sql.in NEWS \
+			 debian/packages debian/changelog
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
