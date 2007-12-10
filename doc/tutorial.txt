@@ -1,5 +1,5 @@
 
-= Short tutorial =
+= PL/Proxy tutorial =
 
 This section explains how to use PL/Proxy to proxy queries across a set of 
 remote databases. For purposes of this intro we assume 
@@ -13,11 +13,25 @@ should use a partitioning scheme that is appropriate to their requirements.
 For the purposes of this example assume that the partition databases part00
 and part01 both contain a table resembling
 
-  CREATE TABLE user ("user" text,email text);
+  CREATE TABLE users (
+    username text,
+    email text
+  );
 
-We also assume that PL/Proxy is installed on the proxy database.
 
+== Installation ==
 
+ 1. Download PL/Proxy from http://pgfoundry.org/projects/plproxy and extract.
+
+ 2. Build PL/Proxy by running `make` and `make install` inside of the plproxy 
+    directory. If your having problems make sure that pg_config from the
+    postgresql bin directory is in your path.
+
+ 3. To install PL/Proxy in a database execute the commands in the `plproxy.sql` 
+    file.  For example `psql -f $SHAREDIR/contrib/plproxy.sql mydatabase`
+
+Steps 1 and 2 can be skipped if your installed pl/proxy from a packaging system
+such as RPM.
 
 
 == Simple remote function call ==
@@ -29,11 +43,10 @@ will connect to a remote database named
 This example  uses plproxy in CONNECT mode, it will 
 connect to `dbname=part00` and run following SQL there:
 
-
-  CREATE FUNCTION get_user_email(username text)
+  CREATE FUNCTION get_user_email(i_username text)
   RETURNS text AS $$
     CONNECT 'dbname=part00';
-    SELECT email FROM users WHERE user = $1;
+    SELECT email FROM users WHERE username = $1;
   $$ LANGUAGE plproxy;
 
  `SELECT * from get_user_email($1);`.
@@ -65,8 +78,6 @@ The following is an example
       RAISE EXCEPTION 'Unknown cluster';
   END;
   $$ LANGUAGE plpgsql;
-
-
  
 A production application might query some configuration tables to return the
 connstrings. The number of partitions must be a power of 2.
@@ -74,7 +85,6 @@ connstrings. The number of partitions must be a power of 2.
 Next define a plproxy.get_cluster_version(cluster_name) function.  This is 
 called on each request and determines if the output from a cached
 result from plproxy.get_cluster_partitions can be reused. 
-
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
   RETURNS int4 AS $$
@@ -86,15 +96,9 @@ result from plproxy.get_cluster_partitions can be reused.
   END;
   $$ LANGUAGE plpgsql;
 
-
-
-
 We also need to provide a plproxy.get_cluster_config function, ours will provide
 a value for the connection lifetime.  See the configuration section for details 
 on what this function can do. 
-
-
-
 
   CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
     in cluster_name text,
@@ -109,7 +113,6 @@ on what this function can do.
       RETURN;
   END;
   $$ LANGUAGE plpgsql;
-
 
 The config section contains more information on all of these functions.
 
@@ -126,13 +129,12 @@ user's email address will be returned.
 
 This function should be created in the proxy database.
 
-  CREATE OR REPLACE FUNCTION get_user_email(username text)
+  CREATE OR REPLACE FUNCTION get_user_email(i_username text)
   RETURNS text AS $$
     CLUSTER 'usercluster';
-    RUN ON hashtext(username) ;
-    SELECT email FROM users WHERE "user" = $1;
+    RUN ON hashtext(i_username) ;
+    SELECT email FROM users WHERE username = i_username;
   $$ LANGUAGE plproxy;
-
 
 
 
@@ -145,9 +147,9 @@ databases that will perform the insert.
 
 We define this function on both part00 and part01
 
-  CREATE OR REPLACE FUNCTION insert_user(username text, emailaddress text)
+  CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
   RETURNS integer AS $$
-       INSERT INTO users ("user",email) VALUES ($1,$2);
+       INSERT INTO users (username, email) VALUES ($1,$2);
        SELECT 1;
   $$ LANGUAGE SQL;
 
@@ -155,10 +157,10 @@ Now we define a proxy function inside the proxy database to send the
 INSERT's to the appropriate target.
 
 
-  CREATE OR REPLACE FUNCTION insert_user(username text, emailaddress text)
+  CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
   RETURNS integer AS $$
     CLUSTER 'usercluster';
-    RUN ON hashtext(username);
+    RUN ON hashtext(i_username);
   $$ LANGUAGE plproxy;
 
 
@@ -179,4 +181,21 @@ When connected to the proxy user you can obtain data by doing
   SELECT get_user_email('Sven');
   SELECT get_user_email('Marko');
   SELECT get_user_email('Steve');
+
+
+== Connection pooling ==
+
+When used in partitioned setup, PL/Proxy somewhat wastes connections
+as it opens connection to each partition from each backend process.
+So it's good idea to use a pooler that can take queries from several
+connections and funnel them via smaller number of connections to actual
+database.  We use and recommend
+https://developer.skype.com/SkypeGarage/DbProjects/PgBouncer[PgBouncer]
+for that.
+
+
+== More resources ==
+
+Kristo Kaiv has his own take on tutorial here:
+http://kaiv.wordpress.com/category/plproxy/[]
 
