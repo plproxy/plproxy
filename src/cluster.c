@@ -92,35 +92,40 @@ plproxy_cluster_cache_init(void)
 static void
 plproxy_cluster_plan_init(void)
 {
-	void	   *plan;
+	void	   *tmp_ver_plan, *tmp_part_plan, *tmp_conf_plan;
 	Oid			types[] = {TEXTOID};
 	static int	init_done = 0;
 
 	if (init_done)
 		return;
-	init_done = 1;
 
 	/*
 	 * prepare plans for fetching configuration.
 	 */
 
-	plan = SPI_prepare(version_sql, 1, types);
-	if (plan == NULL)
-		plproxy_error(NULL, "VERSION_SQL: %s",
-					  SPI_result_code_string(SPI_result));
-	version_plan = SPI_saveplan(plan);
+	tmp_ver_plan = SPI_prepare(version_sql, 1, types);
+	if (tmp_ver_plan == NULL)
+		elog(ERROR, "PL/Proxy: plproxy.get_cluster_version() SQL fails: %s",
+			 SPI_result_code_string(SPI_result));
 
-	plan = SPI_prepare(part_sql, 1, types);
-	if (plan == NULL)
-		plproxy_error(NULL, "PART_SQL: %s",
-					  SPI_result_code_string(SPI_result));
-	partlist_plan = SPI_saveplan(plan);
+	tmp_part_plan = SPI_prepare(part_sql, 1, types);
+	if (tmp_part_plan == NULL)
+		elog(ERROR, "PL/Proxy: plproxy.get_cluster_partitions() SQL fails: %s",
+			 SPI_result_code_string(SPI_result));
 
-	plan = SPI_prepare(config_sql, 1, types);
-	if (plan == NULL)
-		plproxy_error(NULL, "CONFIG_SQL: %s",
-					  SPI_result_code_string(SPI_result));
-	config_plan = SPI_saveplan(plan);
+	tmp_conf_plan = SPI_prepare(config_sql, 1, types);
+	if (tmp_conf_plan == NULL)
+		elog(ERROR, "PL/Proxy: plproxy.get_cluster_config() SQL fails: %s",
+			 SPI_result_code_string(SPI_result));
+
+	/*
+	 * Store them only if all successful.
+	 */
+	version_plan = SPI_saveplan(tmp_ver_plan);
+	partlist_plan = SPI_saveplan(tmp_part_plan);
+	config_plan = SPI_saveplan(tmp_conf_plan);
+
+	init_done = 1;
 }
 
 /*
