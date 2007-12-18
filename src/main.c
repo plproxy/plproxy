@@ -75,8 +75,11 @@ plproxy_error(ProxyFunction *func, const char *fmt,...)
 
 	plproxy_clean_results(func->cur_cluster);
 
-	elog(ERROR, "PL/Proxy function %s(%d): %s",
-		 func->name, func->arg_count, msg);
+	if (func)
+		elog(ERROR, "PL/Proxy function %s(%d): %s",
+			 func->name, func->arg_count, msg);
+	else
+		elog(ERROR, "PL/Proxy error: %s", msg);
 }
 
 /*

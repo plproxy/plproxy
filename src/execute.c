@@ -237,7 +237,7 @@ intr_loop:
 	{
 		if (errno == EINTR)
 			goto intr_loop;
-		plproxy_error(NULL, "check_old_conn: select failed: %s",
+		plproxy_error(func, "check_old_conn: select failed: %s",
 					  strerror(errno));
 	}
 
