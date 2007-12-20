@@ -23,7 +23,7 @@ TARNAME = plproxy-$(PLPROXY_VERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 			 $(foreach t,$(REGRESS),sql/$(t).sql expected/$(t).out) \
-			 config/simple.config.sql \
+			 config/simple.config.sql src/poll_compat.h \
 			 doc/Makefile doc/config.txt doc/overview.txt \
 			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
 			 AUTHORS COPYRIGHT README plproxy.sql.in NEWS \
@@ -50,6 +50,7 @@ src/scanner.c: src/scanner.l
 
 # dependencies
 $(OBJS): src/plproxy.h src/rowstamp.h
+src/execute.o: src/poll_compat.h
 
 # utility rules
 
