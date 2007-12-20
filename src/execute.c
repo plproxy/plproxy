@@ -206,6 +206,14 @@ check_old_conn(ProxyFunction *func, ProxyConnection *conn, struct timeval * now)
 	if (PQstatus(conn->db) != CONNECTION_OK)
 		return false;
 
+	fd = PQsocket(conn->db);
+	if (fd < 0)
+	{
+		elog(WARNING, "libpq socket lost: fd=%d, err=%s",
+			 fd, PQerrorMessage(conn->db));
+		return false;
+	}
+
 	/* check if too old */
 	if (cf->connection_lifetime > 0)
 	{
@@ -224,7 +232,13 @@ check_old_conn(ProxyFunction *func, ProxyConnection *conn, struct timeval * now)
 	 * are events pending.  If there are drop the connection.
 	 */
 intr_loop:
-	fd = PQsocket(conn->db);
+	/* just in case detect if too many fds */
+#ifdef FD_SETSIZE
+	if (fd >= FD_SETSIZE)
+		plproxy_error(func, "Sorry, fd_set to select() too big: FD_SETSIZE=%d, fd=%d",
+					  FD_SETSIZE, fd);
+#endif
+
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
 	res = select(fd + 1, &fds, NULL, NULL, &notimeout);
@@ -435,12 +449,22 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 		fd = PQsocket(conn->db);
 		if (fd > fd_max)
 			fd_max = fd;
+		else if (fd < 0)
+			plproxy_error(func, "libpq has lost its socket: fd=%d err=%s",
+						  fd, PQerrorMessage(conn->db));
 		FD_SET(fd, cur_set);
 	}
 
 	/* set timeout */
 	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
+
+	/* just in case detect if too many fds */
+#ifdef FD_SETSIZE
+	if (fd_max > FD_SETSIZE)
+		plproxy_error(func, "Sorry, fd_set to select() too big: FD_SETSIZE=%d, fd_max=%d",
+					  FD_SETSIZE, fd_max);
+#endif
 
 	/* wait for events */
 	res = select(fd_max + 1, &read_fds, &write_fds, NULL, &timeout);
@@ -479,7 +503,10 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 
 		/* check */
 		fd = PQsocket(conn->db);
-		if (FD_ISSET(fd, cur_set))
+		if (fd < 0)
+			elog(WARNING, "libpq dropped socket: fd=%d err=%s",
+				 fd, PQerrorMessage(conn->db));
+		else if (FD_ISSET(fd, cur_set))
 			handle_conn(func, conn);
 	}
 	return 1;
