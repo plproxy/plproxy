@@ -2,10 +2,9 @@
 
   * Fix crash due to bad error reporting when remote db
     closes socket unexpectedly.
-  * Add some sanity checking around PQsocket() to detect
-    lost sockets.
   * Use pg_strcasecmp to compare encodings.
   * Log encoding values if it fails to apply.
+  * Replace select(2) with poll(2) to allow large fd values.
 
 2007-12-10  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
 
