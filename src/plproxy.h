@@ -48,6 +48,10 @@
 
 #include <libpq-fe.h>
 
+#ifndef PG_MODULE_MAGIC
+#error PL/Proxy requires 8.2+
+#endif
+
 /*
  * backwards compat with 8.2
  */
