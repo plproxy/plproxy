@@ -2,7 +2,10 @@
 #ifndef POLL_COMPAT_H
 #define POLL_COMPAT_H
 
-#define PLPROXY_POLL_COMPAT
+/* define to test poll() compat function */
+#if 0
+#define PLPROXY_POLL_COMPAT 
+#endif
 
 #include <sys/time.h>
 
