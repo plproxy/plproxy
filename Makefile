@@ -12,7 +12,7 @@ BISON = bison
 # module setup
 MODULE_big = plproxy
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
-       src/query.c src/result.c src/type.c
+       src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 DATA_built = plproxy.sql
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch]
@@ -51,6 +51,7 @@ src/scanner.c: src/scanner.l
 # dependencies
 $(OBJS): src/plproxy.h src/rowstamp.h
 src/execute.o: src/poll_compat.h
+src/poll_compat.o: src/poll_compat.h
 
 # utility rules
 

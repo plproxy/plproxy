@@ -1,23 +1,43 @@
 
+#ifndef POLL_COMPAT_H
+#define POLL_COMPAT_H
+
+#define PLPROXY_POLL_COMPAT
+
+#include <sys/time.h>
+
+/* see if real poll() can be used */
+#ifndef PLPROXY_POLL_COMPAT
 #ifdef HAVE_POLL_H
-
 #include <poll.h>
-
 #else
 #ifdef HAVE_SYS_POLL_H
-
 #include <sys/poll.h>
-
 #else
+#define PLPROXY_POLL_COMPAT
+#endif
+#endif
+#endif
 
-#include <sys/select.h>
+/*
+ * Emulate poll() with select(), if needed.
+ */
+#ifdef PLPROXY_POLL_COMPAT
 
-#define POLLIN	(1 << 0)
-#define POLLOUT	(1 << 1)
-#define POLLHUP	(1 << 2)
+/* in/out event types */
+#define POLLIN		(1 << 0)
+#define POLLOUT		(1 << 1)
 
-#define pollfd compat_pollfd
-#define poll compat_poll
+/* rest are unused in this implementation */
+#define POLLHUP		(1 << 2)
+#define POLLPRI		(1 << 3)
+#define POLLNVAL	(1 << 4)
+#define POLLERR		(1 << 5)
+
+/* avoid namespace conflicts */
+#define pollfd	plproxy_compat_pollfd
+#define poll	plproxy_compat_poll
+#define nfds_t	plproxy_compat_nfds_t
 
 struct pollfd {
 	int fd;
@@ -25,56 +45,11 @@ struct pollfd {
 	short revents;
 };
 
-static int poll(struct pollfd *fds, unsigned nfds, int timeout_ms)
-{
-	struct pollfd *pf;
-	int i, fd_max = 0;
-	int res;
-	fd_set r_set, w_set;
+typedef unsigned long nfds_t;
 
-	FD_ZERO(&r_set);
-	FD_ZERO(&w_set);
-	for (i = 0; i < nfds; i++) {
-		pf = fds + i;
-		if (pf->fd < 0 || pf->fd >= FD_SETSIZE)
-		{
-			/* give different errno for FD_SETSIZE to allow detect it */
-			errno = (pf->fd < 0) ? EBADF : EFAULT;
-			return -1;
-		}
-		if (pf->events & POLLIN)
-			FD_SET(pf->fd, &r_set);
-		if (pf->events & POLLOUT)
-			FD_SET(pf->fd, &w_set);
-		if (pf->fd > fd_max)
-			fd_max = pf->fd;
-	}
+int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms);
 
-	if (timeout_ms >= 0)
-	{
-		struct timeval tv;
-		tv.tv_sec = timeout_ms / 1000;
-		tv.tv_usec = timeout_ms % 1000;
-		res = select(fd_max + 1, &r_set, &w_set, NULL, &tv);
-	} else
-		res = select(fd_max + 1, &r_set, &w_set, NULL, NULL);
+#endif /* PLPROXY_POLL_COMPAT */
 
-	if (res <= 0)
-		return res;
-
-	for (i = 0; i < nfds; i++) {
-		pf = fds + i;
-		pf->revents = 0;
-		if ((pf->events & POLLIN) && FD_ISSET(pf->fd, &r_set))
-			pf->revents |= POLLIN;
-		if ((pf->events & POLLOUT) && FD_ISSET(pf->fd, &w_set))
-			pf->revents |= POLLOUT;
-	}
-
-	return res;
-}
-
-#endif /* !HAVE_SYS_POLL_H */
-#endif /* !HAVE_POLL_H */
-
+#endif /* POLL_COMPAT_H */
 
