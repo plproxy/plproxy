@@ -40,14 +40,14 @@ static bool usable_binary(Oid oid)
 		case FLOAT4OID:
 		case FLOAT8OID:
 		case NUMERICOID:
-		case DATEOID:
-		case TIMEOID:
 		case BYTEAOID:
 			return true;
 
 		/* integer vs. float issue */
 		case TIMESTAMPOID:
 		case TIMESTAMPTZOID:
+		case DATEOID:
+		case TIMEOID:
 
 		/* interval binary fmt changed in 8.1 */
 		case INTERVALOID:
