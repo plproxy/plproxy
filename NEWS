@@ -1,10 +1,16 @@
-2007-12-xx  -  PlProxy 2.0.4  -  "Vampire-proof"
+2008-01-04  -  PlProxy 2.0.4  -  "Vampire-proof"
 
   * Fix crash due to bad error reporting when remote db
     closes socket unexpectedly.
   * Use pg_strcasecmp to compare encodings.
   * Log encoding values if it fails to apply.
   * Replace select(2) with poll(2) to allow large fd values.
+    Old select(2) usage could cause problems when plproxy
+    was installed on database with lot of tables/indexes,
+    where Postgres itself could have had lot of files open.
+  * Disable binary I/O for timestamp(tz) and date/time types,
+    to avoid problems when local and remote Postgres have
+    different setting for integer_datetimes.
 
 2007-12-10  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"
 
