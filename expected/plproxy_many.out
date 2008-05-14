@@ -84,7 +84,7 @@ select test_multi(0, 'foo');
 select setseed(0);
  setseed 
 ---------
-       0
+ 
 (1 row)
 
 drop function test_multi(integer, text);
@@ -93,19 +93,19 @@ returns setof integer as $$ cluster 'testcluster'; run on any; $$ language plpro
 select test_multi(0, 'foo');
  test_multi 
 ------------
-          1
-(1 row)
-
-select test_multi(0, 'foo');
- test_multi 
-------------
-          1
-(1 row)
-
-select test_multi(0, 'foo');
- test_multi 
-------------
           3
+(1 row)
+
+select test_multi(0, 'foo');
+ test_multi 
+------------
+          2
+(1 row)
+
+select test_multi(0, 'foo');
+ test_multi 
+------------
+          1
 (1 row)
 
 select test_multi(0, 'foo');
