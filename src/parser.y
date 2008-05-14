@@ -146,9 +146,10 @@ void yyerror(const char *fmt, ...)
 void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 {
 	xfunc = func;
-	got_run = got_cluster = got_connect = 0;
 
-	cur_sql = select_sql = NULL;
+	/* reset variables, in case there was error exit */
+	got_run = got_cluster = got_connect = 0;
+	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
 
 	/* setup scanner */
 	plproxy_yy_scan_bytes(body, len);
@@ -182,5 +183,6 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
 
 	xfunc = NULL;
+	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
 }
 
