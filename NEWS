@@ -1,3 +1,11 @@
+2008-05-xx  -  PlProxy 2.0.5  -  ""
+
+  * Fix crash if a function with "CLUSTER 'name';"
+    is parsed after function with "CLUSTER func();"
+  * RUN ON is now optional, defaulting to RUN ON 0;
+    Should make creating simple RPC functions easier.
+  * Make compat poll() function behave more like actual poll().
+
 2008-01-04  -  PlProxy 2.0.4  -  "Vampire-proof"
 
   * Fix crash due to bad error reporting when remote db
