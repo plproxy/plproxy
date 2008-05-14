@@ -63,25 +63,35 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms)
 	static struct fd_buf writefds = { NULL, 0 };
 
 	struct pollfd *pf;
-	int i, fd_max = 0;
-	int res;
+	int i, res, fd_max = 0;
 	struct timeval *tv = NULL;
 	struct timeval tvreal;
 
+	/* convert timeout_ms to timeval */
+	if (timeout_ms >= 0)
+	{
+		tvreal.tv_sec = timeout_ms / 1000;
+		tvreal.tv_usec = (timeout_ms % 1000) * 1000;
+		tv = &tvreal;
+	} else if (timeout_ms < -1)
+		goto err_inval;
+
+	/*
+	 * Convert pollfds to fd sets.
+	 */
 	fdbuf_zero(&readfds);
 	fdbuf_zero(&writefds);
-
 	for (i = 0; i < nfds; i++)
 	{
 		pf = fds + i;
 		if (pf->fd < 0)
-			goto badf;
+			goto err_badf;
 
 		/* sets must be equal size */
 		if (!fdbuf_resize(&readfds, pf->fd))
-			goto nomem;
+			goto err_nomem;
 		if (!fdbuf_resize(&writefds, pf->fd))
-			goto nomem;
+			goto err_nomem;
 
 		if (pf->events & POLLIN)
 			FD_SET(pf->fd, readfds.set);
@@ -91,16 +101,15 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms)
 			fd_max = pf->fd;
 	}
 
-	if (timeout_ms >= 0)
-	{
-		tvreal.tv_sec = timeout_ms / 1000;
-		tvreal.tv_usec = (timeout_ms % 1000) * 1000;
-		tv = &tvreal;
-	}
-
 	res = select(fd_max + 1, readfds.set, writefds.set, NULL, tv);
 	if (res <= 0)
 		return res;
+
+	/*
+	 * select() and poll() count fd-s differently,
+	 * need to recount them here.
+	 */
+	res = 0;
 
 	for (i = 0; i < nfds; i++)
 	{
@@ -110,17 +119,20 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms)
 			pf->revents |= POLLIN;
 		if ((pf->events & POLLOUT) && FD_ISSET(pf->fd, writefds.set))
 			pf->revents |= POLLOUT;
+		if (pf->revents)
+			res += 1;
 	}
-
-	/* select() may count differently than poll()? */
 	return res;
 
-nomem:
+err_nomem:
 	errno = ENOMEM;
 	return -1;
 
-badf:
+err_badf:
 	errno = EBADF;
+	return -1;
+err_inval:
+	errno = EINVAL;
 	return -1;
 }
 
