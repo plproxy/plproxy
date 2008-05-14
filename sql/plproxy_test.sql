@@ -127,7 +127,7 @@ create domain posint as int4 check (value > 0);
 create type struct as (id int4, data text);
 
 create function test_types2(username text, inout v_posint posint, inout v_struct struct, inout arr int8[])
-as $$ cluster 'testcluster'; run on 0; $$ language plproxy;
+as $$ cluster 'testcluster'; $$ language plproxy;
 
 \c test_part
 create domain posint as int4 check (value > 0);
