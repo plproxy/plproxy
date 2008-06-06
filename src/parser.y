@@ -38,7 +38,16 @@ static int got_run, got_cluster, got_connect;
 static QueryBuffer *cluster_sql;
 static QueryBuffer *select_sql;
 static QueryBuffer *hash_sql;
+
+/* points to one of the above ones */
 static QueryBuffer *cur_sql;
+
+/* keep the resetting code together with variables */
+static void reset_parser_vars(void)
+{
+	got_run = got_cluster = got_connect = 0;
+	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
+}
 
 %}
 
@@ -148,8 +157,7 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	xfunc = func;
 
 	/* reset variables, in case there was error exit */
-	got_run = got_cluster = got_connect = 0;
-	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
+	reset_parser_vars();
 
 	/* By default expect RUN ON ANY; */
 	xfunc->run_type = R_ANY;
@@ -184,6 +192,6 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
 
 	xfunc = NULL;
-	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
+	reset_parser_vars();
 }
 
