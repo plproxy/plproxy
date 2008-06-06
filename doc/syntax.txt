@@ -12,8 +12,8 @@ to specify where to run the function.
 The `SELECT` statement is optional, if it is missing, there will be default
 query generated based on proxy function signature.
 
-The `RUN` statment is also optional, if missing, the query will be run
-on partition 0.
+The `RUN` statment is also optional, it defaults to `RUN ON ANY`
+which means the query will be run random partition.
 
 == CONNECT ==
 

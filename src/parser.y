@@ -151,9 +151,8 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	got_run = got_cluster = got_connect = 0;
 	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
 
-	/* By default expect RUN ON 0; */
-	xfunc->run_type = R_EXACT;
-	xfunc->exact_nr = 0;
+	/* By default expect RUN ON ANY; */
+	xfunc->run_type = R_ANY;
 
 	/* setup scanner */
 	plproxy_yy_scan_bytes(body, len);
