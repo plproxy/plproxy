@@ -131,6 +131,19 @@ fn_cache_delete(ProxyFunction *func)
 	Assert(hentry != NULL);
 }
 
+/* check if function returns untyped RECORD which needs the AS clause */
+static bool
+fn_returns_dynamic_record(HeapTuple proc_tuple)
+{
+	Form_pg_proc proc_struct;
+	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
+	if (proc_struct->prorettype == RECORDOID
+		&& (heap_attisnull(proc_tuple, Anum_pg_proc_proargmodes)
+		    || heap_attisnull(proc_tuple, Anum_pg_proc_proargnames)))
+		return true;
+	return false;
+}
+
 /*
  * Allocate storage for function.
  *
@@ -156,6 +169,9 @@ fn_new(FunctionCallInfo fcinfo, HeapTuple proc_tuple)
 	f->ctx = f_ctx;
 	f->oid = fcinfo->flinfo->fn_oid;
 	plproxy_set_stamp(&f->stamp, proc_tuple);
+
+	if (fn_returns_dynamic_record(proc_tuple))
+		f->dynamic_record = 1;
 
 	MemoryContextSwitchTo(old_ctx);
 
@@ -291,8 +307,15 @@ fn_get_return_type(ProxyFunction *func,
 	MemoryContext old_ctx;
 	int			natts;
 
+
+	/*
+	 * get_call_result_type() will return newly allocated tuple,
+	 * except in case of untyped RECORD functions.
+	 */
 	old_ctx = MemoryContextSwitchTo(func->ctx);
 	rtc = get_call_result_type(fcinfo, &ret_oid, &ret_tup);
+	if (func->dynamic_record && ret_tup)
+		ret_tup = CreateTupleDescCopy(ret_tup);
 	MemoryContextSwitchTo(old_ctx);
 
 	switch (rtc)
@@ -312,6 +335,46 @@ fn_get_return_type(ProxyFunction *func,
 			plproxy_error(func, "unsupported type");
 			break;
 	}
+}
+
+/*
+ * Check if cached ->ret_composite is valid, refresh if needed.
+ */
+static void
+fn_refresh_record(FunctionCallInfo fcinfo, 
+				  ProxyFunction *func,
+				  HeapTuple proc_tuple) 
+{
+
+	TypeFuncClass rtc;
+	TupleDesc tuple_current, tuple_cached;
+	MemoryContext old_ctx;
+	int natts;
+
+	/*
+	 * Compare cached tuple to current one.
+	 */
+	tuple_cached = func->ret_composite->tupdesc;
+	rtc = get_call_result_type(fcinfo, NULL, &tuple_current);
+	Assert(rtc == TYPEFUNC_COMPOSITE);
+	if (equalTupleDescs(tuple_current, tuple_cached))
+		return;
+
+	/* move to function context */
+	old_ctx = MemoryContextSwitchTo(func->ctx);
+	tuple_current = CreateTupleDescCopy(tuple_current);
+	MemoryContextSwitchTo(old_ctx);
+
+	/* release old data */
+	plproxy_free_composite(func->ret_composite);
+	pfree(func->result_map);
+	pfree(func->remote_sql);
+
+	/* construct new data */
+	func->ret_composite = plproxy_composite_info(func, tuple_current);	
+	natts = func->ret_composite->tupdesc->natts;
+	func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
+	func->remote_sql = plproxy_standard_query(func, true);
 }
 
 /* Show part of compilation -- get source and parse */
@@ -339,6 +402,9 @@ fn_compile(FunctionCallInfo fcinfo,
 
 	/* parse body */
 	fn_parse(f, proc_tuple);
+
+	if (f->dynamic_record && f->remote_sql)
+		plproxy_error(f, "SELECT statement not allowed for dynamic RECORD functions");
 
 	/* create SELECT stmt if not specified */
 	if (f->remote_sql == NULL)
@@ -400,6 +466,11 @@ plproxy_compile(FunctionCallInfo fcinfo, bool validate)
 
 		/* now its safe to drop reference */
 		partial_func = NULL;
+	}
+	else if (f->dynamic_record)
+	{
+		/* in case of untyped RECORD, check if cached type is valid */
+		fn_refresh_record(fcinfo, f, proc_tuple);
 	}
 
 	ReleaseSysCache(proc_tuple);

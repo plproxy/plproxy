@@ -101,8 +101,36 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 	return ret;
 }
 
+void
+plproxy_free_composite(ProxyComposite *rec)
+{
+	int i;
+	int natts = rec->tupdesc->natts;
+
+	for (i = 0; i < natts; i++)
+	{
+		plproxy_free_type(rec->type_list[i]);
+		pfree(rec->name_list[i]);
+	}
+	pfree(rec->type_list);
+	pfree(rec->name_list);
+	FreeTupleDesc(rec->tupdesc);
+	pfree(rec);
+}
+
+void
+plproxy_free_type(ProxyType *type)
+{
+	if (type->name)
+		pfree(type->name);
+
+	/* hopefully I/O functions do not use ->fn_extra */
+
+	pfree(type);
+}
+
 /*
- * Build result tuplw from binary or CString values.
+ * Build result tuple from binary or CString values.
  *
  * Based on BuildTupleFromCStrings.
  */

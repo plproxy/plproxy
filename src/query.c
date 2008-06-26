@@ -215,6 +215,23 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 	}
 	appendStringInfoChar(&sql, ')');
 
+	/*
+	 * Untyped RECORD needs types specified in AS (..) clause.
+	 */
+	if (func->dynamic_record)
+	{
+		ProxyComposite *t = func->ret_composite;
+		appendStringInfo(&sql, " as (");
+		for (i = 0; i < t->tupdesc->natts; i++)
+		{
+			appendStringInfo(&sql, "%s%s %s",
+							((i > 0) ? ", " : ""),
+							t->name_list[i],
+							t->type_list[i]->name);
+		}
+		appendStringInfoChar(&sql, ')');
+	}
+
 	if (func->ret_scalar)
 		appendStringInfo(&sql, " r");
 

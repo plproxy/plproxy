@@ -226,6 +226,9 @@ typedef struct ProxyFunction
 	ProxyType **arg_types;		/* Info about arguments */
 	char	  **arg_names;		/* Argument names, may contain NULLs */
 
+	/* if the function returns untyped RECORD that needs AS clause */
+	bool		dynamic_record;
+
 	/* One of them is defined, other NULL */
 	ProxyType  *ret_scalar;		/* Type info for scalar return val */
 	ProxyComposite *ret_composite;	/* Type info for composite return val */
@@ -292,6 +295,8 @@ ProxyType  *plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send);
 char	   *plproxy_send_type(ProxyType *type, Datum val, bool allow_bin, int *len, int *fmt);
 Datum		plproxy_recv_type(ProxyType *type, char *str, int len, bool bin);
 HeapTuple	plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *fmts);
+void		plproxy_free_type(ProxyType *type);
+void		plproxy_free_composite(ProxyComposite *meta);
 
 /* cluster.c */
 void		plproxy_cluster_cache_init(void);
