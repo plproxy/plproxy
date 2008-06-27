@@ -41,8 +41,6 @@
 #include <utils/lsyscache.h>
 #include <utils/memutils.h>
 #include <utils/syscache.h>
-/* for standard_conforming_strings */
-#include <parser/gramparse.h>
 
 #include "rowstamp.h"
 
@@ -120,9 +118,9 @@ typedef struct
 	ConnState	state;			/* Connection state */
 	time_t		connect_time;	/* When connection was started */
 	time_t		query_time;		/* When last query was sent */
-	unsigned	run_on:1;		/* True it this connection should be used */
-	unsigned	same_ver:1;		/* True if dest backend has same X.Y ver */
-	unsigned	tuning:1;		/* True if tuning query is running on conn */
+	bool		run_on;			/* True it this connection should be used */
+	bool		same_ver;		/* True if dest backend has same X.Y ver */
+	bool		tuning;			/* True if tuning query is running on conn */
 } ProxyConnection;
 
 /* Info about one cluster */
@@ -155,8 +153,14 @@ typedef struct ProxyCluster
  */
 typedef struct ProxyType
 {
-	Oid			type_oid;		/* Oid of the type */
 	char	   *name;			/* Name of the type */
+	Oid			type_oid;		/* Oid of the type */
+
+	Oid			io_param;		/* Extra arg for input_func */
+	bool		for_send;		/* True if for outputting */
+	bool		has_send;		/* Has binary output */
+	bool		has_recv;		/* Has binary input */
+	bool		by_value;		/* False if Datum is a pointer to data */
 
 	/* I/O functions */
 	union
@@ -172,12 +176,6 @@ typedef struct ProxyType
 			FmgrInfo	recv_func;
 		}			in;
 	}			io;
-
-	Oid			io_param;		/* Extra arg for input_func */
-	unsigned	for_send:1;		/* True if for outputting */
-	unsigned	has_send:1;		/* Has binary output */
-	unsigned	has_recv:1;		/* Has binary input */
-	unsigned	by_value:1;		/* False if Datum is a pointer to data */
 } ProxyType;
 
 /*
@@ -191,7 +189,7 @@ typedef struct ProxyComposite
 	TupleDesc	tupdesc;		/* Return tuple descriptor */
 	ProxyType **type_list;		/* Column type info */
 	char	  **name_list;		/* Quoted column names */
-	unsigned	use_binary:1;	/* True if all columns support binary recv */
+	bool		use_binary;		/* True if all columns support binary recv */
 } ProxyComposite;
 
 /* Temp structure for query parsing */
@@ -222,9 +220,9 @@ typedef struct ProxyFunction
 
 	RowStamp	stamp;			/* for pg_proc cache validation */
 
-	int			arg_count;		/* Argument count of proxy function */
 	ProxyType **arg_types;		/* Info about arguments */
 	char	  **arg_names;		/* Argument names, may contain NULLs */
+	short		arg_count;		/* Argument count of proxy function */
 
 	/* if the function returns untyped RECORD that needs AS clause */
 	bool		dynamic_record;

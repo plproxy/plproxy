@@ -49,6 +49,7 @@ static void reset_parser_vars(void)
 {
 	got_run = got_cluster = got_connect = 0;
 	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
+	xfunc = NULL;
 }
 
 %}
@@ -156,10 +157,11 @@ void yyerror(const char *fmt, ...)
 /* actually run the flex/bison parser */
 void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 {
-	xfunc = func;
-
 	/* reset variables, in case there was error exit */
 	reset_parser_vars();
+
+	/* make current function visible to parser */
+	xfunc = func;
 
 	/* By default expect RUN ON ANY; */
 	xfunc->run_type = R_ANY;
@@ -196,7 +198,6 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	if (cluster_sql)
 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
 
-	xfunc = NULL;
 	reset_parser_vars();
 }
 
