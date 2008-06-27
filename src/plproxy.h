@@ -284,6 +284,7 @@ int			plproxy_yyget_lineno(void);
 int			plproxy_yylex_destroy(void);
 int			plproxy_yylex(void);
 void		plproxy_scanner_sqlmode(bool val);
+void		plproxy_yylex_startup(void);
 
 /* parser.y */
 void		plproxy_run_parser(ProxyFunction *func, const char *body, int len);
