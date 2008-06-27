@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0.5
+PLPROXY_VERSION = 2.0.6rc1
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
@@ -61,7 +61,7 @@ tags:
 tgz:
 	rm -rf $(TARNAME)
 	mkdir -p $(TARNAME)
-	tar c $(DIST_FILES) $(SRCS) | tar x -C $(TARNAME)
+	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(TARNAME)
 	tar czf $(TARNAME).tar.gz $(TARNAME)
 
 clean: tgzclean
