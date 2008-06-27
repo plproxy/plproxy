@@ -39,40 +39,17 @@ int plproxy_yylex_destroy(void);
 #define yylval plproxy_yylval
 
 /*
- * Allocate in CurrentMemoryContext.  That means plproxy_yylex_destroy()
- * must be called before SPI_finish().
+ * Allocate in CurrentMemoryContext.
  *
  * If we want to support flex 2.5.4, we cannot use
  * options noyyalloc, noyyrealloc, noyyfree.
  *
  * Thus such need to hack malloc() et al.
  */
-#undef FLXMALLOCLOG
 
-static inline void *my_malloc(const char *pfx, int len) {
-	void *p = palloc(len);
-#ifdef FLXMALLOCLOG
-	elog(NOTICE, "%s:%s(%d) = %p", pfx, __FUNCTION__, len, p);
-#endif
-	return p;
-}
-static inline void *my_realloc(const char *pfx, void *old, int len) {
-	void *p = repalloc(old, len);
-#ifdef FLXMALLOCLOG
-	elog(NOTICE, "%s:%s(%p, %d) = %p", pfx, __FUNCTION__, old, len, p);
-#endif
-	return p;
-}
-static inline void my_free(const char *pfx, void *p) {
-	pfree(p);
-#ifdef FLXMALLOCLOG
-	elog(NOTICE, "%s:%s(%p)", pfx, __FUNCTION__, p);
-#endif
-}
-
-#define malloc(x)  my_malloc(__FILE__, x)
-#define realloc(x, y)  my_realloc(__FILE__, x, y)
-#define free(x)  my_free(__FILE__, x)
+#define malloc palloc
+#define realloc repalloc
+#define free(p) do { if (p) pfree(p); } while (0)
 
 
 /*
@@ -85,6 +62,17 @@ static inline void my_free(const char *pfx, void *p) {
 #define YY_FLEX_SUBMINOR_VERSION 0
 #endif
 #define FLXVER ((YY_FLEX_MAJOR_VERSION*1000 + YY_FLEX_MINOR_VERSION)*1000 + YY_FLEX_SUBMINOR_VERSION)
+
+void plproxy_yylex_startup(void)
+{
+	/* there may be stale pointers around, drop them */
+#if FLXVER < 2005031
+	(YY_CURRENT_BUFFER) = NULL;
+#else
+	(yy_buffer_stack) = NULL;
+#endif
+	plproxy_yylex_destroy();
+}
 
 /*
  * compat stuff for older flex

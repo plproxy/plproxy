@@ -24,7 +24,9 @@
 void plproxy_yy_scan_bytes(const char *bytes, int len);
 
 /* avoid permanent allocations */
-#define YYSTACK_USE_ALLOCA 1
+#define malloc palloc
+#define free pfree
+
 /* remove unused code */
 #define YY_LOCATION_PRINT(File, Loc) (0)
 #define YY_(x) (x)
@@ -162,6 +164,9 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	/* By default expect RUN ON ANY; */
 	xfunc->run_type = R_ANY;
 
+	/* reinitialize scanner */
+	plproxy_yylex_startup();
+
 	/* setup scanner */
 	plproxy_yy_scan_bytes(body, len);
 
@@ -177,7 +182,7 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 			yyerror("CLUSTER statement missing");
 	}
 
-	/* reinitialize scanner */
+	/* release scanner resources */
 	plproxy_yylex_destroy();
 
 	/* copy hash data if needed */
