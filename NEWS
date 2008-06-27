@@ -1,3 +1,29 @@
+2008-07-xx  -  PlProxy 2.0.6  -  "Agile Voodoo"
+
+  = Features =
+
+  * Support functions that return plain RECORD without
+    OUT parameters.  Such functions need result type
+    specified on each call with AS clause and the
+    types need to be sent to remote database also.
+    (Lei Yonghua)
+
+    This makes possible to use PL/Proxy for dynamic queries:
+
+    CREATE FUNCTION run_query(sql text) RETURNS RECORD ..
+    SELECT * FROM run_query('select a,b from ..') AS (a int, b text);
+
+  * Accept int2/int8 values from hash function,
+    in addiditon to int4.
+
+  = Fixes =
+
+  * Replace bitfields with bool to conform better
+    with Postgres coding style.
+  * Don't use alloca() in parser.
+  * Make scanner more robust to allocation errors
+    by doing total reset before parsing.
+
 2008-06-06  -  PlProxy 2.0.5  -  "Universal Shredder"
 
   * Fix crash if a function with "CLUSTER 'name';"
