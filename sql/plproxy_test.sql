@@ -162,3 +162,39 @@ returns "RetWeird" as $$ select 1::int4, 'BazOoka'::text $$ language sql;
 \c regression
 select * from "testQuoting"('user', '1', 'dat');
 
+-- test hash types function
+create or replace function t_hash16(int4) returns int2 as $$
+declare
+    res int2;
+begin
+    res = $1::int2;
+    return res;
+end;
+$$ language plpgsql;
+
+create or replace function t_hash64(int4) returns int8 as $$
+declare
+    res int8;
+begin
+    res = $1;
+    return res;
+end;
+$$ language plpgsql;
+
+create function test_hash16(id integer, data text)
+returns text as $$ cluster 'testcluster'; run on t_hash16(id); select data; $$ language plproxy;
+select * from test_hash16('0', 'hash16');
+
+create function test_hash64(id integer, data text)
+returns text as $$ cluster 'testcluster'; run on t_hash64(id); select data; $$ language plproxy;
+select * from test_hash64('0', 'hash64');
+
+-- test argument difference
+\c test_part
+create function test_difftypes(username text, out val1 int2, out val2 float8)
+as $$ begin val1 = 1; val2 = 3;return; end; $$ language plpgsql;
+\c regression
+create function test_difftypes(username text, out val1 int4, out val2 float4)
+as $$ cluster 'testcluster'; run on 0; $$ language plproxy;
+select * from test_difftypes('types');
+

@@ -619,6 +619,7 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
 	int			i;
 	TupleDesc	desc;
+	Oid			htype;
 	ProxyCluster *cluster = func->cur_cluster;
 
 	/* execute cached plan */
@@ -626,22 +627,29 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 
 	/* get header */
 	desc = SPI_tuptable->tupdesc;
-
-	/* check if type is ok */
-	if (SPI_gettypeid(desc, 1) != INT4OID)
-		plproxy_error(func, "Hash result must be int4");
+	htype = SPI_gettypeid(desc, 1);
 
 	/* tag connections */
 	for (i = 0; i < SPI_processed; i++)
 	{
 		bool		isnull;
-		int			hashval;
+		uint32		hashval = 0;
 		HeapTuple	row = SPI_tuptable->vals[i];
 		Datum		val = SPI_getbinval(row, desc, 1, &isnull);
 
 		if (isnull)
 			plproxy_error(func, "Hash function returned NULL");
-		hashval = DatumGetInt32(val) & cluster->part_mask;
+
+		if (htype == INT4OID)
+			hashval = DatumGetInt32(val);
+		else if (htype == INT8OID)
+			hashval = DatumGetInt64(val);
+		else if (htype == INT2OID)
+			hashval = DatumGetInt16(val);
+		else
+			plproxy_error(func, "Hash result must be int2, int4 or int8");
+
+		hashval &= cluster->part_mask;
 		cluster->part_map[hashval]->run_on = 1;
 	}
 
