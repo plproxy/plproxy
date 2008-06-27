@@ -14,7 +14,7 @@
     SELECT * FROM run_query('select a,b from ..') AS (a int, b text);
 
   * Accept int2/int8 values from hash function,
-    in addiditon to int4.
+    in addition to int4.
 
   = Fixes =
 
