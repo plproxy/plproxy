@@ -22,6 +22,9 @@
 #include "plproxy.h"
 #include "parser.tab.h"
 
+/* for standard_conforming_strings */
+#include <parser/gramparse.h>
+
 /* shut down crappy flex warnings */
 int yyget_lineno(void);
 int yyget_leng(void);
