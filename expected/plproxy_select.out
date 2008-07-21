@@ -24,7 +24,7 @@ select * from test_select('user', true);
 (1 row)
 
 select * from test_select('xuser', false);
-ERROR:  PL/Proxy function public.test_select(2): bug: no result
+ERROR:  PL/Proxy function public.test_select(2): Non-SETOF function requires 1 row from remote query, got 0
 -- test errors
 create function test_select_err(xuser text, tmp boolean)
 returns integer as $$

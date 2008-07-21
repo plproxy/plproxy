@@ -211,6 +211,9 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 	else
 	{
 		func = compile_and_execute(fcinfo);
+		if (func->cur_cluster->ret_total != 1)
+			plproxy_error(func, "Non-SETOF function requires 1 row from remote query, got %d",
+						  func->cur_cluster->ret_total);
 		ret = plproxy_result(func, fcinfo);
 		plproxy_clean_results(func->cur_cluster);
 	}
