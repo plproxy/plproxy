@@ -23,6 +23,9 @@
   * Don't use alloca() in parser.
   * Make scanner more robust to allocation errors
     by doing total reset before parsing.
+  * Require exactly one row from remote query for
+    non-SETOF functions.
+  * Docs: tag all functions with embedded SELECT with SETOF.
 
 2008-06-06  -  PlProxy 2.0.5  -  "Universal Shredder"
 
