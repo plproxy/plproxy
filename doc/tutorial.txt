@@ -44,7 +44,7 @@ This example  uses plproxy in CONNECT mode, it will
 connect to `dbname=part00` and run following SQL there:
 
   CREATE FUNCTION get_user_email(i_username text)
-  RETURNS text AS $$
+  RETURNS SETOF text AS $$
     CONNECT 'dbname=part00';
     SELECT email FROM users WHERE username = $1;
   $$ LANGUAGE plproxy;
@@ -130,7 +130,7 @@ user's email address will be returned.
 This function should be created in the proxy database.
 
   CREATE OR REPLACE FUNCTION get_user_email(i_username text)
-  RETURNS text AS $$
+  RETURNS SETOF text AS $$
     CLUSTER 'usercluster';
     RUN ON hashtext(i_username) ;
     SELECT email FROM users WHERE username = i_username;

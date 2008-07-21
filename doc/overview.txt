@@ -80,7 +80,7 @@ But this can be overrided by giving explicit `SELECT` statement to run.
 
 {{{
 CREATE FUNCTION get_user_location(text)
-RETURNS text AS $$
+RETURNS SETOF text AS $$
 
     CLUSTER 'userdb';
     RUN ON hashtext($1);
