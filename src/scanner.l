@@ -28,7 +28,7 @@
 #ifndef WIN32
 #include <parser/gramparse.h>
 #else
-__attribute__((dllimport)) extern bool standard_conforming_strings;
+extern PGDLLIMPORT bool standard_conforming_strings;
 #endif
 
 
