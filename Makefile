@@ -19,6 +19,10 @@ EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch]
 PG_CPPFLAGS = -I$(PQINC)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
+#ifeq ($(PORTNAME), win32)
+SHLIB_LINK += -lws2_32 -lpgport
+#endif
+
 TARNAME = plproxy-$(PLPROXY_VERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \

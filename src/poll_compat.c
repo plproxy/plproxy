@@ -10,7 +10,10 @@
  */
 
 #include <sys/time.h>
+
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
+#endif
 
 /*
  * dynamic buffer for fd_set to avoid depending on FD_SETSIZE

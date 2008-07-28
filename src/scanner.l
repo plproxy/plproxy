@@ -25,6 +25,13 @@
 /* for standard_conforming_strings */
 #include <parser/gramparse.h>
 
+#ifndef WIN32
+#include <parser/gramparse.h>
+#else
+__attribute__((dllimport)) extern bool standard_conforming_strings;
+#endif
+
+
 /* shut down crappy flex warnings */
 int yyget_lineno(void);
 int yyget_leng(void);
