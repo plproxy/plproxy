@@ -107,7 +107,7 @@ int plproxy_yyget_lineno(void)
 /* disable stdio related code */
 #define YY_INPUT(buf, res, maxlen) { res = 0; }
 
-/* shortcut for returning CONST */
+/* shortcut for returning SQLPART */
 #define RETPART do { yylval.str = yytext; return SQLPART; } while (0)
 
 /* dollar quoting helpers */

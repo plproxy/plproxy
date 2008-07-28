@@ -57,7 +57,7 @@ static void reset_parser_vars(void)
 %name-prefix="plproxy_yy"
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
-%token <str> IDENT CONST NUMBER FNCALL STRING
+%token <str> IDENT NUMBER FNCALL STRING
 %token <str> SQLIDENT SQLPART
 
 %union
