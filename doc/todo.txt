@@ -7,20 +7,17 @@
    to have partitions with different versions.  That may mean
    lazy typeout generations.
 
- * Allow missing RUN in CLUSTER functions, which would mean `RUN ON 0;`
-   This should be useful for single-partition clusters.
-
  * Lazy value type cache, per-conn binary I/O decision.
 
 == Just thoughts ==
 
- * A way to give config to CONNECT functions.
-   - SET param = xxx; ???
+ * SPREAD BY clause for OLAP loads.
+ * Drop plproxy.get_cluster_config()...
+
  * Dynamic connstr loading for CONNECT functions?
  * RUN ON ALL: sort by?
  * RUN ON ALL: ignore errors?
  * RUN ON ANY: if one con failed, try another
  * Streaming for big resultsets, to avoid loading them fully in memory.
    This needs also backend changes.
- * Drop CONNECT, SELECT, plproxy.get_cluster_config()...
- * Debug a way to survive AS syntax with different types.
+
