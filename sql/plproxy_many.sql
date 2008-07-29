@@ -45,7 +45,7 @@ select test_multi(3, 'foo');
 drop function test_multi(integer, text);
 create function test_multi(part integer, username text)
 returns setof integer as $$ cluster 'testcluster'; run on all; $$ language plproxy;
-select test_multi(0, 'foo');
+select test_multi(0, 'foo') order by 1;
 
 -- test RUN ON 2
 drop function test_multi(integer, text);
@@ -58,9 +58,7 @@ select setseed(0);
 drop function test_multi(integer, text);
 create function test_multi(part integer, username text)
 returns setof integer as $$ cluster 'testcluster'; run on any; $$ language plproxy;
-select test_multi(0, 'foo');
-select test_multi(0, 'foo');
-select test_multi(0, 'foo');
-select test_multi(0, 'foo');
+-- expect that 20 calls use all partitions
+select distinct test_multi(0, 'foo') from generate_series(1,20) order by 1;
 
 
