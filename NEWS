@@ -1,4 +1,4 @@
-2008-07-xx  -  PlProxy 2.0.6  -  "Agile Voodoo"
+2008-09-05  -  PlProxy 2.0.6  -  "Agile Voodoo"
 
   = Features =
 
@@ -26,6 +26,9 @@
   * Require exactly one row from remote query for
     non-SETOF functions.
   * Docs: tag all functions with embedded SELECT with SETOF.
+  * Make it compile on win32 (Hiroshi Saito)
+  * Make regtest tolerant to random() implementation differneces
+    between different OSes.
 
 2008-06-06  -  PlProxy 2.0.5  -  "Universal Shredder"
 
