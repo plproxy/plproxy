@@ -24,8 +24,8 @@
 void plproxy_yy_scan_bytes(const char *bytes, int len);
 
 /* avoid permanent allocations */
-#define malloc palloc
-#define free pfree
+#define YYMALLOC palloc
+#define YYFREE   pfree
 
 /* remove unused code */
 #define YY_LOCATION_PRINT(File, Loc) (0)
