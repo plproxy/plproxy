@@ -56,14 +56,26 @@ If the string "user=" does not appear in a connect string then
 user=CURRENT_USER will be appended to the connection string by PL/Proxy.  
 This will cause PL/Proxy to connect to the partition database using
 the same username as was used to connect to the proxy database.
-Since plproxy does not know any passwords, the partition databases
-should be using "trust" authentication for connections from the proxy database
-to allow connections to the proxy database without requiring a password.  
-If the connect strings contain an explicit username then an explicit
-password can also be set in the connstring.
+This also avoids the accidental 'user=postgres' connections.
 
-Best way to set explicit passwords is to add them to .pgpass file
-in home dir of the user Postgres server runs at.
+There are several appriaches how to handle passwords:
+
+* Store passwords in .pgpass / pg_service.conf.  Secure (unless you have dblink
+  installed on same Postgres instance.)  Only problem is that it's not
+  administrable from inside the database.
+
+* Load per-user password from table/file and append it to connect string.
+  Slight problem - users can see the password.
+
+* Use single user/password for all users and put it into connect string.
+  Bigger problem - users can see the password.
+
+* Use 'trust' authentication on a pooler listening on locahost/unix socket.
+  This is good combination with PgBouncer as it can load
+  passwords directly from Postgres own pg_auth file and
+  use them for remote connections.
+
+* Use 'trust' authentication on remote database.  Obviously bad idea.
 
 An example function without the use of separate configuration tables:
 
