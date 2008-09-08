@@ -22,12 +22,13 @@
 #include "plproxy.h"
 #include "parser.tab.h"
 
-/* for standard_conforming_strings */
-#include <parser/gramparse.h>
-
+/* import standard_conforming_strings */
 #ifndef WIN32
 #include <parser/gramparse.h>
 #else
+#ifndef PGDLLIMPORT
+#define PGDLLIMPORT DLLIMPORT
+#endif
 extern PGDLLIMPORT bool standard_conforming_strings;
 #endif
 
