@@ -1,0 +1,89 @@
+set client_min_messages = 'warning';
+drop database if exists test_enc_proxy;
+drop database if exists test_enc_part;
+create database test_enc_proxy with encoding 'utf-8';
+create database test_enc_part with encoding 'euc_jp';
+\c test_enc_proxy
+create language plpgsql;
+\i plproxy.sql
+-- handler function
+CREATE FUNCTION plproxy_call_handler ()
+RETURNS language_handler AS '$libdir/plproxy' LANGUAGE C;
+-- language
+CREATE LANGUAGE plproxy HANDLER plproxy_call_handler;
+-- create cluster info functions
+create schema plproxy;
+create or replace function plproxy.get_cluster_version(cluster_name text)
+returns integer as $$ begin return 1; end; $$ language plpgsql; 
+create or replace function
+plproxy.get_cluster_partitions(cluster_name text)
+returns setof text as $$
+begin
+    if cluster_name = 'testcluster' then
+        return next 'host=127.0.0.1 dbname=test_enc_part';
+        return;
+    end if;
+    raise exception 'no such cluster: %', cluster_name;
+end; $$ language plpgsql;
+create or replace function plproxy.get_cluster_config(cluster_name text, out key text, out val text)
+returns setof record as $$ begin return; end; $$ language plpgsql;
+-------------------------------------------------
+-- intialize part
+-------------------------------------------------
+\c test_enc_part
+set client_encoding = 'utf8';
+create table intl_data (
+    id serial,
+    val text
+);
+NOTICE:  CREATE TABLE will create implicit sequence "intl_data_id_seq" for serial column "intl_data.id"
+-- insert into intl_data (val) values ('ÃµÃ¤Ã¶Ã¼Ã•Ã„Ã–Ãœ');
+insert into intl_data (val) values ('æ—¥æœ¬ã«ã¤ãã¾ã—ã¦ã¯ã€');
+select id, val from intl_data order by 1;
+ id |         val          
+----+----------------------
+  1 | æ—¥æœ¬ã«ã¤ãã¾ã—ã¦ã¯ã€
+(1 row)
+
+set client_encoding = 'sjis';
+select id, val from intl_data order by 1;
+ id |         val          
+----+----------------------
+  1 | “ú–{‚É‚Â‚«‚Ü‚µ‚Ä‚ÍA
+(1 row)
+
+set client_encoding = 'euc_jp';
+select id, val from intl_data order by 1;
+ id |         val          
+----+----------------------
+  1 | ÆüËÜ¤Ë¤Ä¤­¤Ş¤·¤Æ¤Ï¡¢
+(1 row)
+
+\c test_enc_proxy
+create function test_encoding(out id int4, out val text)
+returns setof record as $$
+    cluster 'testcluster';
+    run on 0;
+    select id, val from intl_data order by 1;
+$$ language plproxy;
+set client_encoding = 'utf8';
+select * from test_encoding();
+ id |         val          
+----+----------------------
+  1 | æ—¥æœ¬ã«ã¤ãã¾ã—ã¦ã¯ã€
+(1 row)
+
+set client_encoding = 'sjis';
+select * from test_encoding();
+ id |         val          
+----+----------------------
+  1 | “ú–{‚É‚Â‚«‚Ü‚µ‚Ä‚ÍA
+(1 row)
+
+set client_encoding = 'euc_jp';
+select * from test_encoding();
+ id |         val          
+----+----------------------
+  1 | ÆüËÜ¤Ë¤Ä¤­¤Ş¤·¤Æ¤Ï¡¢
+(1 row)
+

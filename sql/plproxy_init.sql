@@ -1,6 +1,8 @@
 
 \set ECHO none
 
+set client_min_messages = 'warning';
+
 \i plproxy.sql
 
 -- create cluster info functions
@@ -36,28 +38,27 @@ end; $$ language plpgsql;
 -- intialize part
 -------------------------------------------------
 drop database if exists test_part;
+drop database if exists test_part0;
+drop database if exists test_part1;
+drop database if exists test_part2;
+drop database if exists test_part3;
 create database test_part;
+create database test_part0;
+create database test_part1;
+create database test_part2;
+create database test_part3;
+
+drop database if exists test_enc_proxy;
+drop database if exists test_enc_part;
+
 \c test_part
 create language plpgsql;
-
-drop database if exists test_part0;
-create database test_part0;
 \c test_part0
 create language plpgsql;
-
-drop database if exists test_part1;
-create database test_part1;
 \c test_part1
 create language plpgsql;
-
-drop database if exists test_part2;
-create database test_part2;
 \c test_part2
 create language plpgsql;
-
-drop database if exists test_part3;
-create database test_part3;
 \c test_part3
 create language plpgsql;
-
 

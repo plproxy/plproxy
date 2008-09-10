@@ -31,7 +31,8 @@ DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
-	  plproxy_errors plproxy_clustermap plproxy_dynamic_record
+	  plproxy_errors plproxy_clustermap plproxy_dynamic_record \
+	  plproxy_encoding
 REGRESS_OPTS = --load-language=plpgsql
 
 # load PGXS makefile
