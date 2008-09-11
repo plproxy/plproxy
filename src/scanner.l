@@ -144,7 +144,7 @@ static const char *unquote(const char *qstr, bool std);
 SPACE		[ \t\n\r]
 
 /* sql ident.  include dotted parts also */
-WORD		[a-z][a-z0-9_]*
+WORD		[_a-z\200-\377][a-z0-9_\200-\377]*
 IDENT		{WORD}({SPACE}*[.]{SPACE}*{WORD})*
 
 /* argument ref by val: $1 */
