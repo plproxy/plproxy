@@ -96,11 +96,13 @@ plproxy_query_add_ident(QueryBuffer *q, const char *ident)
 		if (fn_idx < 0 || fn_idx >= q->func->arg_count)
 			return false;
 	}
-	else
+	else if (q->func->arg_names)
 	{
 		for (i = 0; i < q->func->arg_count; i++)
 		{
-			if (strcasecmp(ident, q->func->arg_names[i]) == 0)
+			if (!q->func->arg_names[i])
+				continue;
+			if (pg_strcasecmp(ident, q->func->arg_names[i]) == 0)
 			{
 				fn_idx = i;
 				break;
