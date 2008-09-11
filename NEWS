@@ -1,3 +1,34 @@
+2008-09-xx  -  PlProxy 2.0.7  -  ""
+
+  = Fixes =
+
+  * Make sure client_encoding on remote server encoding is set to
+    local server encoding.  Currently plproxy set it to local
+    client_encoding, which is wrong as all data is immediately converted
+    to server_encoding by Postgres.  The problem went mostly undetected
+    because of plproxy use of binary I/O which bypasses encoding
+    conversions.
+    (Hiroshi Saito)
+
+    So if you pass non-ascii data around and your client, proxy server
+    and target server may have different encodings, you may want to
+    re-check your data.
+
+  * Disable binary i/o completely.  Currently the decision is done
+    too early, before remote connection is established.  Currently
+    the fix was to use only "safe" types for binary I/O, but now
+    that text types are also unsafe, it's pointless.  Instead
+    type handling should be rewritten to allow lazy decision-making.
+
+  * Fix crash with unnamed function input arguments.
+
+  * Fix compilation with 8.2 on Win32 by providing PGDLLIMPORT if unset.
+    (Hiroshi Saito)
+
+  * Accept >128 chars as part of identifier names.
+
+  * New regtest to detect encoding problems.
+
 2008-09-05  -  PlProxy 2.0.6  -  "Agile Voodoo"
 
   = Features =
