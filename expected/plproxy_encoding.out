@@ -36,10 +36,11 @@ end; $$ language plpgsql;
 set client_encoding = 'utf8';
 create table intl_data (id int4, "ã‚³ãƒ©ãƒ " text);
 insert into intl_data values (1, 'ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿');
+set client_encoding = 'sjis';
 select * from intl_data order by 1;
- id |     ã‚³ãƒ©ãƒ      
+ id |     ƒRƒ‰ƒ€     
 ----+----------------
-  1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
+  1 | ƒŠƒ‚[ƒgƒf[ƒ^
 (1 row)
 
 set client_encoding = 'euc_jp';
@@ -47,6 +48,13 @@ select * from intl_data order by 1;
  id |     ¥³¥é¥à     
 ----+----------------
   1 | ¥ê¥â¡¼¥È¥Ç¡¼¥¿
+(1 row)
+
+set client_encoding = 'utf-8';
+select * from intl_data order by 1;
+ id |     ã‚³ãƒ©ãƒ      
+----+----------------
+  1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
 (1 row)
 
 -- test
@@ -56,6 +64,13 @@ create table intl_data (id int4, "ã‚³ãƒ©ãƒ " text);
 create function test_encoding() returns setof intl_data as $$
     cluster 'testcluster'; run on 0; select * from intl_data order by 1;
 $$ language plproxy;
+set client_encoding = 'sjis';
+select * from test_encoding();
+ id |     ƒRƒ‰ƒ€     
+----+----------------
+  1 | ƒŠƒ‚[ƒgƒf[ƒ^
+(1 row)
+
 set client_encoding = 'euc_jp';
 select * from test_encoding();
  id |     ¥³¥é¥à     
@@ -68,13 +83,6 @@ select * from test_encoding();
  id |     ã‚³ãƒ©ãƒ      
 ----+----------------
   1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
-(1 row)
-
-set client_encoding = 'sjis';
-select * from test_encoding();
- id |     ƒRƒ‰ƒ€     
-----+----------------
-  1 | ƒŠƒ‚[ƒgƒf[ƒ^
 (1 row)
 
 \c template1
@@ -106,10 +114,11 @@ end; $$ language plpgsql;
 set client_encoding = 'utf8';
 create table intl_data (id int4, "ã‚³ãƒ©ãƒ " text);
 insert into intl_data values (1, 'ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿');
+set client_encoding = 'sjis';
 select * from intl_data order by 1;
- id |     ã‚³ãƒ©ãƒ      
+ id |     ƒRƒ‰ƒ€     
 ----+----------------
-  1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
+  1 | ƒŠƒ‚[ƒgƒf[ƒ^
 (1 row)
 
 set client_encoding = 'euc_jp';
@@ -117,6 +126,13 @@ select * from intl_data order by 1;
  id |     ¥³¥é¥à     
 ----+----------------
   1 | ¥ê¥â¡¼¥È¥Ç¡¼¥¿
+(1 row)
+
+set client_encoding = 'utf-8';
+select * from intl_data order by 1;
+ id |     ã‚³ãƒ©ãƒ      
+----+----------------
+  1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
 (1 row)
 
 -- test
@@ -126,6 +142,13 @@ create table intl_data (id int4, "ã‚³ãƒ©ãƒ " text);
 create function test_encoding() returns setof intl_data as $$
     cluster 'testcluster'; run on 0; select * from intl_data order by 1;
 $$ language plproxy;
+set client_encoding = 'sjis';
+select * from test_encoding();
+ id |     ƒRƒ‰ƒ€     
+----+----------------
+  1 | ƒŠƒ‚[ƒgƒf[ƒ^
+(1 row)
+
 set client_encoding = 'euc_jp';
 select * from test_encoding();
  id |     ¥³¥é¥à     
@@ -133,17 +156,10 @@ select * from test_encoding();
   1 | ¥ê¥â¡¼¥È¥Ç¡¼¥¿
 (1 row)
 
-set client_encoding = 'utf8';
+set client_encoding = 'utf-8';
 select * from test_encoding();
  id |     ã‚³ãƒ©ãƒ      
 ----+----------------
   1 | ãƒªãƒ¢ãƒ¼ãƒˆãƒ‡ãƒ¼ã‚¿
-(1 row)
-
-set client_encoding = 'sjis';
-select * from test_encoding();
- id |     ƒRƒ‰ƒ€     
-----+----------------
-  1 | ƒŠƒ‚[ƒgƒf[ƒ^
 (1 row)
 
