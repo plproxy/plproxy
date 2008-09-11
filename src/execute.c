@@ -103,9 +103,9 @@ tune_connection(ProxyFunction *func, ProxyConnection *conn)
 	conn->same_ver = cmp_branch(dst_ver, PG_VERSION);
 
 	/*
-	 * sync client_encoding
+	 * Make sure remote I/O is done using local server_encoding.
 	 */
-	this_enc = pg_get_client_encoding_name();
+	this_enc = GetDatabaseEncodingName();
 	dst_enc = PQparameterStatus(conn->db, "client_encoding");
 	if (dst_enc && strcmp(this_enc, dst_enc))
 	{
