@@ -28,20 +28,35 @@
  */
 static bool usable_binary(Oid oid)
 {
+	/*
+	 * We need to properly track if remote server has:
+	 * - same major:minor version
+	 * - same server_encoding
+	 * - same integer_timestamps
+	 *
+	 * Currently plproxy does the decision too early,
+	 * thus no safe types are left.  Disable is totally,
+	 * until lazy decision-making is possible.
+	 */
+	if (1)
+		return false;
+
 	switch (oid)
 	{
 		case BOOLOID:
 		case INT2OID:
 		case INT4OID:
 		case INT8OID:
-		case TEXTOID:
-		case BPCHAROID:
-		case VARCHAROID:
 		case FLOAT4OID:
 		case FLOAT8OID:
 		case NUMERICOID:
 		case BYTEAOID:
 			return true;
+
+		/* client_encoding issue */
+		case TEXTOID:
+		case BPCHAROID:
+		case VARCHAROID:
 
 		/* integer vs. float issue */
 		case TIMESTAMPOID:
