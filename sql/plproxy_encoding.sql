@@ -3,6 +3,8 @@
 -- encoding tests
 -------------------------------------------------
 
+set client_encoding = 'utf8';
+
 -- google translate says:
 -- column: コラム
 -- table: テーブル
