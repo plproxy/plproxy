@@ -263,13 +263,13 @@ get_config(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 		if (val == NULL)
 			plproxy_error(func, "val must not be NULL");
 
-		if (strcasecmp(key, "statement_timeout") == 0)
+		if (pg_strcasecmp(key, "statement_timeout") == 0)
 			/* ignore */ ;
-		else if (strcasecmp("connection_lifetime", key) == 0)
+		else if (pg_strcasecmp("connection_lifetime", key) == 0)
 			cf->connection_lifetime = atoi(val);
-		else if (strcasecmp("query_timeout", key) == 0)
+		else if (pg_strcasecmp("query_timeout", key) == 0)
 			cf->query_timeout = atoi(val);
-		else if (strcasecmp("disable_binary", key) == 0)
+		else if (pg_strcasecmp("disable_binary", key) == 0)
 			cf->disable_binary = atoi(val);
 		else
 			plproxy_error(func, "Unknown config param: %s", key);
