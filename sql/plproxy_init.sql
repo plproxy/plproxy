@@ -52,13 +52,18 @@ drop database if exists test_enc_proxy;
 drop database if exists test_enc_part;
 
 \c test_part
+drop language if exists plpgsql;
 create language plpgsql;
 \c test_part0
+drop language if exists plpgsql;
 create language plpgsql;
 \c test_part1
+drop language if exists plpgsql;
 create language plpgsql;
 \c test_part2
+drop language if exists plpgsql;
 create language plpgsql;
 \c test_part3
+drop language if exists plpgsql;
 create language plpgsql;
 
