@@ -22,6 +22,7 @@ create database test_enc_part with encoding 'utf-8';
 
 -- initialize proxy db
 \c test_enc_proxy
+set client_min_messages = 'warning';
 set client_encoding = 'utf-8';
 drop language if exists plpgsql;
 create language plpgsql;
@@ -49,6 +50,7 @@ create function test_encoding3(text) returns setof intl_data as $$
 $$ language plproxy;
 -- initialize part db
 \c test_enc_part
+set client_min_messages = 'warning';
 drop language if exists plpgsql;
 create language plpgsql;
 set client_encoding = 'utf8';
@@ -90,6 +92,7 @@ create database test_enc_part with encoding 'euc_jp';
 
 -- initialize proxy db
 \c test_enc_proxy
+set client_min_messages = 'warning';
 drop language if exists plpgsql;
 create language plpgsql;
 \i plproxy.sql
@@ -118,6 +121,7 @@ $$ language plproxy;
 
 -- initialize part db
 \c test_enc_part
+set client_min_messages = 'warning';
 drop language if exists plpgsql;
 create language plpgsql;
 set client_encoding = 'utf8';

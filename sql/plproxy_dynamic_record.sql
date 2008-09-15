@@ -31,8 +31,6 @@ select * from dynamic_query('select id, username from dynamic_query_test') as fo
 
 
 -- test errors
-select * from dynamic_query('select * from dynamic_query_test');
-
 create or replace function dynamic_query_select()
 returns setof record as $x$
     cluster 'map0';
