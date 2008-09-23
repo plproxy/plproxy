@@ -12,7 +12,7 @@ Build: sh
  make
 Clean: sh
  make clean || true
-Build-Depends: postgresql-server-dev-8.2
+Build-Depends: postgresql-server-dev-8.3 | postgresql-server-dev-8.2, flex | flex-old, bison
 
 Package: plproxy2
 Architecture: any
