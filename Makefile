@@ -6,9 +6,6 @@ PLPROXY_VERSION = 2.0.7
 PQINC = $(shell pg_config --includedir)
 PQLIB = $(shell pg_config --libdir)
 
-FLEX = flex
-BISON = bison 
-
 # module setup
 MODULE_big = plproxy
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
@@ -42,6 +39,10 @@ include $(PGXS)
 ifeq ($(PORTNAME), win32)
 SHLIB_LINK += -lws2_32 -lpgport
 endif
+
+# PGXS may define them as empty
+FLEX := $(or $(FLEX), flex)
+BISON := $(or $(BISON), bison)
 
 # parser rules
 src/scanner.o: src/parser.tab.h
