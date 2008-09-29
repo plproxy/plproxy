@@ -1,4 +1,4 @@
-2008-09-xx  -  PlProxy 2.0.7  -  ""
+2008-09-29  -  PlProxy 2.0.7  -  "The Ninja of Shadow"
 
   = Fixes =
 
@@ -31,6 +31,9 @@
 
   * Use pg_strcasecmp instead of strcasecmp to be consistent with
     Postgres code.
+
+  * deb: Survive empty FLEX/BISON defs from PGXS.
+    Accept also postgresql-server-dev-8.3 as build dep.
 
 2008-09-05  -  PlProxy 2.0.6  -  "Agile Voodoo"
 
