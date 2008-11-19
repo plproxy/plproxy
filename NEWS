@@ -1,3 +1,10 @@
+2008-12-xx  -  PlProxy 2.0.8  -  ""
+
+  = Features =
+
+  * If query is canceled, send cancel request to remote db too.
+    (Ye Wenbin)
+
 2008-09-29  -  PlProxy 2.0.7  -  "The Ninja of Shadow"
 
   = Fixes =
