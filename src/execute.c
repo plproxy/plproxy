@@ -281,6 +281,7 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 			PQfinish(conn->db);
 			conn->db = NULL;
 			conn->state = C_NONE;
+			conn->tuning = 0;
 		case C_NONE:
 			break;
 	}
