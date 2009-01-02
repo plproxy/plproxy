@@ -1,9 +1,23 @@
-2008-12-xx  -  PlProxy 2.0.8  -  ""
+2009-01-xx  -  PlProxy 2.0.8  -  ""
 
   = Features =
 
   * If query is canceled, send cancel request to remote db too.
     (Ye Wenbin)
+
+  * Allow direct argument references in RUN ON statement:
+    Now this works: RUN ON $1;   RUN ON arg;
+
+  * Add FAQ to docs which answers few common questions.
+
+  = Fixes =
+
+  * Clear ->tuning bit on connection close.
+
+    If 'SET client_encoding' fails, the bit can stay set,
+    thus creating always-failing connection slot.
+
+    Reported and analyzed by Jonah Harris.
 
 2008-09-29  -  PlProxy 2.0.7  -  "The Ninja of Shadow"
 
