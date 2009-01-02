@@ -54,6 +54,10 @@ Run partition_func() which should return one or more hash values.  (int4)
 Query will be run on tagged partitions.  If more than one partition was
 tagged, query will be sent in parallel to them.
 
+  RUN ON argname;  RUN ON $1;
+
+Take hash value directly from function argument.
+
 == SELECT ==
 
   SELECT .... ;
