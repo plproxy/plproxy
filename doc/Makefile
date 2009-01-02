@@ -5,7 +5,7 @@ web = mkz@shell.pgfoundry.org:/home/pgfoundry.org/groups/plproxy/htdocs/
 
 ASCIIDOC = asciidoc
 
-HTML = config.html syntax.html todo.html tutorial.html
+HTML = config.html syntax.html todo.html tutorial.html faq.html
 
 all:
 
