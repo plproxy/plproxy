@@ -198,3 +198,23 @@ create function test_difftypes(username text, out val1 int4, out val2 float4)
 as $$ cluster 'testcluster'; run on 0; $$ language plproxy;
 select * from test_difftypes('types');
 
+-- test simple hash
+\c test_part
+create function test_simple(partno int4) returns int4
+as $$ begin return $1; end; $$ language plpgsql;
+\c regression
+create function test_simple(partno int4) returns int4
+as $$
+    cluster 'testcluster';
+    run on $1;
+$$ language plproxy;
+select * from test_simple(0);
+drop function test_simple(int4);
+
+create function test_simple(partno int4) returns int4
+as $$
+    cluster 'testcluster';
+    run on partno;
+$$ language plproxy;
+select * from test_simple(0);
+

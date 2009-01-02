@@ -108,7 +108,16 @@ run_spec: hash_func sql_token_list	{ xfunc->run_type = R_HASH; }
 		| NUMBER					{ xfunc->run_type = R_EXACT; xfunc->exact_nr = atoi($1); }
 		| ANY						{ xfunc->run_type = R_ANY; }
 		| ALL						{ xfunc->run_type = R_ALL; }
+		| hash_direct				{ xfunc->run_type = R_HASH; }
 		;
+
+hash_direct: IDENT	{	hash_sql = plproxy_query_start(xfunc, false);
+						cur_sql = hash_sql;
+						plproxy_query_add_const(cur_sql, "select ");
+						if (!plproxy_query_add_ident(cur_sql, $1))
+							yyerror("invalid argument reference: %s", $1);	
+					}
+		 ;
 
 hash_func: FNCALL	{ hash_sql = plproxy_query_start(xfunc, false);
 	 				  cur_sql = hash_sql;
