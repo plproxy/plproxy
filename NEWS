@@ -1,11 +1,11 @@
-2009-01-xx  -  PlProxy 2.0.8  -  ""
+2009-01-16  -  PlProxy 2.0.8  -  "Simple Multi-Tentacle Arhitecture"
 
   = Features =
 
   * If query is canceled, send cancel request to remote db too.
     (Ye Wenbin)
 
-  * Allow direct argument references in RUN ON statement:
+  * Allow direct argument references in RUN ON statement.
     Now this works: RUN ON $1;   RUN ON arg;
 
   * Add FAQ to docs which answers few common questions.
