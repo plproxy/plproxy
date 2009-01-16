@@ -9,6 +9,8 @@
 
  * Lazy value type cache, per-conn binary I/O decision.
 
+ * named connactions (ala SQL-MED)
+
 == Just thoughts ==
 
  * SPREAD BY clause for OLAP loads.
@@ -21,3 +23,10 @@
  * Streaming for big resultsets, to avoid loading them fully in memory.
    This needs also backend changes.
 
+ * integrate with memcache:
+   
+   set_object(id, data)
+   CACHE SET object(id) = data;
+
+   get_object(id)
+   CACHE GET object(id)
