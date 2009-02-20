@@ -1,7 +1,9 @@
 
-Original author
----------------
-Sven Suursoho (PL/Proxy 1, PL/Proxy 2 core)
+Original Authors
+----------------
+Idea             - Hannu Krosing
+Language Design  - Hannu Krosing & Asko Oja
+Implementation   - Sven Suursoho
 
 
 Maintainer
@@ -11,7 +13,6 @@ Marko Kreen
 
 Contributors
 ------------
-
 Hiroshi Saito
 Jonah Harris
 Lei Yonghua
