@@ -183,6 +183,8 @@ select			{ BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* function call */
 
+	/* hack to avoid parsing "SELECT (" as function call */
+select{SPACE}*[(]	{ yyless(6); BEGIN(sql); yylval.str = yytext; return SELECT; }
 {IDENT}{SPACE}*[(]	{ BEGIN(sql); yylval.str = yytext; return FNCALL; }
 
 	/* PL/Proxy language comments/whitespace */

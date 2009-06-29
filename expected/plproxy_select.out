@@ -35,3 +35,15 @@ returns integer as $$
 $$ language plproxy;
 select * from test_select_err('user', true);
 ERROR:  PL/Proxy function public.test_select_err(2): Compile error at line 5: Only one SELECT statement allowed
+create function get_zero()
+returns setof integer as $x$
+    cluster 'testcluster';
+    run on all;
+    select (0*0);
+$x$ language plproxy;
+select * from get_zero();
+ get_zero 
+----------
+        0
+(1 row)
+

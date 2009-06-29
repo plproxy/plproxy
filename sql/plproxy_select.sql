@@ -35,3 +35,12 @@ $$ language plproxy;
 
 select * from test_select_err('user', true);
 
+
+create function get_zero()
+returns setof integer as $x$
+    cluster 'testcluster';
+    run on all;
+    select (0*0);
+$x$ language plproxy;
+
+select * from get_zero();
