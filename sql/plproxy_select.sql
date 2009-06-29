@@ -44,3 +44,28 @@ returns setof integer as $x$
 $x$ language plproxy;
 
 select * from get_zero();
+
+\c test_part
+create table numbers (
+    num int,
+    name text
+);
+insert into numbers values (1, 'one');
+insert into numbers values (2, 'two');
+
+create function ret_numtuple(int)
+returns numbers as $x$
+    select num, name from numbers where num = $1;
+$x$ language sql;
+
+\c regression
+create type numbers_type as (num int, name text);
+
+create function get_one()
+returns setof numbers_type as $x$
+    cluster 'testcluster';
+    run on all;
+    select (ret_numtuple(1)).num, (ret_numtuple(1)).name;
+$x$ language plproxy;
+
+select * from get_one();
