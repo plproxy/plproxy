@@ -69,13 +69,13 @@ plproxy_query_add_const(QueryBuffer *q, const char *data)
 static void
 add_ref(StringInfo buf, int sql_idx, ProxyFunction *func, int fn_idx, bool add_type)
 {
-	char		tmp[32];
+	char		tmp[1 + 3 + 2 + NAMEDATALEN*2 + 1];
 
 	if (add_type)
-		sprintf(tmp, "$%d::%s", sql_idx + 1,
+		snprintf(tmp, sizeof(tmp), "$%d::%s", sql_idx + 1,
 				func->arg_types[fn_idx]->name);
 	else
-		sprintf(tmp, "$%d", sql_idx + 1);
+		snprintf(tmp, sizeof(tmp), "$%d", sql_idx + 1);
 	appendStringInfoString(buf, tmp);
 }
 
