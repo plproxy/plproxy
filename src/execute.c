@@ -774,15 +774,15 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 	gotbin = 0;
 	for (i = 0; i < func->remote_sql->arg_count; i++)
 	{
+		int idx = func->remote_sql->arg_lookup[i];
 		plengths[i] = 0;
 		pformats[i] = 0;
-		if (PG_ARGISNULL(i))
+		if (PG_ARGISNULL(idx))
 		{
 			values[i] = NULL;
 		}
 		else
 		{
-			int			idx = func->remote_sql->arg_lookup[i];
 			bool		bin = cluster->config.disable_binary ? 0 : 1;
 
 			values[i] = plproxy_send_type(func->arg_types[idx],
