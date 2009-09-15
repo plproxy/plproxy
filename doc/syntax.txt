@@ -22,6 +22,19 @@ which means the query will be run random partition.
 Specifies exact location where to connect and execute the query.
 If several functions have same connstr, they will use same connection.
 
+  CONNECT connect_func(...);
+  CONNECT argname;
+  CONNECT $argnr;
+
+Connect string is taken from function result or directly from argument.
+If several functions have same connstr, they will use same connection.
+
+NB: giving untrusted users ability to specify full connect string creates
+security hole.  Eg it can used to read cleartext passwords from `~/.pgpass`
+or `pg_service.conf`.  If such function cannot be avoided, it's access rights
+need to be restricted.
+
+
 == CLUSTER ==
 
   CLUSTER 'cluster_name';
@@ -51,7 +64,7 @@ Run on partition number `<NR>`.
   RUN ON partition_func(..);
 
 Run partition_func() which should return one or more hash values.  (int4)
-Query will be run on tagged partitions.  If more than one partition was
+query will be run on tagged partitions.  If more than one partition was
 tagged, query will be sent in parallel to them.
 
   RUN ON argname;  RUN ON $1;
@@ -77,4 +90,38 @@ and same names too.
 
 Proxy function arguments can be referenced using name or `$n` syntax.
 Everything that is not argument reference is just passed on.
+
+== Dynamic records ==
+
+PL/Proxy supports function returning plain RECORD type.  Such functions
+need the result type specified at call site.  Main use-case is to run
+random queries on partitions.  Very simple example:
+
+    CREATE OR REPLACE FUNCTION dynamic_query(q text)
+    RETURNS SETOF RECORD AS $$
+        CLUSTER 'mycluster';
+        RUN ON ALL;
+    $$ LANGUAGE plproxy;
+
+Corresponding function in partitions:
+
+    CREATE OR REPLACE FUNCTION dynamic_query(sql text)
+    RETURNS SETOF RECORD AS $$
+    DECLARE
+        rec RECORD;
+    BEGIN
+        FOR rec IN EXECUTE sql
+        LOOP
+            RETURN NEXT rec;
+        END LOOP;
+        RETURN;
+    END;
+    $$ LANGUAGE plpgsql;
+
+Sample request:
+
+    SELECT * FROM dynamic_query('SELECT id, username FROM sometable')
+                  AS (id integer, username text);
+
+The types given in AS clause must match actual types from query.
 
