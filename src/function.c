@@ -193,6 +193,7 @@ fn_delete(ProxyFunction *func, bool in_cache)
 	/* free cached plans */
 	plproxy_query_freeplan(func->hash_sql);
 	plproxy_query_freeplan(func->cluster_sql);
+	plproxy_query_freeplan(func->connect_sql);
 
 	/* release function storage */
 	MemoryContextDelete(func->ctx);
@@ -415,6 +416,8 @@ fn_compile(FunctionCallInfo fcinfo,
 		plproxy_query_prepare(f, fcinfo, f->cluster_sql);
 	if (f->hash_sql)
 		plproxy_query_prepare(f, fcinfo, f->hash_sql);
+	if (f->connect_sql)
+		plproxy_query_prepare(f, fcinfo, f->connect_sql);
 
 	/* sanity check */
 	if (f->run_type == R_ALL && !fcinfo->flinfo->fn_retset)

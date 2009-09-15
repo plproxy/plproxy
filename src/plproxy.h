@@ -239,6 +239,7 @@ typedef struct ProxyFunction
 	ProxyQuery *hash_sql;		/* Hash execution for R_HASH */
 	int			exact_nr;		/* Hash value for R_EXACT */
 	const char *connect_str;	/* libpq string for CONNECT function */
+	ProxyQuery *connect_sql;	/* Optional query for CONNECT function */
 
 	/*
 	 * calculated data

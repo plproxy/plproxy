@@ -40,6 +40,7 @@ static int got_run, got_cluster, got_connect;
 static QueryBuffer *cluster_sql;
 static QueryBuffer *select_sql;
 static QueryBuffer *hash_sql;
+static QueryBuffer *connect_sql;
 
 /* points to one of the above ones */
 static QueryBuffer *cur_sql;
@@ -48,7 +49,7 @@ static QueryBuffer *cur_sql;
 static void reset_parser_vars(void)
 {
 	got_run = got_cluster = got_connect = 0;
-	cur_sql = select_sql = cluster_sql = hash_sql = NULL;
+	cur_sql = select_sql = cluster_sql = hash_sql = connect_sql = NULL;
 	xfunc = NULL;
 }
 
@@ -78,8 +79,25 @@ connect_stmt: CONNECT connect_spec ';'	{
 					got_connect = 1; }
 			;
 
-connect_spec: STRING	{ xfunc->connect_str = plproxy_func_strdup(xfunc, $1); }
+connect_spec: connect_func sql_token_list | connect_name | connect_direct 
 			;
+
+connect_direct:	IDENT	{	connect_sql = plproxy_query_start(xfunc, false);
+						cur_sql = connect_sql;
+						plproxy_query_add_const(cur_sql, "select ");
+						if (!plproxy_query_add_ident(cur_sql, $1))
+							yyerror("invalid argument reference: %s", $1);	
+					}
+			;
+
+connect_name: STRING	{ xfunc->connect_str = plproxy_func_strdup(xfunc, $1); }
+			;
+
+connect_func: FNCALL	{ connect_sql = plproxy_query_start(xfunc, false);
+	 				  cur_sql = connect_sql;
+	 				  plproxy_query_add_const(cur_sql, "select * from ");
+	 				  plproxy_query_add_const(cur_sql, $1); }
+		 ;
 
 cluster_stmt: CLUSTER cluster_spec ';' {
 							if (got_cluster)
@@ -206,6 +224,9 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 
 	if (cluster_sql)
 		xfunc->cluster_sql = plproxy_query_finish(cluster_sql);
+
+	if (connect_sql)
+		xfunc->connect_sql = plproxy_query_finish(connect_sql);
 
 	reset_parser_vars();
 }

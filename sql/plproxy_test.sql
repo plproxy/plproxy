@@ -143,6 +143,15 @@ create function test_connect1() returns text
 as $$ connect 'dbname=test_part'; select current_database(); $$ language plproxy;
 select * from test_connect1();
 
+-- test CONNECT $argument
+create function test_connect2(connstr text) returns text
+as $$ connect connstr; select current_database(); $$ language plproxy;
+select * from test_connect2('dbname=test_part');
+
+-- test CONNECT function($argument)
+create function test_connect3(connstr text) returns text
+as $$ connect text(connstr); select current_database(); $$ language plproxy;
+select * from test_connect3('dbname=test_part');
 
 -- test quoting function
 create type "RetWeird" as (

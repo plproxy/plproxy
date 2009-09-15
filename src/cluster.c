@@ -354,7 +354,7 @@ new_cluster(const char *name)
  * Get cached or create new fake cluster.
  */
 static ProxyCluster *
-fake_cluster(ProxyFunction *func)
+fake_cluster(ProxyFunction *func, const char *connect_str)
 {
 	ProxyCluster *cluster;
 	ProxyConnection *conn;
@@ -363,7 +363,7 @@ fake_cluster(ProxyFunction *func)
 	/* search if cached */
 	for (cluster = fake_cluster_list; cluster; cluster = cluster->next)
 	{
-		if (strcmp(cluster->name, func->connect_str) == 0)
+		if (strcmp(cluster->name, connect_str) == 0)
 			break;
 	}
 
@@ -375,7 +375,7 @@ fake_cluster(ProxyFunction *func)
 	old_ctx = MemoryContextSwitchTo(cluster_mem);
 
 	cluster = palloc0(sizeof(*cluster));
-	cluster->name = pstrdup(func->connect_str);
+	cluster->name = pstrdup(connect_str);
 	cluster->version = 1;
 	cluster->part_count = 1;
 	cluster->part_mask = 0;
@@ -400,17 +400,17 @@ fake_cluster(ProxyFunction *func)
  * Call resolve function
  */
 static const char *
-cluster_resolve_name(ProxyFunction *func, FunctionCallInfo fcinfo)
+resolve_query(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *query)
 {
 	const char *name;
 	HeapTuple	row;
 	TupleDesc	desc;
 
-	plproxy_query_exec(func, fcinfo, func->cluster_sql);
+	plproxy_query_exec(func, fcinfo, query);
 
 	if (SPI_processed != 1)
 		plproxy_error(func, "'%s' returned %d rows, expected 1",
-					  func->cluster_sql->sql, SPI_processed);
+					  query->sql, SPI_processed);
 
 	desc = SPI_tuptable->tupdesc;
 	if (SPI_gettypeid(desc, 1) != TEXTOID)
@@ -419,7 +419,7 @@ cluster_resolve_name(ProxyFunction *func, FunctionCallInfo fcinfo)
 	row = SPI_tuptable->vals[0];
 	name = SPI_getvalue(row, desc, 1);
 	if (name == NULL)
-		plproxy_error(func, "Cluster name map func returned NULL");
+		plproxy_error(func, "Cluster/connect name map func returned NULL");
 
 	return name;
 }
@@ -438,15 +438,24 @@ plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 	const char *name;
 	Datum		dname;
 
-	/* functions used CONNECT */
+
+	/* functions used CONNECT with query */
+	if (func->connect_sql) {
+		const char *cstr;
+		cstr = resolve_query(func, fcinfo, func->connect_sql);
+		return fake_cluster(func, cstr);
+	}
+
+
+	/* functions used straight CONNECT */
 	if (func->connect_str)
-		return fake_cluster(func);
+		return fake_cluster(func, func->connect_str);
 
 	/* initialize plans on demand only */
 	plproxy_cluster_plan_init();
 
 	if (func->cluster_sql)
-		name = cluster_resolve_name(func, fcinfo);
+		name = resolve_query(func, fcinfo, func->cluster_sql);
 	else
 		name = func->cluster_name;
 

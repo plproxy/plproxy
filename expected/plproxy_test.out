@@ -243,6 +243,24 @@ select * from test_connect1();
  test_part
 (1 row)
 
+-- test CONNECT $argument
+create function test_connect2(connstr text) returns text
+as $$ connect connstr; select current_database(); $$ language plproxy;
+select * from test_connect2('dbname=test_part');
+ test_connect2 
+---------------
+ test_part
+(1 row)
+
+-- test CONNECT function($argument)
+create function test_connect3(connstr text) returns text
+as $$ connect text(connstr); select current_database(); $$ language plproxy;
+select * from test_connect3('dbname=test_part');
+ test_connect3 
+---------------
+ test_part
+(1 row)
+
 -- test quoting function
 create type "RetWeird" as (
     "ColId" int4,
@@ -317,8 +335,8 @@ as $$ begin return $1; end; $$ language plpgsql;
 \c regression
 create function test_simple(partno int4) returns int4
 as $$
-  cluster 'testcluster';
-  run on $1;
+    cluster 'testcluster';
+    run on $1;
 $$ language plproxy;
 select * from test_simple(0);
  test_simple 
@@ -329,8 +347,8 @@ select * from test_simple(0);
 drop function test_simple(int4);
 create function test_simple(partno int4) returns int4
 as $$
-  cluster 'testcluster';
-  run on partno;
+    cluster 'testcluster';
+    run on partno;
 $$ language plproxy;
 select * from test_simple(0);
  test_simple 
