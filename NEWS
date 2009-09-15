@@ -1,3 +1,37 @@
+2009-09-xx  -  PlProxy 2.0.9  -  ""
+
+  = Features =
+
+  * More flexible CONNECT statement:
+
+      CONNECT func(..);
+      CONNECT argname;
+      CONNECT $argnum;
+
+    NB: giving untrusted users ability to specify full connect string creates
+    security hole.  Eg it can used to read cleartext passwords from .pgpass/pg_service.
+    If such function cannot be avoided, it's access rights need to be restricted.
+
+    (Ian Sollars)
+
+  = Fixes =
+
+  * Avoid parsing "SELECT (" as function call.  Otherwise following query
+    fails to parse: SELECT (0*0);
+    (Peter Eisentraut)
+
+  * Make scanner accept dot as standalone symbol.  Otherwise following query
+    fails to parse: SELECT (ret_numtuple(1)).num, (ret_numtuple(1)).name;
+    (Peter Eisentraut)
+
+  * Argument type name length over 32 could cause buffer overflow.
+    (Ian Sollars)
+
+  * Fix crash with incoming NULL value in function containing SELECT
+    with different argument order.  Due to thinko, NULL check was done
+    with query arg index, instead of function arg index.
+    (João Matos)
+
 2009-01-16  -  PlProxy 2.0.8  -  "Simple Multi-Tentacle Arhitecture"
 
   = Features =
