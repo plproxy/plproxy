@@ -34,9 +34,12 @@
 #if PG_VERSION_NUM < 80400
 static int geterrcode(void)
 {
+	/* switch context to work around Assert() in CopyErrorData() */
+	MemoryContext ctx = MemoryContextSwitchTo(TopMemoryContext);
 	ErrorData *edata = CopyErrorData();
 	int code = edata->sqlerrcode;
-	FreeErrorData(edata); /* unnecessary? */
+	FreeErrorData(edata);
+	MemoryContextSwitchTo(ctx);
 	return code;
 }
 #endif
