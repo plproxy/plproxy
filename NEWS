@@ -1,4 +1,4 @@
-2009-09-xx  -  PlProxy 2.0.9  -  ""
+2009-10-28  -  PlProxy 2.0.9  -  "Five-Nines Guarantee For Not Bricking The Server"
 
   = Features =
 
@@ -31,6 +31,8 @@
     with different argument order.  Due to thinko, NULL check was done
     with query arg index, instead of function arg index.
     (João Matos)
+
+  * geterrcode(): Switch memory context to work around Assert() in CopyErrorData().
 
 2009-01-16  -  PlProxy 2.0.8  -  "Simple Multi-Tentacle Arhitecture"
 
