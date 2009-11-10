@@ -15,7 +15,6 @@
 
  * Drop plproxy.get_cluster_config()...
 
- * Dynamic connstr loading for CONNECT functions?
  * RUN ON ALL: sort by?
  * RUN ON ALL: ignore errors?
  * RUN ON ANY: if one con failed, try another
