@@ -71,6 +71,62 @@ tagged, query will be sent in parallel to them.
 
 Take hash value directly from function argument.
 
+
+== SPLIT ==
+
+  SPLIT array_arg_1 [ , array_arg_2 ... ] ;
+
+Split the input arrays based on RUN ON statement into per-partition arrays.
+This is done by evaluating RUN ON condition for each array element and building
+per-partition parameter arrays for each matching partition. During execution
+each tagged partition then gets its own subset of the array to process.
+
+The semantics of RUN ON statement is slightly changed with SPLIT arrays:
+
+  RUN ON partition_func(..);
+
+The array is split between the partitions matching `partition_func()`. Any
+SPLIT parameters passed to the function are actually replaced with the
+individual array elements.
+
+  RUN ON argname;  RUN ON $1;
+
+An array of partition numbers (or hashes) can be passed as `argname`. The function
+shall be run on the partitions specified in the array.
+
+  RUN ON ANY;
+
+Each element is assigned to random partition.
+
+  RUN ON ALL;
+  RUN ON <NR>;
+
+Unaffected, except for the added overhead of array copying.
+
+Example:
+
+  CREATE FUNCTION set_profiles(i_users text[], i_profiles text[])
+  RETURNS SETOF text AS $$
+    CLUSTER 'userdb';
+    SPLIT i_users, i_profiles;
+    RUN ON hashtext(i_users);
+  $$ LANGUAGE plproxy;
+
+Given query:
+
+  SELECT * FROM set_profiles(ARRAY['foo', 'bar'], ARRAY['a', 'b']);
+
+The hash function is called 2 times:
+
+  SELECT * FROM hashtext('foo');
+  SELECT * FROM hashtext('bar');
+
+And target partitions get queries:
+
+  SELECT * FROM set_profiles(ARRAY['foo'], ARRAY['a']);
+  SELECT * FROM set_profiles(ARRAY['bar'], ARRAY['b']);
+
+
 == SELECT ==
 
   SELECT .... ;

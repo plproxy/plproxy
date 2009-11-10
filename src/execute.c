@@ -439,7 +439,7 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 	for (i = 0; i < cluster->conn_count; i++)
 	{
 		conn = &cluster->conn_list[i];
-		if (!conn->run_on)
+		if (!conn->run_tag)
 			continue;
 
 		/* decide what to do */
@@ -482,7 +482,7 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 	for (i = 0; i < cluster->conn_count; i++)
 	{
 		conn = &cluster->conn_list[i];
-		if (!conn->run_on)
+		if (!conn->run_tag)
 			continue;
 
 		switch (conn->state)
@@ -545,33 +545,32 @@ check_timeouts(ProxyFunction *func, ProxyCluster *cluster, ProxyConnection *conn
 
 /* Run the query on all tagged connections in parallel */
 static void
-remote_execute(ProxyFunction *func,
-			   const char **values, int *plengths, int *pformats)
+remote_execute(ProxyFunction *func)
 {
 	ExecStatusType err;
 	ProxyConnection *conn;
 	ProxyCluster *cluster = func->cur_cluster;
 	int			i,
-				pending;
+				pending = 0;
 	struct timeval now;
 
 	/* either launch connection or send query */
 	for (i = 0; i < cluster->conn_count; i++)
 	{
 		conn = &cluster->conn_list[i];
-		if (!conn->run_on)
+		if (!conn->run_tag)
 			continue;
 
 		/* check if conn is alive, and launch if not */
 		prepare_conn(func, conn);
+		pending++;
 
 		/* if conn is ready, then send query away */
 		if (conn->state == C_READY)
-			send_query(func, conn, values, plengths, pformats);
+			send_query(func, conn, conn->param_values, conn->param_lengths, conn->param_formats);
 	}
 
 	/* now loop until all results are arrived */
-	pending = 1;
 	while (pending)
 	{
 		/* allow postgres to cancel processing */
@@ -587,12 +586,12 @@ remote_execute(ProxyFunction *func,
 		for (i = 0; i < cluster->conn_count; i++)
 		{
 			conn = &cluster->conn_list[i];
-			if (!conn->run_on)
+			if (!conn->run_tag)
 				continue;
 
 			/* login finished, send query */
 			if (conn->state == C_READY)
-				send_query(func, conn, values, plengths, pformats);
+				send_query(func, conn, conn->param_values, conn->param_lengths, conn->param_formats);
 
 			if (conn->state != C_DONE)
 				pending++;
@@ -606,11 +605,11 @@ remote_execute(ProxyFunction *func,
 	{
 		conn = &cluster->conn_list[i];
 
-		if ((conn->run_on || conn->res)
-			&& !(conn->run_on && conn->res))
-			plproxy_error(func, "run_on does not match res");
+		if ((conn->run_tag || conn->res)
+			&& !(conn->run_tag && conn->res))
+			plproxy_error(func, "run_tag does not match res");
 
-		if (!conn->run_on)
+		if (!conn->run_tag)
 			continue;
 
 		if (conn->state != C_DONE)
@@ -661,9 +660,14 @@ remote_cancel(ProxyFunction *func)
 	}
 }
 
-/* Run hash function and tag connections */
+/*
+ * Run hash function and tag connections. If any of the hash function 
+ * arguments are mentioned in the split_arrays an element of the array
+ * is used instead of the actual array.
+ */
 static void
-tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
+tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
+					DatumArray **array_params, int array_row)
 {
 	int			i;
 	TupleDesc	desc;
@@ -671,7 +675,7 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 	ProxyCluster *cluster = func->cur_cluster;
 
 	/* execute cached plan */
-	plproxy_query_exec(func, fcinfo, func->hash_sql);
+	plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
 
 	/* get header */
 	desc = SPI_tuptable->tupdesc;
@@ -698,7 +702,7 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
 
 		hashval &= cluster->part_mask;
-		cluster->part_map[hashval]->run_on = 1;
+		cluster->part_map[hashval]->run_tag = tag;
 	}
 
 	/* sanity check */
@@ -708,12 +712,254 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 						  " allows hashcount <> 1");
 }
 
+/*
+ * Deconstruct an array type to array of Datums, note NULL elements
+ * and determine the element type information.
+ */
+static DatumArray *
+make_datum_array(ProxyFunction *func, ArrayType *v, Oid elem_type)
+{
+	DatumArray	   *da = palloc0(sizeof(*da));
+
+	da->type = plproxy_find_type_info(func, elem_type, true);
+
+	if (v)
+		deconstruct_array(v,
+						  da->type->type_oid, da->type->length, da->type->by_value,
+						  da->type->alignment,
+						  &da->values, &da->nulls, &da->elem_count);
+	return da;
+}
+
+/*
+ * Evaluate the run condition. Tag the matching connections with the specified
+ * tag.
+ *
+ * Note that we don't allow nested plproxy calls on the same cluster (ie.
+ * remote hash functions). The cluster and connection state are global and
+ * would easily get messed up.
+ */
+static void
+tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
+					  DatumArray **array_params, int array_row)
+{
+	ProxyCluster   *cluster = func->cur_cluster;
+	int				i;
+
+	switch (func->run_type)
+	{
+		case R_HASH:
+			tag_hash_partitions(func, fcinfo, tag, array_params, array_row);
+			break;
+		case R_ALL:
+			for (i = 0; i < cluster->part_count; i++)
+				cluster->part_map[i]->run_tag = tag;
+			break;
+		case R_EXACT:
+			i = func->exact_nr;
+			if (i < 0 || i >= cluster->part_count)
+				plproxy_error(func, "part number out of range");
+			cluster->part_map[i]->run_tag = tag;
+			break;
+		case R_ANY:
+			i = random() & cluster->part_mask;
+			cluster->part_map[i]->run_tag = tag;
+			break;
+		default:
+			plproxy_error(func, "uninitialized run_type");
+	}
+}
+
+/*
+ * Tag the partitions to be run on, if split is requested prepare the 
+ * per-partition split array parameters.
+ *
+ * This is done by looping over all of the split arrays side-by-side, for each
+ * tuple see if it satisfies the RUN ON condition. If so, copy the tuple
+ * to the partition's private array parameters.
+ */
+static void
+prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
+{
+	int					i, row, col;
+	int					split_array_len = -1;
+	int					split_array_count = 0;
+	ProxyCluster	   *cluster = func->cur_cluster;
+	DatumArray		   *arrays_to_split[FUNC_MAX_ARGS];
+
+	/*
+	 * See if we have any arrays to split. If so, make them manageable by
+	 * converting them to Datum arrays. During the process verify that all
+	 * the arrays are of the same length.
+	 */
+	for (i = 0; i < func->arg_count; i++)
+	{
+		ArrayType	   *v;
+
+		if (!IS_SPLIT_ARG(func, i))
+		{
+			arrays_to_split[i] = NULL;
+			continue;
+		}
+
+		if (PG_ARGISNULL(i))
+			v = NULL;
+		else
+		{
+			v = PG_GETARG_ARRAYTYPE_P(i);
+
+			if (ARR_NDIM(v) > 1)
+				plproxy_error(func, "split multi-dimensional arrays are not supported");
+		}
+
+		arrays_to_split[i] = make_datum_array(func, v, func->arg_types[i]->elem_type);
+
+		/* Check that the element counts match */
+		if (split_array_len < 0)
+			split_array_len = arrays_to_split[i]->elem_count;
+		else if (arrays_to_split[i]->elem_count != split_array_len)
+			plproxy_error(func, "split arrays must be of identical lengths");
+
+		++split_array_count;
+	}
+
+	/* If nothing to split, just tag the partitions and be done with it */
+	if (!split_array_count)
+	{
+		tag_run_on_partitions(func, fcinfo, 1, NULL, 0);
+		return;
+	}
+
+	/* Need to split, evaluate the RUN ON condition for each of the elements. */
+	for (row = 0; row < split_array_len; row++)
+	{
+		int		part;
+		int		my_tag = row+1;
+
+		/*
+		 * Tag the run-on partitions with a tag that allows us us to identify
+		 * which partitions need the set of elements from this row.
+		 */
+		tag_run_on_partitions(func, fcinfo, my_tag, arrays_to_split, row);
+
+		/* Add the array elements to the partitions tagged in previous step */
+		for (part = 0; part < cluster->conn_count; part++)
+		{
+			ProxyConnection	   *conn = &cluster->conn_list[part];
+
+			if (conn->run_tag != my_tag)
+				continue;
+
+			if (!conn->bstate)
+				conn->bstate = palloc0(func->arg_count * sizeof(*conn->bstate));
+
+			/* Add this set of elements to the partition specific arrays */
+			for (col = 0; col < func->arg_count; col++)
+			{
+				if (!IS_SPLIT_ARG(func, col))
+					continue;
+
+				conn->bstate[col] = accumArrayResult(conn->bstate[col],
+													 arrays_to_split[col]->values[row],
+													 arrays_to_split[col]->nulls[row],
+													 arrays_to_split[col]->type->type_oid,
+													 CurrentMemoryContext);
+			}
+		}
+	}
+
+	/*
+	 * Finally, copy the accumulated arrays to the actual connections
+	 * to be used as parameters.
+	 */
+	for (i = 0; i < cluster->conn_count; i++)
+	{
+		ProxyConnection *conn = &cluster->conn_list[i];
+
+		if (!conn->run_tag)
+			continue;
+
+		conn->split_params = palloc(func->arg_count * sizeof(*conn->split_params));
+
+		for (col = 0; col < func->arg_count; col++)
+		{
+			if (!IS_SPLIT_ARG(func, col))
+				conn->split_params[col] = PointerGetDatum(NULL);
+			else
+				conn->split_params[col] = makeArrayResult(conn->bstate[col],
+														  CurrentMemoryContext);
+		}
+	}
+}
+
+/*
+ * Prepare parameters for the query.
+ */
+static void
+prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo)
+{
+	int				i;
+	ProxyCluster   *cluster = func->cur_cluster;
+
+	for (i = 0; i < func->remote_sql->arg_count; i++)
+	{
+		int			idx = func->remote_sql->arg_lookup[i];
+		bool		bin = cluster->config.disable_binary ? 0 : 1;
+		const char *fixed_param_val = NULL;
+		int			fixed_param_len, fixed_param_fmt;
+		int			part;
+
+		/* Avoid doing multiple conversions for fixed parameters */
+		if (!IS_SPLIT_ARG(func, idx) && !PG_ARGISNULL(idx))
+		{
+			fixed_param_val = plproxy_send_type(func->arg_types[idx],
+												PG_GETARG_DATUM(idx),
+												bin,
+												&fixed_param_len,
+												&fixed_param_fmt);
+		}
+
+		/* Add the parameters to partitions */
+		for (part = 0; part < cluster->conn_count; part++)
+		{
+			ProxyConnection *conn = &cluster->conn_list[part];
+
+			if (!conn->run_tag)
+				continue;
+
+			if (PG_ARGISNULL(idx))
+			{
+				conn->param_values[i] = NULL;
+				conn->param_lengths[i] = 0;
+				conn->param_formats[i] = 0;
+			}
+			else
+			{
+				if (IS_SPLIT_ARG(func, idx))
+				{
+					conn->param_values[i] = plproxy_send_type(func->arg_types[idx],
+															  conn->split_params[idx],
+															  bin,
+															  &conn->param_lengths[i],
+															  &conn->param_formats[i]);
+				}
+				else
+				{
+					conn->param_values[i] = fixed_param_val;
+					conn->param_lengths[i] = fixed_param_len;
+					conn->param_formats[i] = fixed_param_fmt;
+				}
+			}
+		}
+	}
+}
+
 /* Clean old results and prepare for new one */
 void
 plproxy_clean_results(ProxyCluster *cluster)
 {
-	int			i;
-	ProxyConnection *conn;
+	int					i;
+	ProxyConnection	   *conn;
 
 	if (!cluster)
 		return;
@@ -730,7 +976,8 @@ plproxy_clean_results(ProxyCluster *cluster)
 			conn->res = NULL;
 		}
 		conn->pos = 0;
-		conn->run_on = 0;
+		conn->run_tag = 0;
+		conn->bstate = NULL;
 	}
 	/* conn state checks are done in prepare_conn */
 }
@@ -739,78 +986,31 @@ plproxy_clean_results(ProxyCluster *cluster)
 void
 plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
-	const char *values[FUNC_MAX_ARGS];
-	int			plengths[FUNC_MAX_ARGS];
-	int			pformats[FUNC_MAX_ARGS];
-	int			i;
-	int			gotbin;
-	ProxyCluster *cluster = func->cur_cluster;
-
-	/* clean old results */
-	plproxy_clean_results(cluster);
-
-	/* tag interesting partitions */
-	switch (func->run_type)
-	{
-		case R_HASH:
-			tag_hash_partitions(func, fcinfo);
-			break;
-		case R_ALL:
-			for (i = 0; i < cluster->part_count; i++)
-				cluster->part_map[i]->run_on = 1;
-			break;
-		case R_EXACT:
-			i = func->exact_nr;
-			if (i < 0 || i >= cluster->part_count)
-				plproxy_error(func, "part number out of range");
-			cluster->part_map[i]->run_on = 1;
-			break;
-		case R_ANY:
-			i = random() & cluster->part_mask;
-			cluster->part_map[i]->run_on = 1;
-			break;
-		default:
-			plproxy_error(func, "uninitialized run_type");
-	}
-
-	/* prepare args */
-	gotbin = 0;
-	for (i = 0; i < func->remote_sql->arg_count; i++)
-	{
-		int idx = func->remote_sql->arg_lookup[i];
-		plengths[i] = 0;
-		pformats[i] = 0;
-		if (PG_ARGISNULL(idx))
-		{
-			values[i] = NULL;
-		}
-		else
-		{
-			bool		bin = cluster->config.disable_binary ? 0 : 1;
-
-			values[i] = plproxy_send_type(func->arg_types[idx],
-										  PG_GETARG_DATUM(idx),
-										  bin,
-										  &plengths[i],
-										  &pformats[i]);
-
-			if (pformats[i])
-				gotbin = 1;
-		}
-	}
-
 	/*
-	 * Run query.  On cancel, send cancel request to partitions too.
+	 * Prepare parameters and run query.  On cancel, send cancel request to
+	 * partitions too.
 	 */
 	PG_TRY();
 	{
-		if (gotbin)
-			remote_execute(func, values, plengths, pformats);
-		else
-			remote_execute(func, values, NULL, NULL);
+		func->cur_cluster->busy = true;
+
+		/* clean old results */
+		plproxy_clean_results(func->cur_cluster);
+
+		/* tag the partitions and prepare per-partition parameters */
+		prepare_and_tag_partitions(func, fcinfo);
+
+		/* prepare the target query parameters */
+		prepare_query_parameters(func, fcinfo);
+
+		remote_execute(func);
+
+		func->cur_cluster->busy = false;
 	}
 	PG_CATCH();
 	{
+		func->cur_cluster->busy = false;
+
 		if (geterrcode() == ERRCODE_QUERY_CANCELED)
 			remote_cancel(func);
 		PG_RE_THROW();

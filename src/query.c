@@ -90,25 +90,8 @@ plproxy_query_add_ident(QueryBuffer *q, const char *ident)
 				fn_idx = -1,
 				sql_idx = -1;
 
-	if (ident[0] == '$')
-	{
-		fn_idx = atoi(ident + 1) - 1;
-		if (fn_idx < 0 || fn_idx >= q->func->arg_count)
-			return false;
-	}
-	else if (q->func->arg_names)
-	{
-		for (i = 0; i < q->func->arg_count; i++)
-		{
-			if (!q->func->arg_names[i])
-				continue;
-			if (pg_strcasecmp(ident, q->func->arg_names[i]) == 0)
-			{
-				fn_idx = i;
-				break;
-			}
-		}
-	}
+	fn_idx = plproxy_get_parameter_index(q->func, ident);
+
 	if (fn_idx >= 0)
 	{
 		for (i = 0; i < q->arg_count; i++)
@@ -127,7 +110,12 @@ plproxy_query_add_ident(QueryBuffer *q, const char *ident)
 		add_ref(q->sql, sql_idx, q->func, fn_idx, q->add_types);
 	}
 	else
+	{
+		if (ident[0] == '$')
+			return false;
 		appendStringInfoString(q->sql, ident);
+	}
+
 	return true;
 }
 
@@ -149,6 +137,7 @@ plproxy_query_finish(QueryBuffer *q)
 	len = q->arg_count * sizeof(int);
 	pq->arg_lookup = palloc(len);
 	pq->plan = NULL;
+
 	memcpy(pq->arg_lookup, q->arg_lookup, len);
 
 	MemoryContextSwitchTo(old);
@@ -247,7 +236,7 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
  * Prepare ProxyQuery for local execution
  */
 void
-plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q)
+plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q, bool split_support)
 {
 	int			i;
 	Oid			types[FUNC_MAX_ARGS];
@@ -258,7 +247,11 @@ plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *
 	{
 		int			idx = q->arg_lookup[i];
 
-		types[i] = func->arg_types[idx]->type_oid;
+		if (split_support && IS_SPLIT_ARG(func, idx))
+			/* for SPLIT arguments use array element type instead */
+			types[i] = func->arg_types[idx]->elem_type;
+		else 
+			types[i] = func->arg_types[idx]->type_oid;
 	}
 
 	/* prepare & store plan */
@@ -272,12 +265,12 @@ plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *
  * Result will be in SPI_tuptable.
  */
 void
-plproxy_query_exec(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q)
+plproxy_query_exec(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q,
+				   DatumArray **array_params, int array_row)
 {
 	int			i,
 				idx,
 				err;
-	ProxyType  *type;
 	char		arg_nulls[FUNC_MAX_ARGS];
 	Datum		arg_values[FUNC_MAX_ARGS];
 
@@ -285,11 +278,18 @@ plproxy_query_exec(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q)
 	for (i = 0; i < q->arg_count; i++)
 	{
 		idx = q->arg_lookup[i];
-		type = func->arg_types[idx];
+
 		if (PG_ARGISNULL(idx))
 		{
 			arg_nulls[i] = 'n';
 			arg_values[i] = (Datum) NULL;
+		}
+		else if (array_params && IS_SPLIT_ARG(func, idx))
+		{
+			DatumArray *ats = array_params[idx];
+
+			arg_nulls[i] = ats->nulls[array_row] ? 'n' : ' ';
+			arg_values[i] = ats->nulls[array_row] ? (Datum) NULL : ats->values[array_row];
 		}
 		else
 		{

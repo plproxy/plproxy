@@ -13,7 +13,6 @@
 
 == Just thoughts ==
 
- * SPREAD BY clause for OLAP loads.
  * Drop plproxy.get_cluster_config()...
 
  * Dynamic connstr loading for CONNECT functions?

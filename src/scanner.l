@@ -179,6 +179,7 @@ run			{ return RUN; }
 on			{ return ON; }
 all			{ return ALL; }
 any			{ return ANY; }
+split		{ return SPLIT; }
 select			{ BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* function call */

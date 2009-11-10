@@ -73,6 +73,63 @@ plproxy_func_strdup(ProxyFunction *func, const char *s)
 	return res;
 }
 
+/* Find the index of a named parameter, -1 if not found */
+int
+plproxy_get_parameter_index(ProxyFunction *func, const char *ident)
+{
+	int		i;
+
+	if (ident[0] == '$')
+	{
+		/* Probably a $# parameter reference */
+		i = atoi(ident + 1) - 1;
+		if (i >= 0 && i < func->arg_count)
+			return i;
+	}
+	else if (func->arg_names)
+	{
+		/* Named parameter, go through the argument names */
+		for (i = 0; i < func->arg_count; i++)
+		{
+			if (!func->arg_names[i])
+				continue;
+			if (pg_strcasecmp(ident, func->arg_names[i]) == 0)
+				return i;
+		}
+	}
+
+	return -1;
+}
+
+/* Add a new split argument */
+bool
+plproxy_split_add_ident(ProxyFunction *func, const char *ident)
+{
+	int		argindex;
+
+	if ((argindex = plproxy_get_parameter_index(func, ident)) < 0)
+		return false;
+
+	/* Already split? */
+	if (IS_SPLIT_ARG(func, argindex))
+		plproxy_error(func, "SPLIT parameter specified more than once: %s", ident);
+
+	/* Is it an array? */
+	if (!func->arg_types[argindex]->is_array)
+		plproxy_error(func, "SPLIT parameter is not an array: %s", ident);
+
+	if (!func->split_args)
+	{
+		size_t alloc_size = sizeof(*func->split_args) * func->arg_count;
+
+		func->split_args = plproxy_func_alloc(func, alloc_size);
+		MemSet(func->split_args, 0, alloc_size);
+	}
+
+	func->split_args[argindex] = true;
+
+	return true;
+}
 
 /* Initialize PL/Proxy function cache */
 void
@@ -413,11 +470,11 @@ fn_compile(FunctionCallInfo fcinfo,
 
 	/* prepare local queries */
 	if (f->cluster_sql)
-		plproxy_query_prepare(f, fcinfo, f->cluster_sql);
+		plproxy_query_prepare(f, fcinfo, f->cluster_sql, false);
 	if (f->hash_sql)
-		plproxy_query_prepare(f, fcinfo, f->hash_sql);
+		plproxy_query_prepare(f, fcinfo, f->hash_sql, true);
 	if (f->connect_sql)
-		plproxy_query_prepare(f, fcinfo, f->connect_sql);
+		plproxy_query_prepare(f, fcinfo, f->connect_sql, false);
 
 	/* sanity check */
 	if (f->run_type == R_ALL && !fcinfo->flinfo->fn_retset)

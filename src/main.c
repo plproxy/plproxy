@@ -140,6 +140,10 @@ compile_and_execute(FunctionCallInfo fcinfo)
 	/* get actual cluster to run on */
 	cluster = plproxy_find_cluster(func, fcinfo);
 
+	/* Don't allow nested calls on the same cluster */
+	if (cluster->busy)
+		plproxy_error(func, "Nested PL/Proxy calls to the same cluster are not supported.");
+
 	/* fetch PGresults */
 	func->cur_cluster = cluster;
 	plproxy_exec(func, fcinfo);

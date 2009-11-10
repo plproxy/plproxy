@@ -406,7 +406,7 @@ resolve_query(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *query)
 	HeapTuple	row;
 	TupleDesc	desc;
 
-	plproxy_query_exec(func, fcinfo, query);
+	plproxy_query_exec(func, fcinfo, query, NULL, 0);
 
 	if (SPI_processed != 1)
 		plproxy_error(func, "'%s' returned %d rows, expected 1",

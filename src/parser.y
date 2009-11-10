@@ -35,7 +35,7 @@ void plproxy_yy_scan_bytes(const char *bytes, int len);
 static ProxyFunction *xfunc;
 
 /* remember what happened */
-static int got_run, got_cluster, got_connect;
+static int got_run, got_cluster, got_connect, got_split;
 
 static QueryBuffer *cluster_sql;
 static QueryBuffer *select_sql;
@@ -48,7 +48,7 @@ static QueryBuffer *cur_sql;
 /* keep the resetting code together with variables */
 static void reset_parser_vars(void)
 {
-	got_run = got_cluster = got_connect = 0;
+	got_run = got_cluster = got_connect = got_split = 0;
 	cur_sql = select_sql = cluster_sql = hash_sql = connect_sql = NULL;
 	xfunc = NULL;
 }
@@ -58,7 +58,7 @@ static void reset_parser_vars(void)
 %name-prefix="plproxy_yy"
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
-%token <str> IDENT NUMBER FNCALL STRING
+%token <str> IDENT NUMBER FNCALL SPLIT STRING
 %token <str> SQLIDENT SQLPART
 
 %union
@@ -70,7 +70,7 @@ static void reset_parser_vars(void)
 
 body: | body stmt ;
 
-stmt: cluster_stmt | run_stmt | select_stmt | connect_stmt ;
+stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt ;
 
 connect_stmt: CONNECT connect_spec ';'	{
 					if (got_connect)
@@ -116,6 +116,22 @@ cluster_func: FNCALL	{ cluster_sql = plproxy_query_start(xfunc, false);
 
 cluster_name: STRING	{ xfunc->cluster_name = plproxy_func_strdup(xfunc, $1); }
 			;
+
+split_stmt: SPLIT split_param_list ';' {
+							if (got_split)
+								yyerror("Only one SPLIT statement allowed");
+							got_split = 1;
+						}
+			;
+
+split_param_list: split_param
+			| split_param_list ',' split_param
+			;
+
+split_param: IDENT {
+				if (!plproxy_split_add_ident(xfunc, $1))
+					yyerror("invalid argument reference: %s", $1);
+			}
 
 run_stmt: RUN ON run_spec ';'	{ if (got_run)
 									yyerror("Only one RUN statement allowed");

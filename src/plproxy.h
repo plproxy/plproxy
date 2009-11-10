@@ -36,6 +36,7 @@
 #include <commands/trigger.h>
 #include <mb/pg_wchar.h>
 #include <miscadmin.h>
+#include <utils/array.h>
 #include <utils/builtins.h>
 #include <utils/hsearch.h>
 #include <utils/lsyscache.h>
@@ -63,6 +64,11 @@
 #define PG_DETOAST_DATUM_PACKED(x) PG_DETOAST_DATUM(x)
 #endif
 
+
+/*
+ * Determine if this argument is to SPLIT
+ */
+#define IS_SPLIT_ARG(func, arg)	((func)->split_args && (func)->split_args[arg])
 
 /*
  * Maintenece period in seconds.  Connnections will be freed
@@ -118,9 +124,25 @@ typedef struct
 	ConnState	state;			/* Connection state */
 	time_t		connect_time;	/* When connection was started */
 	time_t		query_time;		/* When last query was sent */
-	bool		run_on;			/* True it this connection should be used */
 	bool		same_ver;		/* True if dest backend has same X.Y ver */
 	bool		tuning;			/* True if tuning query is running on conn */
+
+	/*
+	 * Nonzero if this connection should be used. The actual tag value is only
+	 * used by SPLIT processing, others should treat it as a boolean value.
+	 */
+	int			run_tag;
+
+	/*
+	 * Per-connection parameters. These are a assigned just before the 
+	 * remote call is made.
+	 */
+
+	Datum			   *split_params;					/* Split array parameters */
+	ArrayBuildState	  **bstate;							/* Temporary build state */
+	const char		   *param_values[FUNC_MAX_ARGS];	/* Parameter values */
+	int					param_lengths[FUNC_MAX_ARGS];	/* Parameter lengths (binary io) */
+	int					param_formats[FUNC_MAX_ARGS];	/* Parameter formats (binary io) */
 } ProxyConnection;
 
 /* Info about one cluster */
@@ -142,6 +164,8 @@ typedef struct ProxyCluster
 	int			ret_cur_conn;	/* Result walking: index of current conn */
 	int			ret_cur_pos;	/* Result walking: index of current row */
 	int			ret_total;		/* Result walking: total rows left */
+
+	bool		busy;			/* True if the cluster is already involved in execution */
 } ProxyCluster;
 
 /*
@@ -161,6 +185,10 @@ typedef struct ProxyType
 	bool		has_send;		/* Has binary output */
 	bool		has_recv;		/* Has binary input */
 	bool		by_value;		/* False if Datum is a pointer to data */
+	char		alignment;		/* Type alignment */
+	bool		is_array;		/* True if array */
+	Oid			elem_type;		/* Array element type */
+	short		length;			/* Type length */
 
 	/* I/O functions */
 	union
@@ -208,6 +236,17 @@ typedef struct ProxyQuery
 } ProxyQuery;
 
 /*
+ * Deconstructed array parameters
+ */
+typedef struct DatumArray
+{
+	ProxyType  *type;
+	Datum	   *values;
+	bool	   *nulls;
+	int			elem_count;
+} DatumArray;
+
+/*
  * Complete info about compiled function.
  *
  * Note: only IN and INOUT arguments are cached here.
@@ -223,6 +262,8 @@ typedef struct ProxyFunction
 	ProxyType **arg_types;		/* Info about arguments */
 	char	  **arg_names;		/* Argument names, may contain NULLs */
 	short		arg_count;		/* Argument count of proxy function */
+
+	bool	   *split_args;		/* Map of arguments to split */
 
 	/* if the function returns untyped RECORD that needs AS clause */
 	bool		dynamic_record;
@@ -272,6 +313,8 @@ void		plproxy_error(ProxyFunction *func, const char *fmt,...);
 void		plproxy_function_cache_init(void);
 void	   *plproxy_func_alloc(ProxyFunction *func, int size);
 char	   *plproxy_func_strdup(ProxyFunction *func, const char *s);
+int			plproxy_get_parameter_index(ProxyFunction *func, const char *ident);
+bool		plproxy_split_add_ident(ProxyFunction *func, const char *ident);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, bool validate);
 
 /* execute.c */
@@ -312,8 +355,9 @@ bool		plproxy_query_add_const(QueryBuffer *q, const char *data);
 bool		plproxy_query_add_ident(QueryBuffer *q, const char *ident);
 ProxyQuery *plproxy_query_finish(QueryBuffer *q);
 ProxyQuery *plproxy_standard_query(ProxyFunction *func, bool add_types);
-void		plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q);
-void		plproxy_query_exec(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q);
+void		plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q, bool split_support);
+void		plproxy_query_exec(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *q,
+							   DatumArray **array_params, int array_row);
 void		plproxy_query_freeplan(ProxyQuery *q);
 
 #endif
