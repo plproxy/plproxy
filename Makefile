@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.0.9
+PLPROXY_VERSION = 2.1-cvs
 
 # libpq config
 PQINC = $(shell pg_config --includedir)
