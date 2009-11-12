@@ -335,6 +335,7 @@ void	   *plproxy_func_alloc(ProxyFunction *func, int size);
 char	   *plproxy_func_strdup(ProxyFunction *func, const char *s);
 int			plproxy_get_parameter_index(ProxyFunction *func, const char *ident);
 bool		plproxy_split_add_ident(ProxyFunction *func, const char *ident);
+void		plproxy_split_all_arrays(ProxyFunction *func);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, bool validate);
 
 /* execute.c */

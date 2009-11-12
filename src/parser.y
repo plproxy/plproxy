@@ -117,12 +117,16 @@ cluster_func: FNCALL	{ cluster_sql = plproxy_query_start(xfunc, false);
 cluster_name: STRING	{ xfunc->cluster_name = plproxy_func_strdup(xfunc, $1); }
 			;
 
-split_stmt: SPLIT split_param_list ';' {
+split_stmt: SPLIT split_spec ';' {
 							if (got_split)
 								yyerror("Only one SPLIT statement allowed");
 							got_split = 1;
 						}
 			;
+
+split_spec:	ALL						{ plproxy_split_all_arrays(xfunc); }
+		  | split_param_list
+		  ;
 
 split_param_list: split_param
 			| split_param_list ',' split_param

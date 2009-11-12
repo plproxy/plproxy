@@ -101,7 +101,22 @@ plproxy_get_parameter_index(ProxyFunction *func, const char *ident)
 	return -1;
 }
 
-/* Add a new split argument */
+/* Add a new split argument by position */
+static void
+plproxy_split_add_arg(ProxyFunction *func, int argindex)
+{
+	if (!func->split_args)
+	{
+		size_t alloc_size = sizeof(*func->split_args) * func->arg_count;
+
+		func->split_args = plproxy_func_alloc(func, alloc_size);
+		MemSet(func->split_args, 0, alloc_size);
+	}
+
+	func->split_args[argindex] = true;
+}
+
+/* Add a new split argument by argument name */
 bool
 plproxy_split_add_ident(ProxyFunction *func, const char *ident)
 {
@@ -118,17 +133,21 @@ plproxy_split_add_ident(ProxyFunction *func, const char *ident)
 	if (!func->arg_types[argindex]->is_array)
 		plproxy_error(func, "SPLIT parameter is not an array: %s", ident);
 
-	if (!func->split_args)
-	{
-		size_t alloc_size = sizeof(*func->split_args) * func->arg_count;
-
-		func->split_args = plproxy_func_alloc(func, alloc_size);
-		MemSet(func->split_args, 0, alloc_size);
-	}
-
-	func->split_args[argindex] = true;
+	plproxy_split_add_arg(func, argindex);
 
 	return true;
+}
+
+/* Tag all array arguments for splitting */
+void
+plproxy_split_all_arrays(ProxyFunction *func)
+{
+	int		i;
+
+	for (i = 0; i < func->arg_count; i++) {
+		if (func->arg_types[i]->is_array)
+			plproxy_split_add_arg(func, i);
+	}
 }
 
 /* Initialize PL/Proxy function cache */

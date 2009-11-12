@@ -102,6 +102,37 @@ select * from test_array('{}'::text[], '{}'::text[], 'foo');
 ------------
 (0 rows)
 
+-- run on text hash, split all arrays
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(c);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+               test_array                
+-----------------------------------------
+ test_part2 $1:a,b,c,d $2:e,f,g,h $3:foo
+(1 row)
+
+-- run on text hash, attempt to split all arrays but none are present
+create or replace function test_nonarray_split(a text, b text, c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(a); select * from test_array(array[a], array[b], c);
+$$ language plproxy;
+select * from test_nonarray_split('a', 'b', 'c');
+    test_nonarray_split    
+---------------------------
+ test_part1 $1:a $2:b $3:c
+(1 row)
+
+-- run on array hash, split all arrays
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+         test_array          
+-----------------------------
+ test_part0 $1:d $2:h $3:foo
+ test_part1 $1:a $2:e $3:foo
+ test_part2 $1:b $2:f $3:foo
+ test_part3 $1:c $2:g $3:foo
+(4 rows)
+
 -- run on arg
 create or replace function test_array_direct(a integer[], b text[], c text) returns setof text as
 $$ split a; cluster 'testcluster'; run on a; select test_array('{}'::text[], b, c);$$ language plproxy;

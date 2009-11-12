@@ -76,6 +76,7 @@ Take hash value directly from function argument.  _(New in 2.0.8)_
 == SPLIT ==
 
   SPLIT array_arg_1 [ , array_arg_2 ... ] ;
+  SPLIT ALL ;
 
 Split the input arrays based on RUN ON statement into per-partition arrays.
 This is done by evaluating RUN ON condition for each array element and building
