@@ -60,6 +60,8 @@ data with PL/Proxy.
 == Create  configuration functions ==
 
 Using PL/Proxy for partitioning requires setting up some configuration functions.
+Alternatively, if you are running PostgreSQL 8.4 or above you can take advantage
+of the SQL/MED connection management facilities. See below.
 
 When a query needs to be forwarded to a remote database the function
 plproxy.get_cluster_partitions(cluster) is invoked by plproxy to get the
@@ -115,6 +117,39 @@ on what this function can do.
   $$ LANGUAGE plpgsql;
 
 The config section contains more information on all of these functions.
+
+
+== Configuring Pl/Proxy clusters with SQL/MED ==
+
+First we need a foreign data wrapper. This is mostly a placeholder, but can
+be extended with a validator function to verify the cluster definition.
+See http://www.postgresql.org/docs/8.4/static/sql-createforeigndatawrapper.html
+for additional details of how to manage the SQL/MED catalog.
+
+  CREATE FOREIGN DATA WRAPPER plproxy;
+
+Then the actual cluster with its configuration options and partitions:
+
+  CREATE SERVER usercluster FOREIGN DATA WRAPPER plproxy
+  OPTIONS (	connection_lifetime '1800',
+  		p0 'dbname=part00 host=127.0.0.1',
+  		p1 'dbname=part01 host=127.0.0.1' );
+
+We also need a user mapping that maps local PostgreSQL users to remote
+partitions. It is possible to create PUBLIC mapping that applies for
+all users in the local system:
+
+  CREATE USER MAPPING FOR PUBLIC SERVER usercluster;
+
+Or a private mapping that can only be used by specific users:
+
+  CREATE USER MAPPING FOR bob SERVER usercluster 
+  	OPTIONS (user 'plproxy', password 'salakala');
+
+Finally we need to grant USAGE on the cluster to specific users:
+
+  GRANT USAGE ON SERVER usercluster TO bob;
+
 
 
 == Partitioned remote call ==

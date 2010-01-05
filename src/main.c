@@ -93,6 +93,7 @@ plproxy_startup_init(void)
 
 	plproxy_function_cache_init();
 	plproxy_cluster_cache_init();
+	plproxy_syscache_callback_init();
 
 	initialized = true;
 }

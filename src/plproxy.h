@@ -29,6 +29,15 @@
 #include <fmgr.h>
 #include <executor/spi.h>
 
+#if PG_VERSION_NUM >= 80400
+#define PLPROXY_USE_SQLMED
+#include <foreign/foreign.h>
+#include <catalog/pg_foreign_data_wrapper.h>
+#include <catalog/pg_foreign_server.h>
+#include <catalog/pg_user_mapping.h>
+#endif
+
+#include <access/reloptions.h>
 #include <access/tupdesc.h>
 #include <catalog/pg_namespace.h>
 #include <catalog/pg_proc.h>
@@ -36,13 +45,15 @@
 #include <commands/trigger.h>
 #include <mb/pg_wchar.h>
 #include <miscadmin.h>
+#include <nodes/value.h>
+#include <utils/acl.h>
 #include <utils/array.h>
 #include <utils/builtins.h>
 #include <utils/hsearch.h>
+#include "utils/inval.h"
 #include <utils/lsyscache.h>
 #include <utils/memutils.h>
 #include <utils/syscache.h>
-
 #include "rowstamp.h"
 
 #include <libpq-fe.h>
@@ -165,7 +176,16 @@ typedef struct ProxyCluster
 	int			ret_cur_pos;	/* Result walking: index of current row */
 	int			ret_total;		/* Result walking: total rows left */
 
+	bool		sqlmed_cluster;	/* True if the cluster is defined using SQL/MED */
+	bool		needs_reload;	/* True if the cluster partition list should be reloaded */
 	bool		busy;			/* True if the cluster is already involved in execution */
+
+	/*
+	 * SQL/MED clusters: TIDs of the foreign server and user mapping catalog tuples.
+	 * Used in to perform cluster invalidation in syscache callbacks.
+	 */
+	ItemPointerData		clusterTupleId;
+	ItemPointerData		umTupleId;
 } ProxyCluster;
 
 /*
@@ -343,6 +363,7 @@ void		plproxy_free_composite(ProxyComposite *meta);
 
 /* cluster.c */
 void		plproxy_cluster_cache_init(void);
+void		plproxy_syscache_callback_init(void);
 ProxyCluster *plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_cluster_maint(struct timeval * now);
 

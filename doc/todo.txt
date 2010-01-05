@@ -9,8 +9,6 @@
 
  * Lazy value type cache, per-conn binary I/O decision.
 
- * named connactions (ala SQL-MED)
-
 == Just thoughts ==
 
  * Drop plproxy.get_cluster_config()...
