@@ -23,15 +23,14 @@
 #include "parser.tab.h"
 
 /* import standard_conforming_strings */
-#ifndef WIN32
-#include <parser/gramparse.h>
+#if PG_VERSION_NUM >= 80500
+#include <parser/parser.h>
 #else
 #ifndef PGDLLIMPORT
 #define PGDLLIMPORT DLLIMPORT
 #endif
 extern PGDLLIMPORT bool standard_conforming_strings;
 #endif
-
 
 /* shut down crappy flex warnings */
 int yyget_lineno(void);
