@@ -80,6 +80,41 @@ plproxy_error(ProxyFunction *func, const char *fmt,...)
 }
 
 /*
+ * Pass remote error/notice/warning through.
+ */
+void
+plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr)
+{
+	const char *ss = PQresultErrorField(res, PG_DIAG_SQLSTATE);
+	const char *sev = PQresultErrorField(res, PG_DIAG_SEVERITY);
+	const char *msg = PQresultErrorField(res, PG_DIAG_MESSAGE_PRIMARY);
+	const char *det = PQresultErrorField(res, PG_DIAG_MESSAGE_DETAIL);
+	const char *hint = PQresultErrorField(res, PG_DIAG_MESSAGE_HINT);
+	const char *spos = PQresultErrorField(res, PG_DIAG_STATEMENT_POSITION);
+	const char *ipos = PQresultErrorField(res, PG_DIAG_INTERNAL_POSITION);
+	const char *iquery = PQresultErrorField(res, PG_DIAG_INTERNAL_QUERY);
+	const char *ctx = PQresultErrorField(res, PG_DIAG_CONTEXT);
+	int elevel;
+
+	if (iserr)
+		/* must ignore remote level, as it may be FATAL/PANIC */
+		elevel = ERROR;
+	else
+		/* cannot look at sev here, as it may be localized */
+		elevel = !strncmp(ss, "00", 2) ? NOTICE : WARNING;
+
+	ereport(elevel, (
+		errcode(MAKE_SQLSTATE(ss[0], ss[1], ss[2], ss[3], ss[4])),
+		errmsg("%s(%d): REMOTE %s: %s", func->name, func->arg_count, sev, msg),
+		det ? errdetail("Remote detail: %s", det) : 0,
+		hint ? errhint("Remote hint: %s", det) : 0,
+		spos ? errposition(atoi(spos)) : 0,
+		ipos ? internalerrposition(atoi(ipos)) : 0,
+		iquery ? internalerrquery(iquery) : 0,
+		ctx ? errcontext("Remote context: %s", ctx) : 0));
+}
+
+/*
  * Library load-time initialization.
  * Do the initialization when SPI is active to simplify the code.
  */

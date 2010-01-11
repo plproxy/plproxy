@@ -258,6 +258,13 @@ intr_loop:
 	return true;
 }
 
+static void
+handle_notice(void *arg, const PGresult *res)
+{
+	ProxyCluster *cluster = arg;
+	plproxy_remote_error(cluster->cur_func, res, false);
+}
+
 /* check existing conn status or launch new conn */
 static void
 prepare_conn(ProxyFunction *func, ProxyConnection *conn)
@@ -301,6 +308,9 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 
 	if (PQstatus(conn->db) == CONNECTION_BAD)
 		conn_error(func, conn, "PQconnectStart");
+
+	/* override default notice handler */
+	PQsetNoticeReceiver(conn->db, handle_notice, func->cur_cluster);
 }
 
 /*
@@ -329,15 +339,29 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 	{
 		case PGRES_TUPLES_OK:
 			if (conn->res)
+			{
+				PQclear(res);
 				conn_error(func, conn, "double result?");
+			}
 			conn->res = res;
 			break;
 		case PGRES_COMMAND_OK:
 			PQclear(res);
 			break;
+		case PGRES_FATAL_ERROR:
+			if (conn->res)
+				PQclear(conn->res);
+			conn->res = res;
+
+			plproxy_remote_error(func, res, true);
+			break;
 		default:
-			PQclear(res);
-			conn_error(func, conn, "remote error");
+			if (conn->res)
+				PQclear(conn->res);
+			conn->res = res;
+
+			plproxy_error(func, "Unexpected result type: %s", PQresStatus(PQresultStatus(res)));
+			break;
 	}
 	return true;
 }
@@ -993,6 +1017,7 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 	PG_TRY();
 	{
 		func->cur_cluster->busy = true;
+		func->cur_cluster->cur_func = func;
 
 		/* clean old results */
 		plproxy_clean_results(func->cur_cluster);
@@ -1013,6 +1038,10 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 
 		if (geterrcode() == ERRCODE_QUERY_CANCELED)
 			remote_cancel(func);
+
+		/* plproxy_remote_error() cannot clean itself, do it here */
+		plproxy_clean_results(func->cur_cluster);
+
 		PG_RE_THROW();
 	}
 	PG_END_TRY();

@@ -75,7 +75,6 @@
 #define PG_DETOAST_DATUM_PACKED(x) PG_DETOAST_DATUM(x)
 #endif
 
-
 /*
  * Determine if this argument is to SPLIT
  */
@@ -186,6 +185,9 @@ typedef struct ProxyCluster
 	 */
 	ItemPointerData		clusterTupleId;
 	ItemPointerData		umTupleId;
+
+	/* notice processing: provide info about currently executing function */
+	struct ProxyFunction	*cur_func;
 } ProxyCluster;
 
 /*
@@ -328,6 +330,7 @@ typedef struct ProxyFunction
 /* main.c */
 Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
 void		plproxy_error(ProxyFunction *func, const char *fmt,...);
+void		plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr);
 
 /* function.c */
 void		plproxy_function_cache_init(void);

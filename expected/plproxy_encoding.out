@@ -108,6 +108,7 @@ select * from test_encoding2('クライアント側のデータ');
 (1 row)
 
 select * from test_encoding3('クライアント側のデータ');
+NOTICE:  public.test_encoding3(1): REMOTE NOTICE: got: クライアント側のデータ
  id |         コラム         
 ----+------------------------
   3 | クライアント側のデータ
@@ -214,6 +215,7 @@ select * from test_encoding2('クライアント側のデータ');
 (1 row)
 
 select * from test_encoding3('クライアント側のデータ');
+NOTICE:  public.test_encoding3(1): REMOTE NOTICE: got: クライアント側のデータ
  id |         コラム         
 ----+------------------------
   3 | クライアント側のデータ

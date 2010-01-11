@@ -363,3 +363,35 @@ select * from test_simple(0);
            0
 (1 row)
 
+-- test error passing
+\c test_part
+create function test_error1() returns int4
+as $$
+begin
+    select line2err;
+    return 0;
+end;
+$$ language plpgsql;
+\c regression
+create function test_error1() returns int4
+as $$
+    cluster 'testcluster';
+    run on 0;
+$$ language plproxy;
+select * from test_error1();
+ERROR:  public.test_error1(0): REMOTE ERROR: column "line2err" does not exist
+LINE 1: select line2err
+               ^
+QUERY:  select line2err
+CONTEXT:  Remote context: PL/pgSQL function "test_error1" line 2 at SQL statement
+create function test_error2() returns int4
+as $$
+    cluster 'testcluster';
+    run on 0;
+    select err;
+$$ language plproxy;
+select * from test_error2();
+NOTICE:  PL/Proxy: dropping stale conn
+ERROR:  public.test_error2(0): REMOTE ERROR: column "err" does not exist
+LINE 1: select * from test_error2();
+               ^

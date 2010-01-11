@@ -231,3 +231,29 @@ as $$
 $$ language plproxy;
 select * from test_simple(0);
 
+-- test error passing
+\c test_part
+create function test_error1() returns int4
+as $$
+begin
+    select line2err;
+    return 0;
+end;
+$$ language plpgsql;
+\c regression
+create function test_error1() returns int4
+as $$
+    cluster 'testcluster';
+    run on 0;
+$$ language plproxy;
+select * from test_error1();
+
+create function test_error2() returns int4
+as $$
+    cluster 'testcluster';
+    run on 0;
+    select err;
+$$ language plproxy;
+select * from test_error2();
+
+
