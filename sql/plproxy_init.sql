@@ -5,6 +5,9 @@ set client_min_messages = 'warning';
 
 \i plproxy.sql
 
+drop language if exists plpgsql;
+create language plpgsql;
+
 -- create cluster info functions
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)

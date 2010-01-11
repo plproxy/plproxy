@@ -117,7 +117,11 @@ as $$ cluster 'testcluster'; run on hashtext(username); $$ language plproxy;
 \c test_part
 create function test_types(username text, inout vbool boolean, inout xdate timestamp, inout bin bytea)
 as $$ begin return; end; $$ language plpgsql;
+
 \c regression
+select 1 from (select set_config(name, 'escape', false) as ignore
+          from pg_settings where name = 'bytea_output') x
+where x.ignore = 'foo';
 select * from test_types('types', true, '2009-11-04 12:12:02', E'a\\000\\001\\002b');
 select * from test_types('types', NULL, NULL, NULL);
 

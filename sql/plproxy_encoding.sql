@@ -17,8 +17,8 @@ set client_encoding = 'utf8';
 set client_min_messages = 'warning';
 drop database if exists test_enc_proxy;
 drop database if exists test_enc_part;
-create database test_enc_proxy with encoding 'euc_jp';
-create database test_enc_part with encoding 'utf-8';
+create database test_enc_proxy with encoding 'euc_jp' template template0;
+create database test_enc_part with encoding 'utf-8' template template0;
 
 -- initialize proxy db
 \c test_enc_proxy
@@ -26,7 +26,9 @@ set client_min_messages = 'warning';
 set client_encoding = 'utf-8';
 drop language if exists plpgsql;
 create language plpgsql;
+\set ECHO none
 \i plproxy.sql
+\set ECHO all
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)
 returns integer as $$ begin return 1; end; $$ language plpgsql; 
@@ -87,15 +89,17 @@ select * from test_encoding3('クライアント側のデータ');
 set client_min_messages = 'warning';
 drop database if exists test_enc_proxy;
 drop database if exists test_enc_part;
-create database test_enc_proxy with encoding 'utf-8';
-create database test_enc_part with encoding 'euc_jp';
+create database test_enc_proxy with encoding 'utf-8' template template0;
+create database test_enc_part with encoding 'euc_jp' template template0;
 
 -- initialize proxy db
 \c test_enc_proxy
 set client_min_messages = 'warning';
 drop language if exists plpgsql;
 create language plpgsql;
+\set ECHO none
 \i plproxy.sql
+\set ECHO all
 set client_encoding = 'utf8';
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)

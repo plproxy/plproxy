@@ -44,7 +44,7 @@ REGRESS += plproxy_sqlmed
 PLPROXY_SQL += plproxy_fdw.sql
 endif
 
-REGRESS_OPTS = --load-language=plpgsql
+REGRESS_OPTS = --dbname=regression
 
 # load PGXS makefile
 PGXS = $(shell pg_config --pgxs)
