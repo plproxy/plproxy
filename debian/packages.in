@@ -12,10 +12,13 @@ Build: sh
  make
 Clean: sh
  make clean || true
-Build-Depends: postgresql-server-dev-8.3 | postgresql-server-dev-8.2, flex | flex-old, bison
+Build-Depends: postgresql-server-dev-PGVER, flex | flex-old, bison
 
-Package: plproxy2
+Package: postgresql-plproxy-PGVER
 Architecture: any
+Conflicts: plproxy2
+Replaces: plproxy2
+Contains: unstripped
 Depends: []
 Description: Query partitioner for PostgreSQL
  .

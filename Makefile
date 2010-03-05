@@ -98,10 +98,26 @@ test: install
 ack:
 	cp results/*.out expected/
 
-deb:
+mainteiner-clean: clean
+	rm -f src/scanner.[ch] src/parser.tab.[ch]
+
+deb82:
+	sed -e s/PGVER/8.2/g < debian/packages.in > debian/packages
 	yada rebuild
 	debuild -uc -us -b
 
-mainteiner-clean: clean
-	rm -f src/scanner.[ch] src/parser.tab.[ch]
+deb83:
+	sed -e s/PGVER/8.3/g < debian/packages.in > debian/packages
+	yada rebuild
+	debuild -uc -us -b
+
+deb84:
+	sed -e s/PGVER/8.4/g < debian/packages.in > debian/packages
+	yada rebuild
+	debuild -uc -us -b
+
+deb90:
+	sed -e s/PGVER/9.0/g < debian/packages.in > debian/packages
+	yada rebuild
+	debuild -uc -us -b
 
