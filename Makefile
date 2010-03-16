@@ -3,11 +3,12 @@
 PLPROXY_VERSION = 2.1-cvs
 
 # libpq config
-PQINC = $(shell pg_config --includedir)
-PQLIB = $(shell pg_config --libdir)
+PG_CONFIG = pg_config
+PQINC = $(shell $(PG_CONFIG) --includedir)
+PQLIB = $(shell $(PG_CONFIG) --libdir)
 
 # PostgreSQL version
-PGVER = $(shell pg_config --version | sed 's/PostgreSQL //')
+PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
 SQLMED = $(shell test $(PGVER) "<" "8.4" && echo "false" || echo "true")
 
 # module setup
@@ -47,7 +48,7 @@ endif
 REGRESS_OPTS = --dbname=regression
 
 # load PGXS makefile
-PGXS = $(shell pg_config --pgxs)
+PGXS = $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
 ifeq ($(PORTNAME), win32)
