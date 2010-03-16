@@ -1,3 +1,6 @@
+
+set client_min_messages = 'warning';
+
 drop foreign data wrapper if exists plproxy cascade;
 create foreign data wrapper plproxy;
 
