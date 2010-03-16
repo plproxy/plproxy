@@ -32,7 +32,19 @@
 extern PGDLLIMPORT bool standard_conforming_strings;
 #endif
 
+/*
+ * Calculare numeric flex version.
+ */
+#if !defined(YY_FLEX_MAJOR_VERSION) || !defined(YY_FLEX_MINOR_VERSION)
+#error Flex required
+#endif
+#ifndef YY_FLEX_SUBMINOR_VERSION
+#define YY_FLEX_SUBMINOR_VERSION 0
+#endif
+#define FLXVER ((YY_FLEX_MAJOR_VERSION*1000 + YY_FLEX_MINOR_VERSION)*1000 + YY_FLEX_SUBMINOR_VERSION)
+
 /* shut down crappy flex warnings */
+#if FLXVER < 2005035
 int yyget_lineno(void);
 int yyget_leng(void);
 FILE *yyget_in(void);
@@ -44,6 +56,7 @@ void plproxy_yyset_out(FILE *);
 int plproxy_yyget_debug(void);
 void plproxy_yyset_debug(int);
 int plproxy_yylex_destroy(void);
+#endif
 
 /* point to parser value */
 #define yylval plproxy_yylval
@@ -61,17 +74,6 @@ int plproxy_yylex_destroy(void);
 #define realloc repalloc
 #define free(p) do { if (p) pfree(p); } while (0)
 
-
-/*
- * Calculare numeric flex version.
- */
-#if !defined(YY_FLEX_MAJOR_VERSION) || !defined(YY_FLEX_MINOR_VERSION)
-#error Flex required
-#endif
-#ifndef YY_FLEX_SUBMINOR_VERSION
-#define YY_FLEX_SUBMINOR_VERSION 0
-#endif
-#define FLXVER ((YY_FLEX_MAJOR_VERSION*1000 + YY_FLEX_MINOR_VERSION)*1000 + YY_FLEX_SUBMINOR_VERSION)
 
 void plproxy_yylex_startup(void)
 {
