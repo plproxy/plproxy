@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.1-cvs
+PLPROXY_VERSION = 2.1rc1
 
 # libpq config
 PG_CONFIG = pg_config

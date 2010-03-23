@@ -1,3 +1,42 @@
+2010-xx-xx  -  PlProxy 2.1  -  ""
+
+  = Features =
+
+    * SPLIT: New SPLIT statement to convert incoming array arguments
+      into smaller per-partition arrays:
+
+         http://plproxy.projects.postgresql.org/doc/syntax.html#_split
+
+      (Martin Pihlak)
+
+    * SQL/MED: Cluster can be defined with SQL/MED facilities,
+      instead of old-style plproxy.* functions.
+
+        http://plproxy.projects.postgresql.org/doc/config.html
+
+      (Martin Pihlak)
+
+  = Minor fixes/features =
+
+    * Allow to customize location to pg_config via PG_CONFIG make variable.
+      (David E. Wheeler)
+
+    * Remote errors and notices are now passed upwards with all details.
+      Previously only error message pas passed and notices were ignored.
+
+    * Compatible with Postgres 9.0.
+
+    * Compatible with flex 2.5.35+ - it now properly defines it's
+      own functions, so PL/Proxy does not need to do it.  Otherwise
+      compilation will fail if flex definitions are hacked (MacOS).
+
+    * Rework regests to make them work across 8.2..9.0 and decrease
+      chance of spurious failures.  The encoding test still fails
+      if Postgres instance is not created with LANG=C.
+
+    * deb: per-version packaging: `make debXY` will create
+      `postgresql-plproxy-X.Y` package.
+
 2009-10-28  -  PlProxy 2.0.9  -  "Five-Nines Guarantee For Not Bricking The Server"
 
   = Features =
