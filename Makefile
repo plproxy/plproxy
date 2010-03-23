@@ -29,7 +29,7 @@ DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 			 doc/Makefile doc/config.txt doc/overview.txt doc/faq.txt \
 			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
 			 AUTHORS COPYRIGHT README plproxy_lang.sql plproxy_fdw.sql NEWS \
-			 debian/packages debian/changelog
+			 debian/packages.in debian/changelog
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
