@@ -48,8 +48,8 @@ static int geterrcode(void)
 static void
 conn_error(ProxyFunction *func, ProxyConnection *conn, const char *desc)
 {
-	plproxy_error(func, "%s: %s",
-				  desc, PQerrorMessage(conn->db));
+	plproxy_error(func, "[%s] %s: %s",
+				  PQdb(conn->db), desc, PQerrorMessage(conn->db));
 }
 
 /* Compare if major/minor match. Works on "MAJ.MIN.*" */
@@ -261,8 +261,9 @@ intr_loop:
 static void
 handle_notice(void *arg, const PGresult *res)
 {
-	ProxyCluster *cluster = arg;
-	plproxy_remote_error(cluster->cur_func, res, false);
+	ProxyConnection *conn = arg;
+	ProxyCluster *cluster = conn->cluster;
+	plproxy_remote_error(cluster->cur_func, conn, res, false);
 }
 
 /* check existing conn status or launch new conn */
@@ -310,7 +311,7 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 		conn_error(func, conn, "PQconnectStart");
 
 	/* override default notice handler */
-	PQsetNoticeReceiver(conn->db, handle_notice, func->cur_cluster);
+	PQsetNoticeReceiver(conn->db, handle_notice, conn);
 }
 
 /*
@@ -353,7 +354,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 				PQclear(conn->res);
 			conn->res = res;
 
-			plproxy_remote_error(func, res, true);
+			plproxy_remote_error(func, conn, res, true);
 			break;
 		default:
 			if (conn->res)

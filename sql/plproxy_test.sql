@@ -256,4 +256,23 @@ as $$
 $$ language plproxy;
 select * from test_error2();
 
+create function test_error3() returns int4
+as $$
+    connect 'dbname=test_part';
+$$ language plproxy;
+select * from test_error3();
+
+-- test invalid db
+create function test_bad_db() returns int4
+as $$
+    cluster 'badcluster';
+$$ language plproxy;
+select * from test_bad_db();
+
+create function test_bad_db2() returns int4
+as $$
+    connect 'dbname=wrong_name_db';
+$$ language plproxy;
+select * from test_bad_db2();
+
 

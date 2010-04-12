@@ -125,6 +125,7 @@ typedef struct ProxyConfig
 /* Single database connection */
 typedef struct
 {
+	struct ProxyCluster *cluster;
 	const char *connstr;		/* Connection string for libpq */
 
 	/* state */
@@ -330,7 +331,7 @@ typedef struct ProxyFunction
 /* main.c */
 Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
 void		plproxy_error(ProxyFunction *func, const char *fmt,...);
-void		plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr);
+void		plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult *res, bool iserr);
 
 /* function.c */
 void		plproxy_function_cache_init(void);

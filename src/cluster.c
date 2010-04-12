@@ -207,6 +207,7 @@ add_connection(ProxyCluster *cluster, char *connstr, int part_num)
 	{
 		conn = &cluster->conn_list[cluster->conn_count++];
 		conn->connstr = MemoryContextStrdup(cluster_mem, final->data);
+		conn->cluster = cluster;
 	}
 
 	cluster->part_map[part_num] = conn;
@@ -812,6 +813,7 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 	cluster->part_map = palloc(sizeof(ProxyConnection *));
 	cluster->conn_list = palloc0(sizeof(ProxyConnection));
 	conn = &cluster->conn_list[0];
+	conn->cluster = cluster;
 	cluster->part_map[0] = conn;
 
 	conn->connstr = pstrdup(cluster->name);

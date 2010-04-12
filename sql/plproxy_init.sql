@@ -16,6 +16,9 @@ begin
     if cluster_name = 'testcluster' then
         return 5;
     end if;
+    if cluster_name = 'badcluster' then
+        return 5;
+    end if;
     raise exception 'no such cluster: %', cluster_name;
 end; $$ language plpgsql;
 
@@ -25,6 +28,10 @@ returns setof text as $$
 begin
     if cluster_name = 'testcluster' then
         return next 'host=127.0.0.1 dbname=test_part';
+        return;
+    end if;
+    if cluster_name = 'badcluster' then
+        return next 'host=127.0.0.1 dbname=nonex_db';
         return;
     end if;
     raise exception 'no such cluster: %', cluster_name;

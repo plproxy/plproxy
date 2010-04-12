@@ -83,7 +83,7 @@ plproxy_error(ProxyFunction *func, const char *fmt,...)
  * Pass remote error/notice/warning through.
  */
 void
-plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr)
+plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult *res, bool iserr)
 {
 	const char *ss = PQresultErrorField(res, PG_DIAG_SQLSTATE);
 	const char *sev = PQresultErrorField(res, PG_DIAG_SEVERITY);
@@ -105,7 +105,7 @@ plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr)
 
 	ereport(elevel, (
 		errcode(MAKE_SQLSTATE(ss[0], ss[1], ss[2], ss[3], ss[4])),
-		errmsg("%s(%d): REMOTE %s: %s", func->name, func->arg_count, sev, msg),
+		errmsg("%s(%d): [%s] REMOTE %s: %s", func->name, func->arg_count, PQdb(conn->db), sev, msg),
 		det ? errdetail("Remote detail: %s", det) : 0,
 		hint ? errhint("Remote hint: %s", hint) : 0,
 		spos ? errposition(atoi(spos)) : 0,
