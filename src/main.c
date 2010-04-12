@@ -107,7 +107,7 @@ plproxy_remote_error(ProxyFunction *func, const PGresult *res, bool iserr)
 		errcode(MAKE_SQLSTATE(ss[0], ss[1], ss[2], ss[3], ss[4])),
 		errmsg("%s(%d): REMOTE %s: %s", func->name, func->arg_count, sev, msg),
 		det ? errdetail("Remote detail: %s", det) : 0,
-		hint ? errhint("Remote hint: %s", det) : 0,
+		hint ? errhint("Remote hint: %s", hint) : 0,
 		spos ? errposition(atoi(spos)) : 0,
 		ipos ? internalerrposition(atoi(ipos)) : 0,
 		iquery ? internalerrquery(iquery) : 0,
