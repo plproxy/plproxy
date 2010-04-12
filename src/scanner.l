@@ -326,6 +326,9 @@ static const char *unquote(const char *qstr, bool std)
 		} else
 			appendStringInfoChar(&buf, *p);
 	}
+
+	if (0) yy_fatal_error("avoid unused func warning");
+
 	/* leak buf.data */
 	return buf.data;
 }
