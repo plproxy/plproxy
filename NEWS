@@ -1,4 +1,4 @@
-2010-xx-xx  -  PlProxy 2.1  -  ""
+2010-04-23  -  PlProxy 2.1  -  "Quality Horrorshow"
 
   = Features =
 
@@ -23,6 +23,8 @@
 
     * Remote errors and notices are now passed upwards with all details.
       Previously only error message pas passed and notices were ignored.
+
+    * Show remote database name in error messages.
 
     * Compatible with Postgres 9.0.
 
