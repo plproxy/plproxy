@@ -96,6 +96,10 @@ plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult 
 	const char *ctx = PQresultErrorField(res, PG_DIAG_CONTEXT);
 	int elevel;
 
+	/* libpq errors may not have sqlstate */
+	if (!ss)
+		ss = "XX000";
+
 	if (iserr)
 		/* must ignore remote level, as it may be FATAL/PANIC */
 		elevel = ERROR;
