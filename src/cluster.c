@@ -69,6 +69,9 @@ static const char *cluster_config_options[] = {
 	"connection_lifetime",
 	"query_timeout",
 	"disable_binary",
+	"keepalive_idle",
+	"keepalive_interval",
+	"keepalive_count",
 	NULL
 };
 
@@ -257,6 +260,12 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->query_timeout = atoi(val);
 	else if (pg_strcasecmp("disable_binary", key) == 0)
 		cf->disable_binary = atoi(val);
+	else if (pg_strcasecmp("keepalive_idle", key) == 0)
+		cf->keepidle = atoi(val);
+	else if (pg_strcasecmp("keepalive_interval", key) == 0)
+		cf->keepintvl = atoi(val);
+	else if (pg_strcasecmp("keepalive_count", key) == 0)
+		cf->keepcnt = atoi(val);
 	else
 		plproxy_error(func, "Unknown config param: %s", key);
 }

@@ -31,6 +31,24 @@
 
 #include "poll_compat.h"
 
+#ifdef WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+#ifdef SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+#include <netinet/in.h>
+#endif
+#ifdef HAVE_NETINET_TCP_H
+#include <netinet/tcp.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+
 #if PG_VERSION_NUM < 80400
 static int geterrcode(void)
 {
@@ -258,6 +276,97 @@ intr_loop:
 	return true;
 }
 
+static bool
+socket_set_keepalive(int fd, int onoff, int keepidle, int keepintvl, int keepcnt)
+{
+	int val, res;
+
+	if (!onoff) {
+		/* turn keepalive off */
+		val = 0;
+		res = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val));
+		return (res == 0);
+	}
+
+	/* turn keepalive on */
+	val = 1;
+	res = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val));
+	if (res < 0)
+		return false;
+
+	/* Darwin */
+#ifdef TCP_KEEPALIVE
+	if (keepidle) {
+		val = keepidle;
+		res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPALIVE, &val, sizeof(val));
+		if (res < 0 && errno != ENOPROTOOPT)
+			return false;
+	}
+#endif
+
+	/* Linux, NetBSD */
+#ifdef TCP_KEEPIDLE
+	if (keepidle) {
+		val = keepidle;
+		res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val));
+		if (res < 0 && errno != ENOPROTOOPT)
+			return false;
+	}
+#endif
+#ifdef TCP_KEEPINTVL
+	if (keepintvl) {
+		val = keepintvl;
+		res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val));
+		if (res < 0 && errno != ENOPROTOOPT)
+			return false;
+	}
+#endif
+#ifdef TCP_KEEPCNT
+	if (keepcnt > 0) {
+		val = keepcnt;
+		res = setsockopt(fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val));
+		if (res < 0 && errno != ENOPROTOOPT)
+			return false;
+	}
+#endif
+
+	/* Windows */
+#ifdef SIO_KEEPALIVE_VALS
+	if (keepidle || keepintvl) {
+		struct tcp_keepalive vals;
+		DWORD outlen = 0;
+		if (!keepidle) keepidle = 5 * 60;
+		if (!keepintvl) keepintvl = 15;
+		vals.onoff = 1;
+		vals.keepalivetime = keepidle * 1000;
+		vals.keepaliveinterval = keepintvl * 1000;
+		res = WSAIoctl(fd, SIO_KEEPALIVE_VALS, &vals, sizeof(vals), NULL, 0, &outlen, NULL, NULL, NULL, NULL);
+		if (res != 0)
+			return false;
+	}
+#endif
+	return true;
+}
+
+static void setup_keepalive(ProxyConnection *conn)
+{
+	struct sockaddr sa;
+	socklen_t salen = sizeof(sa);
+	int fd = PQsocket(conn->db);
+	ProxyConfig *config = &conn->cluster->config;
+
+	/* turn on keepalive */
+	if (!config->keepidle && !config->keepintvl && !config->keepcnt)
+		return;
+#ifdef AF_UNIX
+	if (getsockname(fd, &sa, &salen) != 0)
+		return;
+	if (sa.sa_family == AF_UNIX)
+		return;
+#endif
+	socket_set_keepalive(fd, 1, config->keepidle, config->keepintvl, config->keepcnt);
+}
+
 static void
 handle_notice(void *arg, const PGresult *res)
 {
@@ -312,6 +421,8 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 
 	/* override default notice handler */
 	PQsetNoticeReceiver(conn->db, handle_notice, conn);
+
+	setup_keepalive(conn);
 }
 
 /*
@@ -1047,3 +1158,5 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 	PG_END_TRY();
 }
+
+
