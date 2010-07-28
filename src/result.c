@@ -144,11 +144,15 @@ return_composite(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fc
 {
 	int			i,
 				col;
-	char	   *values[FUNC_MAX_ARGS];
-	int			fmts[FUNC_MAX_ARGS];
-	int			lengths[FUNC_MAX_ARGS];
+	char	  **values;
+	int		   *fmts;
+	int		   *lengths;
 	HeapTuple	tup;
 	ProxyComposite *meta = func->ret_composite;
+
+	values = palloc(meta->tupdesc->natts * sizeof(char *));
+	fmts = palloc(meta->tupdesc->natts * sizeof(int));
+	lengths = palloc(meta->tupdesc->natts * sizeof(int));
 
 	for (i = 0; i < meta->tupdesc->natts; i++)
 	{
@@ -167,6 +171,11 @@ return_composite(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fc
 		}
 	}
 	tup = plproxy_recv_composite(meta, values, lengths, fmts);
+
+	pfree(lengths);
+	pfree(fmts);
+	pfree(values);
+
 	return HeapTupleGetDatum(tup);
 }
 
