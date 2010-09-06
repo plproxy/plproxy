@@ -231,6 +231,12 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 			yyerror("CLUSTER statement missing");
 	}
 
+	/* disallow SELECT if requested */
+#if NO_SELECT
+	if (select_sql)
+		yyerror("SELECT statement not allowed");
+#endif
+
 	/* release scanner resources */
 	plproxy_yylex_destroy();
 

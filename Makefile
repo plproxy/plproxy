@@ -2,6 +2,9 @@
 # PL/Proxy version
 PLPROXY_VERSION = 2.1
 
+# set to 1 to disallow functions containing SELECT
+NO_SELECT = 0
+
 # libpq config
 PG_CONFIG = pg_config
 PQINC = $(shell $(PG_CONFIG) --includedir)
@@ -18,7 +21,7 @@ SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 DATA_built = plproxy.sql
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] plproxy.sql.in
-PG_CPPFLAGS = -I$(PQINC)
+PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
 TARNAME = plproxy-$(PLPROXY_VERSION)
