@@ -59,8 +59,8 @@ SHLIB_LINK += -lws2_32 -lpgport
 endif
 
 # PGXS may define them as empty
-FLEX := $(or $(FLEX), flex)
-BISON := $(or $(BISON), bison)
+FLEX := $(if $(FLEX),$(FLEX),flex)
+BISON := $(if $(BISON),$(BISON),bison)
 
 # parser rules
 src/scanner.o: src/parser.tab.h
