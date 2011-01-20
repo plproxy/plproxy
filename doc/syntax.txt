@@ -130,6 +130,24 @@ And target partitions get queries:
   SELECT * FROM set_profiles(ARRAY['bar'], ARRAY['b']);
 
 
+== TARGET ==
+
+Specify function name on remote side to be called.  By default
+PL/Proxy uses current function name.
+
+Following function:
+
+  CREATE FUNCTION some_function(username text, num int4)
+  RETURNS SETOF text AS $$
+    CLUSTER 'userdb';
+    RUN ON hashtext(username);
+    TARGET other_function;
+  $$ LANGUAGE plproxy;
+
+will run following query on remote side:
+
+  SELECT * FROM other_function(username, num);
+
 == SELECT ==
 
   SELECT .... ;

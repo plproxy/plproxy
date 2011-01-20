@@ -35,7 +35,7 @@ void plproxy_yy_scan_bytes(const char *bytes, int len);
 static ProxyFunction *xfunc;
 
 /* remember what happened */
-static int got_run, got_cluster, got_connect, got_split;
+static int got_run, got_cluster, got_connect, got_split, got_target;
 
 static QueryBuffer *cluster_sql;
 static QueryBuffer *select_sql;
@@ -48,7 +48,7 @@ static QueryBuffer *cur_sql;
 /* keep the resetting code together with variables */
 static void reset_parser_vars(void)
 {
-	got_run = got_cluster = got_connect = got_split = 0;
+	got_run = got_cluster = got_connect = got_split = got_target = 0;
 	cur_sql = select_sql = cluster_sql = hash_sql = connect_sql = NULL;
 	xfunc = NULL;
 }
@@ -59,7 +59,7 @@ static void reset_parser_vars(void)
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
 %token <str> IDENT NUMBER FNCALL SPLIT STRING
-%token <str> SQLIDENT SQLPART
+%token <str> SQLIDENT SQLPART TARGET
 
 %union
 {
@@ -70,7 +70,7 @@ static void reset_parser_vars(void)
 
 body: | body stmt ;
 
-stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt ;
+stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt | target_stmt;
 
 connect_stmt: CONNECT connect_spec ';'	{
 					if (got_connect)
@@ -116,6 +116,15 @@ cluster_func: FNCALL	{ cluster_sql = plproxy_query_start(xfunc, false);
 
 cluster_name: STRING	{ xfunc->cluster_name = plproxy_func_strdup(xfunc, $1); }
 			;
+
+target_stmt: TARGET target_name ';' {
+							if (got_target)
+								yyerror("Only one TARGET statement allowed");
+							got_target = 1; }
+		   ;
+
+target_name: IDENT { xfunc->target_name = plproxy_func_strdup(xfunc, $1); }
+		   ;
 
 split_stmt: SPLIT split_spec ';' {
 							if (got_split)
@@ -236,6 +245,9 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	if (select_sql)
 		yyerror("SELECT statement not allowed");
 #endif
+
+	if (select_sql && got_target)
+		yyerror("TARGET cannot be used with SELECT");
 
 	/* release scanner resources */
 	plproxy_yylex_destroy();

@@ -163,6 +163,7 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 {
 	StringInfoData sql;
 	ProxyQuery *pq;
+	const char *target;
 	int			i,
 				len;
 
@@ -193,7 +194,8 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 		appendStringInfo(&sql, "r::%s", func->ret_scalar->name);
 
 	/* function call */
-	appendStringInfo(&sql, " from %s(", func->name);
+	target = func->target_name ? func->target_name : func->name;
+	appendStringInfo(&sql, " from %s(", target);
 
 	/* fill in function arguments */
 	for (i = 0; i < func->arg_count; i++)

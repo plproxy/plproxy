@@ -304,6 +304,7 @@ typedef struct ProxyFunction
 	int			exact_nr;		/* Hash value for R_EXACT */
 	const char *connect_str;	/* libpq string for CONNECT function */
 	ProxyQuery *connect_sql;	/* Optional query for CONNECT function */
+	const char *target_name;	/* Optional target function name */
 
 	/*
 	 * calculated data
