@@ -11,14 +11,8 @@ all:
 
 html: $(HTML)
 
-upload:
-	devupload.sh overview.txt $(wiki)
-	#devupload.sh config.txt $(wiki)/ClusterConfig
-	#devupload.sh syntax.txt $(wiki)/LanguageSyntax
-	#devupload.sh todo.txt $(wiki)/ToDo
-
 clean:
-	rm -rf api
+	rm -f *.html
 
 web: $(HTML)
 	rsync -avz $(HTML) $(web)/doc/
