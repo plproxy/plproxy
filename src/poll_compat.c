@@ -32,11 +32,19 @@ static void fdbuf_zero(struct fd_buf *buf)
 
 static bool fdbuf_resize(struct fd_buf *buf, int fd)
 {
-	/* get some extra room for quaranteed alignment */
-	int need_bytes = fd/8 + 32;
-	/* default - 2048 fds */
-	int alloc = 256;
-	uint8 *ptr;
+	int need_bytes;
+	unsigned char *ptr;
+	/* default allocation */
+	int alloc = sizeof(fd_set);
+
+#ifdef WIN32
+	int cnt = buf->set ? buf->set->fd_count : 0;
+	/* win32 fd_set is array of handles, +8 for count&padding */
+	need_bytes = (cnt + 1) * sizeof(buf->set->fd_array[0]) + 8;
+#else
+	/* otherwise, fd_set is bitmap, +8 for int/long alignment */
+	need_bytes = fd / 8 + 8;
+#endif
 
 	if (buf->alloc_bytes < need_bytes)
 	{
@@ -60,15 +68,20 @@ static bool fdbuf_resize(struct fd_buf *buf, int fd)
 	return true;
 }
 
+/* win32: make macros ignore FD_SETSIZE */
+#undef FD_SETSIZE
+#define FD_SETSIZE (1 << 30)
+
 int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms)
 {
 	static struct fd_buf readfds = { NULL, 0 };
 	static struct fd_buf writefds = { NULL, 0 };
 
 	struct pollfd *pf;
-	int i, res, fd_max = 0;
+	int res, fd_max = 0;
 	struct timeval *tv = NULL;
 	struct timeval tvreal;
+	unsigned i;
 
 	/* convert timeout_ms to timeval */
 	if (timeout_ms >= 0)
@@ -97,9 +110,9 @@ int poll(struct pollfd *fds, nfds_t nfds, int timeout_ms)
 			goto err_nomem;
 
 		if (pf->events & POLLIN)
-			FD_SET(pf->fd, readfds.set);
+			FD_SET((unsigned)pf->fd, readfds.set);
 		if (pf->events & POLLOUT)
-			FD_SET(pf->fd, writefds.set);
+			FD_SET((unsigned)pf->fd, writefds.set);
 		if (pf->fd > fd_max)
 			fd_max = pf->fd;
 	}
