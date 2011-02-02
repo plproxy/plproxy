@@ -133,7 +133,7 @@ And target partitions get queries:
 == TARGET ==
 
 Specify function name on remote side to be called.  By default
-PL/Proxy uses current function name.
+PL/Proxy uses current function name.  _(New in 2.2)_
 
 Following function:
 

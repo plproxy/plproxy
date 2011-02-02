@@ -1,6 +1,6 @@
 
 # PL/Proxy version
-PLPROXY_VERSION = 2.1
+PLPROXY_VERSION = 2.2rc1
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0

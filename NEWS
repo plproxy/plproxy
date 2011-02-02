@@ -1,3 +1,30 @@
+2011-xx-xx  -  PlProxy 2.2  -  ""
+
+  = Features =
+
+    * New TARGET statement to specify different function to call
+      on remote side.
+
+    * Make possible to compile out support for SELECT statement:
+
+       $ make all NO_SELECT=1
+
+  = Fixes =
+
+    * Fix returning of many-column (>100) result rows.  Old code assumed
+      FUNC_MAX_ARGS is max, but that does not apply to result columns.
+      (Hans-Jürgen Schönig)
+
+    * Survive missing sqlstate field on error messages.
+      Local libpq errors do not set it.
+
+    * More portable workaround for empty FLEX/BISON.
+      (Peter Eisentraut)
+
+    * win32: Fix poll compat to work with large amount of fds.
+      Old compat assument bitmap representation for fd_set,
+      but win32 uses array.
+
 2010-04-23  -  PlProxy 2.1  -  "Quality Horrorshow"
 
   = Features =
