@@ -175,6 +175,19 @@ returns "RetWeird" as $$ select 1::int4, 'BazOoka'::text $$ language sql;
 \c regression
 select * from "testQuoting"('user', '1', 'dat');
 
+-- test arg type quoting
+create domain "bad type" as text;
+create function test_argq(username text, "some arg" integer, "other arg" "bad type",
+                          out "bad out" text, out "bad out2" "bad type")
+as $$ cluster 'testcluster'; run on hashtext(username); $$ language plproxy;
+\c test_part
+create domain "bad type" as text;
+create function test_argq(username text, "some arg" integer, "other arg" "bad type",
+                          out "bad out" text, out "bad out2" "bad type")
+                    as $$ begin return; end; $$ language plpgsql;
+\c regression
+select * from test_argq('user', 1, 'q');
+
 -- test hash types function
 create or replace function t_hash16(int4) returns int2 as $$
 declare
