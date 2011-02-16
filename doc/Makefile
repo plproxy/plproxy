@@ -1,7 +1,5 @@
 
-wiki = https://developer.skype.com/SkypeGarage/DbProjects/PlProxy
-
-web = mkz@shell.pgfoundry.org:/home/pgfoundry.org/groups/plproxy/htdocs/
+web = pgf:/home/pgfoundry.org/groups/plproxy/htdocs/
 
 ASCIIDOC = asciidoc
 
