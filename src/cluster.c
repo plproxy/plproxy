@@ -392,6 +392,28 @@ extract_part_num(const char *partname, int *part_num)
 }
 
 /*
+ * Validate single cluster option
+ */
+static void
+validate_cluster_option(const char *name, const char *arg)
+{
+	const char **opt;
+
+	/* see that a valid config option is specified */
+	for (opt = cluster_config_options; *opt; opt++)
+	{
+		if (pg_strcasecmp(*opt, name) == 0)
+			break;
+	}
+
+	if (*opt == NULL)
+		elog(ERROR, "Pl/Proxy: invalid server option: %s", name);
+	else if (strspn(arg, "0123456789") != strlen(arg))
+		elog(ERROR, "Pl/Proxy: only integer options are allowed: %s=%s",
+			 name, arg);
+}
+
+/*
  * Validate the generic option given to servers or user mappings defined with
  * plproxy foreign data wrapper.  Raise an ERROR if the option or its value is
  * considered invalid.
@@ -435,20 +457,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 			}
 			else
 			{
-				const char **opt;
-
-				/* see that a valid config option is specified */
-				for (opt = cluster_config_options; *opt; opt++)
-				{
-					if (pg_strcasecmp(*opt, def->defname) == 0)
-						break;
-				}
-
-				if (*opt == NULL)
-					elog(ERROR, "Pl/Proxy: invalid server option: %s", def->defname);
-				else if (strspn(arg, "0123456789") != strlen(arg))
-					elog(ERROR, "Pl/Proxy: only integer options are allowed: %s=%s",
-						 def->defname, arg);
+				validate_cluster_option(def->defname, arg);
 			}
 		}
 		else if (catalog == UserMappingRelationId)
@@ -465,8 +474,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 		}
 		else if (catalog == ForeignDataWrapperRelationId)
 		{
-			 /* At the moment there are no options to the fdw itself */
-			 elog(WARNING, "Pl/Proxy: foreign data wrapper takes no options");
+			validate_cluster_option(def->defname, arg);
 		}
 	}
 
@@ -551,6 +559,16 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 		DefElem    *def = lfirst(cell);
 
 		appendStringInfo(user_options, "%s='%s' ", def->defname, strVal(def->arg));
+	}
+
+	/*
+	 * Collect the configuration definitions from foreign data wrapper.
+	 */
+	foreach(cell, fdw->options)
+	{
+		DefElem    *def = lfirst(cell);
+
+		set_config_key(func, &cluster->config, def->defname, strVal(def->arg));
 	}
 
 	/*
