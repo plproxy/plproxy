@@ -187,10 +187,11 @@ your cluster definitions.
 Note: the validation function is known to be broken in PostgreSQL 8.4.2 and
 below.
 
-  CREATE FOREIGN DATA WRAPPER plproxy [ VALIDATOR plproxy_fdw_validator ];
+  CREATE FOREIGN DATA WRAPPER plprox [ VALIDATOR plproxy_fdw_validator ]
+      [OPTIONS global options] ;
 
 Next we need to define a CLUSTER, this is done by creating a SERVER that uses
-the plproxy FDW. The options to the SERVER are Pl/Proxy configuration settings
+the plproxy FDW.  The options to the SERVER are PL/Proxy configuration settings
 and the list of cluster partitions.
 
 Note: USAGE access to the SERVER must be explicitly granted. Without this,
