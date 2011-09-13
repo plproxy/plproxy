@@ -1,3 +1,18 @@
+2011-xx-xx  -  PlProxy 2.3  -  ""
+
+  = Features =
+
+    * Global SQL/MED options: ALTER FOREIGN DATA WRAPPER plproxy OPTIONS ... ;
+      (Petr Jelinek)
+
+    * New config options: keepalive_idle, keepalive_interval, keepalive_count.
+      For TCP keepalive tuning.  Alternative to libpq keepalive options
+      when older libpq is used or when central tuning is preferrable.
+
+  = Docs =
+
+    * Use Asciidoc ListingBlock for code - results in nicer HTML.
+
 2011-02-18  -  PlProxy 2.2  -  "Cover With Milk To See Secret Message"
 
   = Features =
