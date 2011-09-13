@@ -20,8 +20,10 @@ The following plproxy schema functions are used to define the clusters:
 
 === plproxy.get_cluster_version(cluster_name) ===
 
-  plproxy.get_cluster_version(cluster_name text)
-  returns integer
+----------------------
+plproxy.get_cluster_version(cluster_name text)
+returns integer
+----------------------
 
 The get_cluster_version function is called on each request, it should return 
 the version number of the current configuration for a particular cluster.  
@@ -32,22 +34,26 @@ by calling the get_cluster_config() and get_cluster_paritions() functions.
 This is an example function that does not lookup the version number for an 
 external source such as a configuration table.
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
-  RETURNS int4 AS $$
-  BEGIN
-      IF cluster_name = 'a_cluster' THEN
-          RETURN 1;
-      END IF;
-      RAISE EXCEPTION 'Unknown cluster';
-  END;
-  $$ LANGUAGE plpgsql;
+----------------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
+RETURNS int4 AS $$
+BEGIN
+    IF cluster_name = 'a_cluster' THEN
+        RETURN 1;
+    END IF;
+    RAISE EXCEPTION 'Unknown cluster';
+END;
+$$ LANGUAGE plpgsql;
+----------------------
 
 
 
 === plproxy.get_cluster_partitions(cluster_name) ===
 
-  plproxy.get_cluster_partitions(cluster_name text)
-  returns setof text
+----------------------
+plproxy.get_cluster_partitions(cluster_name text)
+returns setof text
+----------------------
 
 This is called when a new partition configuration needs to be loaded. 
 It should return connect strings to the partitions in the cluster.
@@ -82,25 +88,31 @@ There are several appriaches how to handle passwords:
 
 An example function without the use of separate configuration tables:
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
-  RETURNS SETOF text AS $$
-  BEGIN
-      IF cluster_name = 'a_cluster' THEN
-          RETURN NEXT 'dbname=part00 host=127.0.0.1';
-          RETURN NEXT 'dbname=part01 host=127.0.0.1';
-          RETURN NEXT 'dbname=part02 host=127.0.0.1';
-          RETURN NEXT 'dbname=part03 host=127.0.0.1';
-	  RETURN;
-      END IF;
-      RAISE EXCEPTION 'Unknown cluster';
-  END;
-  $$ LANGUAGE plpgsql;
+----------------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
+RETURNS SETOF text AS $$
+BEGIN
+    IF cluster_name = 'a_cluster' THEN
+        RETURN NEXT 'dbname=part00 host=127.0.0.1';
+        RETURN NEXT 'dbname=part01 host=127.0.0.1';
+        RETURN NEXT 'dbname=part02 host=127.0.0.1';
+        RETURN NEXT 'dbname=part03 host=127.0.0.1';
+        RETURN;
+    END IF;
+    RAISE EXCEPTION 'Unknown cluster';
+END;
+$$ LANGUAGE plpgsql;
+----------------------
 
 === plproxy.get_cluster_config(cluster) ===
-
-  plproxy.get_cluster_config(in cluster_name text,
-			     out key text, out val text)
-  returns setof record
+ 
+----------------------
+plproxy.get_cluster_config(
+	IN cluster_name text,
+	OUT key text,
+	OUT val text)
+RETURNS SETOF record
+----------------------
 
 The get_cluster_config function returns a set of key-value pairs that can 
 consist of any of the following configuration parameters.  All of them are 
@@ -152,19 +164,21 @@ or NULL then the parameter is disabled (a default value will be used)
 
 Example function without the use of separate tables for storing parameters.
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
-      in cluster_name text,
-      out key text,
-      out val text)
-  RETURNS SETOF record AS $$
-  BEGIN
-      -- lets use same config for all clusters
-      key := 'connection_lifetime';
-      val := 30*60; -- 30m
-      RETURN NEXT;
-      RETURN;
-  END;
-  $$ LANGUAGE plpgsql;
+------------------------------------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
+    IN cluster_name text,
+    OUT key text,
+    OUT val text)
+RETURNS SETOF record AS $$
+BEGIN
+    -- lets use same config for all clusters
+    key := 'connection_lifetime';
+    val := 30*60; -- 30m
+    RETURN NEXT;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+------------------------------------------
 
 == SQL/MED cluster definitions ==
 
@@ -187,8 +201,10 @@ your cluster definitions.
 Note: the validation function is known to be broken in PostgreSQL 8.4.2 and
 below.
 
-  CREATE FOREIGN DATA WRAPPER plprox [ VALIDATOR plproxy_fdw_validator ]
-      [OPTIONS global options] ;
+
+------------------------------------------
+CREATE FOREIGN DATA WRAPPER plproxy [ VALIDATOR plproxy_fdw_validator ] [ OPTIONS global options ] ;
+------------------------------------------
 
 Next we need to define a CLUSTER, this is done by creating a SERVER that uses
 the plproxy FDW.  The options to the SERVER are PL/Proxy configuration settings
@@ -197,8 +213,9 @@ and the list of cluster partitions.
 Note: USAGE access to the SERVER must be explicitly granted. Without this,
 users are unable to use the cluster.
 
-  CREATE SERVER a_cluster FOREIGN DATA WRAPPER plproxy
-  	OPTIONS (
+------------------------------------------
+CREATE SERVER a_cluster FOREIGN DATA WRAPPER plproxy
+        OPTIONS (
 		connection_lifetime '1800',
 		disable_binary '1',
 		p0 'dbname=part00 hostname=127.0.0.1',
@@ -206,17 +223,20 @@ users are unable to use the cluster.
 		p2 'dbname=part02 hostname=127.0.0.1',
 		p3 'dbname=part03 hostname=127.0.0.1'
 		);
+------------------------------------------
 
 Finally we need to create a user mapping for the Pl/Proxy users. One might
 create individual mappings for specific users:
 
-  CREATE USER MAPPING FOR bob SERVER a_cluster
-  	OPTIONS (user 'bob', password 'secret');
+------------------------------------------
+CREATE USER MAPPING FOR bob SERVER a_cluster OPTIONS (user 'bob', password 'secret');
+------------------------------------------
 
 or create a PUBLIC mapping for all users of the system:
 
-  CREATE USER MAPPING FOR public SERVER a_cluster
-  	OPTIONS (user 'plproxy', password 'foo');
+------------------------------------------
+CREATE USER MAPPING FOR public SERVER a_cluster OPTIONS (user 'plproxy', password 'foo');
+------------------------------------------
 
 Also it is possible to create both individual and PUBLIC mapping, in this case
 the individual mapping takes precedence.

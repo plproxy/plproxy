@@ -13,10 +13,12 @@ should use a partitioning scheme that is appropriate to their requirements.
 For the purposes of this example assume that the partition databases part00
 and part01 both contain a table resembling
 
-  CREATE TABLE users (
+------------
+CREATE TABLE users (
     username text,
     email text
-  );
+);
+------------
 
 
 == Installation ==
@@ -43,13 +45,15 @@ will connect to a remote database named
 This example  uses plproxy in CONNECT mode, it will 
 connect to `dbname=part00` and run following SQL there:
 
-  CREATE FUNCTION get_user_email(i_username text)
-  RETURNS SETOF text AS $$
+------------
+CREATE FUNCTION get_user_email(i_username text)
+RETURNS SETOF text AS $$
     CONNECT 'dbname=part00';
     SELECT email FROM users WHERE username = $1;
-  $$ LANGUAGE plproxy;
+$$ LANGUAGE plproxy;
 
- `SELECT * from get_user_email($1);`.
+SELECT * from get_user_email($1);
+------------
 
 The above example uses plproxy to proxy the query to the remote database but 
 doesn't handle partitioning of data.  It assumes that the entire users table is 
@@ -69,17 +73,19 @@ connection string to use for each partition.
 
 The following is an example 
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
-  RETURNS SETOF text AS $$
-  BEGIN
-      IF cluster_name = 'usercluster' THEN
-          RETURN NEXT 'dbname=part00 host=127.0.0.1';
-          RETURN NEXT 'dbname=part01 host=127.0.0.1';
-          RETURN;
-      END IF;
-      RAISE EXCEPTION 'Unknown cluster';
-  END;
-  $$ LANGUAGE plpgsql;
+------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_partitions(cluster_name text)
+RETURNS SETOF text AS $$
+BEGIN
+    IF cluster_name = 'usercluster' THEN
+        RETURN NEXT 'dbname=part00 host=127.0.0.1';
+        RETURN NEXT 'dbname=part01 host=127.0.0.1';
+        RETURN;
+    END IF;
+    RAISE EXCEPTION 'Unknown cluster';
+END;
+$$ LANGUAGE plpgsql;
+------------
  
 A production application might query some configuration tables to return the
 connstrings. The number of partitions must be a power of 2.
@@ -88,33 +94,37 @@ Next define a plproxy.get_cluster_version(cluster_name) function.  This is
 called on each request and determines if the output from a cached
 result from plproxy.get_cluster_partitions can be reused. 
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
-  RETURNS int4 AS $$
-  BEGIN
-      IF cluster_name = 'usercluster' THEN
-          RETURN 1;
-      END IF;
-      RAISE EXCEPTION 'Unknown cluster';
-  END;
-  $$ LANGUAGE plpgsql;
+------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_version(cluster_name text)
+RETURNS int4 AS $$
+BEGIN
+    IF cluster_name = 'usercluster' THEN
+        RETURN 1;
+    END IF;
+    RAISE EXCEPTION 'Unknown cluster';
+END;
+$$ LANGUAGE plpgsql;
+------------
 
 We also need to provide a plproxy.get_cluster_config function, ours will provide
 a value for the connection lifetime.  See the configuration section for details 
 on what this function can do. 
 
-  CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
+------------
+CREATE OR REPLACE FUNCTION plproxy.get_cluster_config(
     in cluster_name text,
     out key text,
     out val text)
-  RETURNS SETOF record AS $$
-  BEGIN
-      -- lets use same config for all clusters
-      key := 'connection_lifetime';
-      val := 30*60; -- 30m
-      RETURN NEXT;
-      RETURN;
-  END;
-  $$ LANGUAGE plpgsql;
+RETURNS SETOF record AS $$
+BEGIN
+    -- lets use same config for all clusters
+    key := 'connection_lifetime';
+    val := 30*60; -- 30m
+    RETURN NEXT;
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+------------
 
 The config section contains more information on all of these functions.
 
@@ -126,29 +136,39 @@ be extended with a validator function to verify the cluster definition.
 See http://www.postgresql.org/docs/8.4/static/sql-createforeigndatawrapper.html
 for additional details of how to manage the SQL/MED catalog.
 
-  CREATE FOREIGN DATA WRAPPER plproxy;
+------------
+CREATE FOREIGN DATA WRAPPER plproxy;
+------------
 
 Then the actual cluster with its configuration options and partitions:
 
-  CREATE SERVER usercluster FOREIGN DATA WRAPPER plproxy
-  OPTIONS (	connection_lifetime '1800',
-  		p0 'dbname=part00 host=127.0.0.1',
-  		p1 'dbname=part01 host=127.0.0.1' );
+------------
+CREATE SERVER usercluster FOREIGN DATA WRAPPER plproxy
+OPTIONS (connection_lifetime '1800',
+         p0 'dbname=part00 host=127.0.0.1',
+         p1 'dbname=part01 host=127.0.0.1' );
+------------
 
 We also need a user mapping that maps local PostgreSQL users to remote
 partitions. It is possible to create PUBLIC mapping that applies for
 all users in the local system:
 
-  CREATE USER MAPPING FOR PUBLIC SERVER usercluster;
+------------
+CREATE USER MAPPING FOR PUBLIC SERVER usercluster;
+------------
 
 Or a private mapping that can only be used by specific users:
 
-  CREATE USER MAPPING FOR bob SERVER usercluster 
+------------
+CREATE USER MAPPING FOR bob SERVER usercluster 
   	OPTIONS (user 'plproxy', password 'salakala');
+------------
 
 Finally we need to grant USAGE on the cluster to specific users:
 
-  GRANT USAGE ON SERVER usercluster TO bob;
+------------
+GRANT USAGE ON SERVER usercluster TO bob;
+------------
 
 
 
@@ -164,12 +184,14 @@ user's email address will be returned.
 
 This function should be created in the proxy database.
 
-  CREATE OR REPLACE FUNCTION get_user_email(i_username text)
-  RETURNS SETOF text AS $$
+------------
+CREATE OR REPLACE FUNCTION get_user_email(i_username text)
+RETURNS SETOF text AS $$
     CLUSTER 'usercluster';
     RUN ON hashtext(i_username) ;
     SELECT email FROM users WHERE username = i_username;
-  $$ LANGUAGE plproxy;
+$$ LANGUAGE plproxy;
+------------
 
 
 
@@ -182,21 +204,25 @@ databases that will perform the insert.
 
 We define this function on both part00 and part01
 
-  CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
-  RETURNS integer AS $$
+------------
+CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
+RETURNS integer AS $$
        INSERT INTO users (username, email) VALUES ($1,$2);
        SELECT 1;
-  $$ LANGUAGE SQL;
+$$ LANGUAGE SQL;
+------------
 
 Now we define a proxy function inside the proxy database to send the 
 INSERT's to the appropriate target.
 
 
-  CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
-  RETURNS integer AS $$
+------------
+CREATE OR REPLACE FUNCTION insert_user(i_username text, i_emailaddress text)
+RETURNS integer AS $$
     CLUSTER 'usercluster';
     RUN ON hashtext(i_username);
-  $$ LANGUAGE plproxy;
+$$ LANGUAGE plproxy;
+------------
 
 
 == Putting it all together ==
@@ -204,18 +230,22 @@ INSERT's to the appropriate target.
 Connect to the proxy database (The one we installed plproxy and the plproxy
 functions on).
 
-  SELECT insert_user('Sven','sven@somewhere.com');
-  SELECT insert_user('Marko', 'marko@somewhere.com');
-  SELECT insert_user('Steve','steve@somewhere.cm');
+------------
+SELECT insert_user('Sven','sven@somewhere.com');
+SELECT insert_user('Marko', 'marko@somewhere.com');
+SELECT insert_user('Steve','steve@somewhere.cm');
+------------
 
 Now connect to the plproxy_1 and plproxy_2 databases.  Sven and Marko should be
 in plproxy_2 , and Steve should be in plproxy_1.
 
 When connected to the proxy user you can obtain data by doing
 
-  SELECT get_user_email('Sven');
-  SELECT get_user_email('Marko');
-  SELECT get_user_email('Steve');
+------------
+SELECT get_user_email('Sven');
+SELECT get_user_email('Marko');
+SELECT get_user_email('Steve');
+------------
 
 
 == Connection pooling ==
@@ -225,7 +255,7 @@ as it opens connection to each partition from each backend process.
 So it's good idea to use a pooler that can take queries from several
 connections and funnel them via smaller number of connections to actual
 database.  We use and recommend
-https://developer.skype.com/SkypeGarage/DbProjects/PgBouncer[PgBouncer]
+http://wiki.postgresql.org/wiki/PgBouncer[PgBouncer]
 for that.
 
 
