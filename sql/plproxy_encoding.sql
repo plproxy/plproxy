@@ -22,10 +22,10 @@ create database test_enc_part with encoding 'utf-8' template template0;
 
 -- initialize proxy db
 \c test_enc_proxy
-set client_min_messages = 'warning';
 set client_encoding = 'utf-8';
-drop language if exists plpgsql;
+set client_min_messages = 'fatal';
 create language plpgsql;
+set client_min_messages = 'warning';
 \set ECHO none
 \i plproxy.sql
 \set ECHO all
@@ -52,9 +52,9 @@ create function test_encoding3(text) returns setof intl_data as $$
 $$ language plproxy;
 -- initialize part db
 \c test_enc_part
-set client_min_messages = 'warning';
-drop language if exists plpgsql;
+set client_min_messages = 'fatal';
 create language plpgsql;
+set client_min_messages = 'warning';
 set client_encoding = 'utf8';
 create table intl_data (id int4, "コラム" text);
 insert into intl_data values (1, 'リモートデータ');
@@ -94,9 +94,9 @@ create database test_enc_part with encoding 'euc_jp' template template0;
 
 -- initialize proxy db
 \c test_enc_proxy
-set client_min_messages = 'warning';
-drop language if exists plpgsql;
+set client_min_messages = 'fatal';
 create language plpgsql;
+set client_min_messages = 'warning';
 \set ECHO none
 \i plproxy.sql
 \set ECHO all
@@ -125,9 +125,9 @@ $$ language plproxy;
 
 -- initialize part db
 \c test_enc_part
-set client_min_messages = 'warning';
-drop language if exists plpgsql;
+set client_min_messages = 'fatal';
 create language plpgsql;
+set client_min_messages = 'warning';
 set client_encoding = 'utf8';
 create table intl_data (id int4, "コラム" text);
 insert into intl_data values (1, 'リモートデータ');
