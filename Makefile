@@ -48,7 +48,11 @@ REGRESS += plproxy_sqlmed
 PLPROXY_SQL += plproxy_fdw.sql
 endif
 
+
 REGRESS_OPTS = --dbname=regression
+
+# pg9.1 ignores --dbname
+override CONTRIB_TESTDB := regression
 
 # load PGXS makefile
 PGXS = $(shell $(PG_CONFIG) --pgxs)
