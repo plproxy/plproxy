@@ -9,6 +9,10 @@
       For TCP keepalive tuning.  Alternative to libpq keepalive options
       when older libpq is used or when central tuning is preferrable.
 
+  = Fixes =
+
+    * Fix memory leak in SPLIT - it was leaking array element type info.
+
   = Docs =
 
     * Use Asciidoc ListingBlock for code - results in nicer HTML.
