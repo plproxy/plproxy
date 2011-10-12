@@ -214,7 +214,8 @@ typedef struct ProxyType
 	bool		by_value;		/* False if Datum is a pointer to data */
 	char		alignment;		/* Type alignment */
 	bool		is_array;		/* True if array */
-	Oid			elem_type;		/* Array element type */
+	Oid			elem_type_oid;	/* Array element type oid */
+	struct ProxyType *elem_type_t;	/* Elem type info, filled lazily */
 	short		length;			/* Type length */
 
 	/* I/O functions */
@@ -365,6 +366,7 @@ void		plproxy_yyerror(const char *fmt,...);
 /* type.c */
 ProxyComposite *plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc);
 ProxyType  *plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send);
+ProxyType  *plproxy_get_elem_type(ProxyFunction *func, ProxyType *type, bool for_send);
 char	   *plproxy_send_type(ProxyType *type, Datum val, bool allow_bin, int *len, int *fmt);
 Datum		plproxy_recv_type(ProxyType *type, char *str, int len, bool bin);
 HeapTuple	plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *fmts);

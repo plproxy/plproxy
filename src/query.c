@@ -251,7 +251,7 @@ plproxy_query_prepare(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *
 
 		if (split_support && IS_SPLIT_ARG(func, idx))
 			/* for SPLIT arguments use array element type instead */
-			types[i] = func->arg_types[idx]->elem_type;
+			types[i] = func->arg_types[idx]->elem_type_oid;
 		else 
 			types[i] = func->arg_types[idx]->type_oid;
 	}

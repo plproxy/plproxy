@@ -853,11 +853,11 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
  * and determine the element type information.
  */
 static DatumArray *
-make_datum_array(ProxyFunction *func, ArrayType *v, Oid elem_type)
+make_datum_array(ProxyFunction *func, ArrayType *v, ProxyType *array_type)
 {
 	DatumArray	   *da = palloc0(sizeof(*da));
 
-	da->type = plproxy_find_type_info(func, elem_type, true);
+	da->type = plproxy_get_elem_type(func, array_type, true);
 
 	if (v)
 		deconstruct_array(v,
@@ -948,7 +948,7 @@ prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 				plproxy_error(func, "split multi-dimensional arrays are not supported");
 		}
 
-		arrays_to_split[i] = make_datum_array(func, v, func->arg_types[i]->elem_type);
+		arrays_to_split[i] = make_datum_array(func, v, func->arg_types[i]);
 
 		/* Check that the element counts match */
 		if (split_array_len < 0)

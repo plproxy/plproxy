@@ -139,6 +139,9 @@ plproxy_free_type(ProxyType *type)
 	if (type->name)
 		pfree(type->name);
 
+	if (type->elem_type_t)
+		plproxy_free_type(type->elem_type_t);
+
 	/* hopefully I/O functions do not use ->fn_extra */
 
 	pfree(type);
@@ -254,7 +257,8 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 	type->by_value = s_type->typbyval;
 	type->name = plproxy_func_strdup(func, namebuf);
 	type->is_array = (s_type->typelem != 0 && s_type->typlen == -1);
-	type->elem_type = s_type->typelem;
+	type->elem_type_oid = s_type->typelem;
+	type->elem_type_t = NULL;
 	type->alignment = s_type->typalign;
 	type->length = s_type->typlen;
 
@@ -283,6 +287,13 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 	return type;
 }
 
+/* Get cached type info for array elems */
+ProxyType *plproxy_get_elem_type(ProxyFunction *func, ProxyType *type, bool for_send)
+{
+	if (!type->elem_type_t)
+		type->elem_type_t = plproxy_find_type_info(func, type->elem_type_oid, for_send);
+	return type->elem_type_t;
+}
 
 /* Convert a Datum to parameter for libpq */
 char *
