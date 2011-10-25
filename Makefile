@@ -89,25 +89,32 @@ src/poll_compat.o: src/poll_compat.h
 tags:
 	cscope -I src -b -f .cscope.out src/*.c
 
-tgz:
+oldtgz:
 	rm -rf $(TARNAME)
 	mkdir -p $(TARNAME)
 	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(TARNAME)
-	tar czf $(TARNAME).tar.gz $(TARNAME)
+	tar czf $(TARNAME).tgz $(TARNAME)
 
-clean: tgzclean
+tgz:
+	git archive -o $(TARNAME).tar.gz --prefix=$(TARNAME)/ HEAD
+
+clean: tgzclean doc-clean
+
+doc-clean:
+	$(MAKE) -C doc clean
 
 tgzclean:
 	rm -rf $(TARNAME) $(TARNAME).tar.gz
 
 test: install
-	make installcheck || { less regression.diffs; exit 1; }
+	$(MAKE) installcheck || { less regression.diffs; exit 1; }
 
 ack:
 	cp results/*.out expected/
 
-mainteiner-clean: clean
+maintainer-clean: clean
 	rm -f src/scanner.[ch] src/parser.tab.[ch]
+	rm -rf debian/control debian/rules debian/packages debian/packages-tmp*
 
 deb82:
 	sed -e s/PGVER/8.2/g < debian/packages.in > debian/packages
