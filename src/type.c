@@ -244,6 +244,7 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 		case 'b':
 		case 'c':
 		case 'd':
+		case 'e':
 			break;
 	}
 
