@@ -3,19 +3,20 @@
 
 == Near future ==
 
- * Clean up the binary-or-not decision.  There should be possible
-   to have partitions with different versions.  That may mean
-   lazy typeout generations.
-
  * Lazy value type cache, per-conn binary I/O decision.
+
+ * Clean up the binary-or-not decision.  There should be possible
+   to have partitions with different versions.  Requires lazy values.
+
+== Good to have ==
+
+ * RUN ON ALL: ignore errors?
+ * RUN ON ANY: if one con failed, try another
 
 == Just thoughts ==
 
  * Drop plproxy.get_cluster_config()...
 
- * RUN ON ALL: sort by?
- * RUN ON ALL: ignore errors?
- * RUN ON ANY: if one con failed, try another
  * Streaming for big resultsets, to avoid loading them fully in memory.
    This needs also backend changes.
 
