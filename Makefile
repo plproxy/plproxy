@@ -1,6 +1,6 @@
-
-# PL/Proxy version
-PLPROXY_VERSION = 2.3
+EXTENSION  = plproxy
+EXTVERSION = $(shell grep default_version $(EXTENSION).control | \
+             sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -13,6 +13,7 @@ PQLIB = $(shell $(PG_CONFIG) --libdir)
 # PostgreSQL version
 PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
 SQLMED = $(shell test $(PGVER) "<" "8.4" && echo "false" || echo "true")
+PG91 = $(shell test $(PGVER) "<" "9.1" && echo "false" || echo "true")
 
 # module setup
 MODULE_big = plproxy
@@ -24,7 +25,7 @@ EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] sql/plproxy.sql
 PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-TARNAME = plproxy-$(PLPROXY_VERSION)
+TARNAME = plproxy-$(EXTVERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 			 $(foreach t,$(REGRESS),test/sql/$(t).sql test/expected/$(t).out) \
@@ -46,6 +47,17 @@ PLPROXY_SQL = sql/plproxy_lang.sql
 ifeq ($(SQLMED), true)
 REGRESS += plproxy_sqlmed
 PLPROXY_SQL += sql/plproxy_fdw.sql
+endif
+
+# Extensions available, rename files as appropriate.
+ifeq ($(PG91),true)
+all: sql/$(EXTENSION)--$(EXTVERSION).sql
+
+sql/$(EXTENSION)--$(EXTVERSION).sql: sql/$(EXTENSION).sql
+	cp $< $@
+
+DATA = $(wildcard sql/*--*.sql) sql/$(EXTENSION)--$(EXTVERSION).sql
+EXTRA_CLEAN += sql/$(EXTENSION)--$(EXTVERSION).sql
 endif
 
 
