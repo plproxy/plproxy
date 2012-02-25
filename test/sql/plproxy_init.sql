@@ -3,7 +3,7 @@
 
 set client_min_messages = 'warning';
 
-\i plproxy.sql
+\i sql/plproxy.sql
 
 set client_min_messages = 'fatal';
 create language plpgsql;

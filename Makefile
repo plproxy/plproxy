@@ -1,6 +1,6 @@
-
-# PL/Proxy version
-PLPROXY_VERSION = 2.3
+EXTENSION  = plproxy
+EXTVERSION = $(shell grep default_version $(EXTENSION).control | \
+             sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -13,21 +13,22 @@ PQLIB = $(shell $(PG_CONFIG) --libdir)
 # PostgreSQL version
 PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
 SQLMED = $(shell test $(PGVER) "<" "8.4" && echo "false" || echo "true")
+PG91 = $(shell test $(PGVER) "<" "9.1" && echo "false" || echo "true")
 
 # module setup
 MODULE_big = plproxy
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
-DATA_built = plproxy.sql
-EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] plproxy.sql.in
+DATA_built = sql/plproxy.sql
+EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] sql/plproxy.sql
 PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-TARNAME = plproxy-$(PLPROXY_VERSION)
+DISTNAME = plproxy-$(EXTVERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
-			 $(foreach t,$(REGRESS),sql/$(t).sql expected/$(t).out) \
+			 $(foreach t,$(REGRESS),test/sql/$(t).sql test/expected/$(t).out) \
 			 config/simple.config.sql src/poll_compat.h \
 			 doc/Makefile doc/config.txt doc/faq.txt \
 			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
@@ -36,20 +37,31 @@ DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
-	  plproxy_errors plproxy_clustermap plproxy_dynamic_record \
-	  plproxy_encoding plproxy_split plproxy_target
+     plproxy_errors plproxy_clustermap plproxy_dynamic_record \
+     plproxy_encoding plproxy_split plproxy_target
 
 # SQL files
-PLPROXY_SQL = plproxy_lang.sql
+PLPROXY_SQL = sql/plproxy_lang.sql
 
 # SQL/MED available, add foreign data wrapper and regression tests
 ifeq ($(SQLMED), true)
 REGRESS += plproxy_sqlmed
-PLPROXY_SQL += plproxy_fdw.sql
+PLPROXY_SQL += sql/plproxy_fdw.sql
+endif
+
+# Extensions available, rename files as appropriate.
+ifeq ($(PG91),true)
+all: sql/$(EXTENSION)--$(EXTVERSION).sql
+
+sql/$(EXTENSION)--$(EXTVERSION).sql: sql/$(EXTENSION).sql
+	cp $< $@
+
+DATA = $(wildcard sql/*--*.sql) sql/$(EXTENSION)--$(EXTVERSION).sql
+EXTRA_CLEAN += sql/$(EXTENSION)--$(EXTVERSION).sql
 endif
 
 
-REGRESS_OPTS = --dbname=regression
+REGRESS_OPTS = --dbname=regression --inputdir=test
 
 # pg9.1 ignores --dbname
 override CONTRIB_TESTDB := regression
@@ -76,7 +88,7 @@ src/parser.tab.c: src/parser.y
 src/scanner.c: src/scanner.l
 	cd src; $(FLEX) -oscanner.c scanner.l
 
-plproxy.sql.in: $(PLPROXY_SQL)
+sql/plproxy.sql: $(PLPROXY_SQL)
 	cat $^ > $@
 
 # dependencies
@@ -90,13 +102,16 @@ tags:
 	cscope -I src -b -f .cscope.out src/*.c
 
 oldtgz:
-	rm -rf $(TARNAME)
-	mkdir -p $(TARNAME)
-	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(TARNAME)
-	tar czf $(TARNAME).tgz $(TARNAME)
+	rm -rf $(DISTNAME)
+	mkdir -p $(DISTNAME)
+	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(DISTNAME)
+	tar czf $(DISTNAME).tgz $(DISTNAME)
 
 tgz:
-	git archive -o $(TARNAME).tar.gz --prefix=$(TARNAME)/ HEAD
+	git archive -o $(DISTNAME).tar.gz --prefix=$(DISTNAME)/ HEAD
+
+zip:
+	git archive -o $(DISTNAME).zip --format zip --prefix=$(DISTNAME)/ HEAD
 
 clean: tgzclean doc-clean
 
@@ -104,7 +119,10 @@ doc-clean:
 	$(MAKE) -C doc clean
 
 tgzclean:
-	rm -rf $(TARNAME) $(TARNAME).tar.gz
+	rm -rf $(DISTNAME) $(DISTNAME).tar.gz
+
+zipclean:
+	rm -rf $(DISTNAME) $(DISTNAME).zip
 
 test: install
 	$(MAKE) installcheck || { less regression.diffs; exit 1; }

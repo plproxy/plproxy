@@ -400,7 +400,7 @@ ERROR:  public.test_error1(0): [test_part] REMOTE ERROR: column "line2err" does 
 LINE 1: select line2err
                ^
 QUERY:  select line2err
-CONTEXT:  Remote context: PL/pgSQL function "test_error1" line 2 at SQL statement
+CONTEXT:  Remote context: PL/pgSQL function "test_error1" line 3 at SQL statement
 create function test_error2() returns int4
 as $$
     cluster 'testcluster';
