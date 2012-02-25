@@ -27,7 +27,7 @@ SHLIB_LINK = -L$(PQLIB) -lpq
 TARNAME = plproxy-$(PLPROXY_VERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
-			 $(foreach t,$(REGRESS),sql/$(t).sql expected/$(t).out) \
+			 $(foreach t,$(REGRESS),test/sql/$(t).sql test/expected/$(t).out) \
 			 config/simple.config.sql src/poll_compat.h \
 			 doc/Makefile doc/config.txt doc/faq.txt \
 			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
@@ -36,8 +36,8 @@ DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
-	  plproxy_errors plproxy_clustermap plproxy_dynamic_record \
-	  plproxy_encoding plproxy_split plproxy_target
+     plproxy_errors plproxy_clustermap plproxy_dynamic_record \
+     plproxy_encoding plproxy_split plproxy_target
 
 # SQL files
 PLPROXY_SQL = plproxy_lang.sql
@@ -49,7 +49,7 @@ PLPROXY_SQL += plproxy_fdw.sql
 endif
 
 
-REGRESS_OPTS = --dbname=regression
+REGRESS_OPTS = --dbname=regression --inputdir=test
 
 # pg9.1 ignores --dbname
 override CONTRIB_TESTDB := regression
