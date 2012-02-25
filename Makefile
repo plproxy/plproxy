@@ -19,8 +19,8 @@ MODULE_big = plproxy
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
-DATA_built = plproxy.sql
-EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] plproxy.sql.in
+DATA_built = sql/plproxy.sql
+EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] sql/plproxy.sql
 PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
@@ -40,12 +40,12 @@ REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
      plproxy_encoding plproxy_split plproxy_target
 
 # SQL files
-PLPROXY_SQL = plproxy_lang.sql
+PLPROXY_SQL = sql/plproxy_lang.sql
 
 # SQL/MED available, add foreign data wrapper and regression tests
 ifeq ($(SQLMED), true)
 REGRESS += plproxy_sqlmed
-PLPROXY_SQL += plproxy_fdw.sql
+PLPROXY_SQL += sql/plproxy_fdw.sql
 endif
 
 
@@ -76,7 +76,7 @@ src/parser.tab.c: src/parser.y
 src/scanner.c: src/scanner.l
 	cd src; $(FLEX) -oscanner.c scanner.l
 
-plproxy.sql.in: $(PLPROXY_SQL)
+sql/plproxy.sql: $(PLPROXY_SQL)
 	cat $^ > $@
 
 # dependencies
