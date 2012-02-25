@@ -2,6 +2,9 @@ results/
 *.so
 tmp/
 *.o
+*.zip
+*.tgz
+*.tar.gz
 regression.diffs
 regression.out
 sql/plproxy--2*

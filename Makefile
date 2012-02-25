@@ -25,7 +25,7 @@ EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] sql/plproxy.sql
 PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-TARNAME = plproxy-$(EXTVERSION)
+DISTNAME = plproxy-$(EXTVERSION)
 DIST_DIRS = src sql expected config doc debian
 DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
 			 $(foreach t,$(REGRESS),test/sql/$(t).sql test/expected/$(t).out) \
@@ -102,13 +102,16 @@ tags:
 	cscope -I src -b -f .cscope.out src/*.c
 
 oldtgz:
-	rm -rf $(TARNAME)
-	mkdir -p $(TARNAME)
-	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(TARNAME)
-	tar czf $(TARNAME).tgz $(TARNAME)
+	rm -rf $(DISTNAME)
+	mkdir -p $(DISTNAME)
+	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(DISTNAME)
+	tar czf $(DISTNAME).tgz $(DISTNAME)
 
 tgz:
-	git archive -o $(TARNAME).tar.gz --prefix=$(TARNAME)/ HEAD
+	git archive -o $(DISTNAME).tar.gz --prefix=$(DISTNAME)/ HEAD
+
+zip:
+	git archive -o $(DISTNAME).zip --format zip --prefix=$(DISTNAME)/ HEAD
 
 clean: tgzclean doc-clean
 
@@ -116,7 +119,10 @@ doc-clean:
 	$(MAKE) -C doc clean
 
 tgzclean:
-	rm -rf $(TARNAME) $(TARNAME).tar.gz
+	rm -rf $(DISTNAME) $(DISTNAME).tar.gz
+
+zipclean:
+	rm -rf $(DISTNAME) $(DISTNAME).zip
 
 test: install
 	$(MAKE) installcheck || { less regression.diffs; exit 1; }
