@@ -27,7 +27,7 @@ set client_min_messages = 'fatal';
 create language plpgsql;
 set client_min_messages = 'warning';
 \set ECHO none
-\i plproxy.sql
+\i sql/plproxy.sql
 \set ECHO all
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)
@@ -98,7 +98,7 @@ set client_min_messages = 'fatal';
 create language plpgsql;
 set client_min_messages = 'warning';
 \set ECHO none
-\i plproxy.sql
+\i sql/plproxy.sql
 \set ECHO all
 set client_encoding = 'utf8';
 create schema plproxy;
