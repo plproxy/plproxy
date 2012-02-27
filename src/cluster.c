@@ -531,7 +531,7 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
     if (!HeapTupleIsValid(tup))
         elog(ERROR, "cache lookup failed for foreign server %u", foreign_server->serverid);
 
-	cluster->clusterTupleId = tup->t_self;
+	scstamp_set(FOREIGNSERVEROID, &cluster->clusterStamp, tup);
 	ReleaseSysCache(tup);
 
     tup = SearchSysCache(USERMAPPINGUSERSERVER,
@@ -551,7 +551,8 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 				user_mapping->userid, foreign_server->serverid);
 	}
 
-	cluster->umTupleId = tup->t_self;
+	scstamp_set(USERMAPPINGOID, &cluster->umStamp, tup);
+
 	ReleaseSysCache(tup);
 
 	/*
@@ -684,7 +685,7 @@ determine_compat_mode(ProxyCluster *cluster)
  * functions.
  */
 static void
-ClusterSyscacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
+ClusterSyscacheCallback(Datum arg, int cacheid, SCInvalArg newStamp)
 {
 	ProxyCluster *cluster;
 
@@ -695,25 +696,23 @@ ClusterSyscacheCallback(Datum arg, int cacheid, ItemPointer tuplePtr)
 			/* already invalidated */
 			continue;
 		}
-		else if (!tuplePtr)
-		{
-			/* invalidate all */
-			cluster->needs_reload = true;
-		}
 		else if (!cluster->sqlmed_cluster)
 		{
 			/* allow new SQL/MED servers to override compat definitions */
-			cluster->needs_reload = (cacheid == FOREIGNSERVEROID);
+			if (cacheid == FOREIGNSERVEROID)
+				cluster->needs_reload = true;
 		}
 		else if (cacheid == USERMAPPINGOID)
 		{
 			/* user mappings changed */
-			cluster->needs_reload = ItemPointerEquals(tuplePtr, &cluster->umTupleId);
+			if (scstamp_check(cacheid, &cluster->umStamp, newStamp))
+				cluster->needs_reload = true;
 		}
 		else if (cacheid == FOREIGNSERVEROID)
 		{
 			/* server definitions changed */
-			cluster->needs_reload = ItemPointerEquals(tuplePtr, &cluster->clusterTupleId);
+			if (scstamp_check(cacheid, &cluster->clusterStamp, newStamp))
+				cluster->needs_reload = true;
 		}
 	}
 }

@@ -54,6 +54,7 @@
 #include <utils/lsyscache.h>
 #include <utils/memutils.h>
 #include <utils/syscache.h>
+
 #include "rowstamp.h"
 
 #include <libpq-fe.h>
@@ -196,8 +197,8 @@ typedef struct ProxyCluster
 	 * SQL/MED clusters: TIDs of the foreign server and user mapping catalog tuples.
 	 * Used in to perform cluster invalidation in syscache callbacks.
 	 */
-	ItemPointerData		clusterTupleId;
-	ItemPointerData		umTupleId;
+	SysCacheStamp clusterStamp;
+	SysCacheStamp umStamp;
 
 	/* notice processing: provide info about currently executing function */
 	struct ProxyFunction	*cur_func;

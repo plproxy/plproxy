@@ -48,3 +48,52 @@ static inline bool plproxy_check_stamp(RowStamp *stamp, HeapTuple tup)
 
 #endif
 
+/*
+ * SyscacheCallback check changed in 9.2.
+ */
+
+#if PG_VERSION_NUM >= 90200
+
+typedef uint32 SCInvalArg;
+typedef struct SysCacheStamp {
+	uint32 cacheid;
+	uint32 hashValue;
+} SysCacheStamp;
+
+static inline void scstamp_set(int cache, SysCacheStamp *stamp, HeapTuple tup)
+{
+	Oid oid = HeapTupleGetOid(tup);
+	stamp->cacheid = cache;
+	stamp->hashValue = GetSysCacheHashValue1(cache, oid);
+}
+
+static inline bool scstamp_check(int cache, SysCacheStamp *stamp, uint32 hashValue)
+{
+	if (cache != stamp->cacheid)
+		elog(WARNING, "cache id mismatch: stamp:%d cur:%d", stamp->cacheid, cache);
+	return !hashValue || stamp->hashValue == hashValue;
+}
+
+#else
+
+/*
+ * Pre-9.2 cache invalidation.
+ */
+
+typedef ItemPointer SCInvalArg;
+typedef struct SysCacheStamp {
+	ItemPointerData     tupleId;
+} SysCacheStamp;
+
+static inline void scstamp_set(int cache, SysCacheStamp *stamp, HeapTuple tup)
+{
+	stamp->tupleId = tup->t_self;
+}
+
+static inline bool scstamp_check(int cache, SysCacheStamp *stamp, ItemPointer scrow)
+{
+	return !scrow || ItemPointerEquals(&stamp->tupleId, scrow);
+}
+
+#endif
+
