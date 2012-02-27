@@ -26,14 +26,6 @@ PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
 DISTNAME = plproxy-$(EXTVERSION)
-DIST_DIRS = src sql expected config doc debian
-DIST_FILES = Makefile src/plproxy.h src/rowstamp.h src/scanner.l src/parser.y \
-			 $(foreach t,$(REGRESS),test/sql/$(t).sql test/expected/$(t).out) \
-			 config/simple.config.sql src/poll_compat.h \
-			 doc/Makefile doc/config.txt doc/faq.txt \
-			 doc/syntax.txt doc/todo.txt doc/tutorial.txt \
-			 AUTHORS COPYRIGHT README plproxy_lang.sql plproxy_fdw.sql NEWS \
-			 debian/packages.in debian/changelog
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
@@ -101,28 +93,16 @@ src/poll_compat.o: src/poll_compat.h
 tags:
 	cscope -I src -b -f .cscope.out src/*.c
 
-oldtgz:
-	rm -rf $(DISTNAME)
-	mkdir -p $(DISTNAME)
-	tar c $(DIST_FILES) $(SRCS) | tar xp -C $(DISTNAME)
-	tar czf $(DISTNAME).tgz $(DISTNAME)
-
 tgz:
 	git archive -o $(DISTNAME).tar.gz --prefix=$(DISTNAME)/ HEAD
 
 zip:
 	git archive -o $(DISTNAME).zip --format zip --prefix=$(DISTNAME)/ HEAD
 
-clean: tgzclean doc-clean
+clean: doc-clean
 
 doc-clean:
 	$(MAKE) -C doc clean
-
-tgzclean:
-	rm -rf $(DISTNAME) $(DISTNAME).tar.gz
-
-zipclean:
-	rm -rf $(DISTNAME) $(DISTNAME).zip
 
 test: install
 	$(MAKE) installcheck || { less regression.diffs; exit 1; }
