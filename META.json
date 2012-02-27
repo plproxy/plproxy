@@ -6,6 +6,9 @@
    "maintainer": [
       "Marko Kreen <markokr@gmail.com>"
    ],
+   "license": {
+     "ISC": "http://www.opensource.org/licenses/ISC"
+   },
    "license": "isc",
    "provides": {
       "plproxy": {
