@@ -9,7 +9,6 @@
    "license": {
      "ISC": "http://www.opensource.org/licenses/ISC"
    },
-   "license": "isc",
    "provides": {
       "plproxy": {
          "abstract": "Database partitioning implemented as procedural language",
