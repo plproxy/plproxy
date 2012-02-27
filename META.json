@@ -6,7 +6,9 @@
    "maintainer": [
       "Marko Kreen <markokr@gmail.com>"
    ],
-   "license": "isc",
+   "license": {
+     "ISC": "http://www.opensource.org/licenses/ISC"
+   },
    "provides": {
       "plproxy": {
          "abstract": "Database partitioning implemented as procedural language",
