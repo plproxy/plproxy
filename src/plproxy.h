@@ -75,6 +75,14 @@
 #define PG_DETOAST_DATUM_PACKED(x) PG_DETOAST_DATUM(x)
 #endif
 
+#ifndef PG_PRINTF_ATTRIBUTE
+#ifdef WIN32
+#define PG_PRINTF_ATTRIBUTE gnu_printf
+#else
+#define PG_PRINTF_ATTRIBUTE printf
+#endif
+#endif
+
 /*
  * Determine if this argument is to SPLIT
  */
@@ -336,7 +344,8 @@ typedef struct ProxyFunction
 
 /* main.c */
 Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
-void		plproxy_error(ProxyFunction *func, const char *fmt,...);
+void		plproxy_error(ProxyFunction *func, const char *fmt, ...)
+	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 void		plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult *res, bool iserr);
 
 /* function.c */
@@ -361,7 +370,8 @@ void		plproxy_yylex_startup(void);
 
 /* parser.y */
 void		plproxy_run_parser(ProxyFunction *func, const char *body, int len);
-void		plproxy_yyerror(const char *fmt,...);
+void		plproxy_yyerror(const char *fmt, ...)
+	__attribute__((format(PG_PRINTF_ATTRIBUTE, 1, 2)));
 
 /* type.c */
 ProxyComposite *plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc);
