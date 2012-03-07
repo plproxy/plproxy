@@ -1,3 +1,14 @@
+2012-xx-xx  -  PlProxy 2.4  -  ""
+
+  = Features =
+
+    * Support ENUM types.  (Zoltán Böszörményi)
+
+    * Support building as PGXN extension.  (David E. Wheeler)
+
+    * Support Postgres 9.2.
+
+
 2011-10-25  -  PlProxy 2.3  -  "Unmanned Crowd Control"
 
   = Features =
