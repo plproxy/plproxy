@@ -1,0 +1,111 @@
+#!/bin/sh
+#
+# build a PostgreSQL module based on PGXS for give list of supported major
+# versions
+#
+# Author: Dimitri Fontaine <dfontaine@hi-media.com>
+
+action="$1"
+srcdir="$2"
+target="$3"
+opt="$4"
+
+prepare_env() {
+    if [ ! -d $srcdir ]; then
+	echo "Error: no such directory '$srcdir'"
+	exit 1
+    fi
+    version=$1
+    vtarget=`echo $target | sed -e "s:%v:$version:"`
+    pgc="/usr/lib/postgresql/$version/bin/pg_config"
+    cflags=`$pgc --cflags`
+}
+
+build() {
+    prepare_env $1
+
+    mkdir -p $vtarget
+    cd $vtarget
+    make -f $srcdir/Makefile CFLAGS="$cflags $opt" PG_CONFIG="$pgc" VPATH="$srcdir"
+    cd -
+}
+
+clean() {
+    prepare_env $1
+    make clean PG_CONFIG="$pgc"
+    rm -rf $vtarget
+}
+
+versions() {
+    #for v in `/usr/share/postgresql-common/supported-versions`
+    #grep -q "^$v" $srcdir/debian/pgversions && echo $v
+    for v in `cat $srcdir/debian/pgversions`
+    do
+	test -x /usr/lib/postgresql/$v/bin/pg_config && echo $v
+    done
+}
+
+for v in `versions`
+do
+    case "$action" in
+	"supported-versions")
+	    echo $v
+	    ;;
+
+	build|clean)
+	    # be verbose?
+	    $action $v
+	    ;;
+
+	*)
+	    echo "$0: unsupported $action."
+	    ;;
+    esac
+done
+
+exit 0
+
+# POD follows here
+
+=head1 NAME
+
+pg_buildext - Build and install a PostgreSQL extension
+
+=head1 SYNOPSIS
+
+B<pg_buildext> I<action> I<srcdir> I<target> I<opts>
+
+=head1 DESCRIPTION
+
+B<pg_buildext> is a script that will build a PostgreSQL extension in a
+C<VPATH> way. It only supports the B<build> and B<clean> actions, and will
+choose to build the versions known in C<debian/pgversions> and in
+C</usr/share/postgresql-common/supported-versions>.
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<action>
+
+Either I<clean> or I<build>.
+
+=item B<srcdir>
+
+Where to find the extension sources, including the C<debian> subdirectory.
+
+=item B<target>
+
+The target directory where to build the sources, it will get created for you
+if it does not exist. If the B<target> contains a C<%v> sign, it will get
+replaced by the specific version of PostgreSQL being built against.
+
+=item B<opts>
+
+Custom C<CFLAGS> options to use for the build.
+
+=back
+
+=head1 AUTHOR
+
+Dimitri Fontaine L<E<lt>dim@tapoueh.orgE<gt>>

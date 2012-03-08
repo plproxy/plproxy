@@ -1,0 +1,10 @@
+Source: plproxy2
+Section: database
+Priority: extra
+Maintainer: Marko Kreen <marko.kreen@skype.net>
+Build-Depends: debhelper (>= 7.0.50~), libpq-dev, flex, bison
+Standards-Version: 3.9.1
+Homepage: http://wiki.postgresql.org/wiki/PL/Proxy
+Vcs-Git: git://github.com/markokr/plproxy-dev.git
+Vcs-Browser: https://github.com/markokr/plproxy-dev
+

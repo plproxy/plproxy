@@ -8,6 +8,7 @@ NO_SELECT = 0
 
 # libpq config
 PG_CONFIG = pg_config
+PQINCSERVER = $(shell $(PG_CONFIG) --includedir-server)
 PQINC = $(shell $(PG_CONFIG) --includedir)
 PQLIB = $(shell $(PG_CONFIG) --libdir)
 
@@ -17,8 +18,15 @@ SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.*
-PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
+
+# Server include must come before client include, because there could
+# be mismatching libpq-dev and postgresql-server-dev installed.
+PG_CPPFLAGS = -I$(PQINCSERVER) -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
+
+ifdef VPATH
+PG_CPPFLAGS += -I$(VPATH)/src
+endif
 
 DISTNAME = $(EXTENSION)-$(EXTVERSION)
 
@@ -48,7 +56,7 @@ REGRESS += plproxy_sqlmed
 PLPROXY_SQL += sql/plproxy_fdw.sql
 endif
 
-# Extensions available
+# SQL for extensions or plain?
 ifeq ($(PG91),true)
 DATA_built = $(EXTSQL)
 DATA = $(EXTMISC)
@@ -78,15 +86,20 @@ src/scanner.o: src/parser.tab.h
 src/parser.tab.h: src/parser.tab.c
 
 src/parser.tab.c: src/parser.y
-	cd src; $(BISON) -d parser.y
+	@mkdir -p src
+	$(BISON) -b src/parser -d $<
 
 src/scanner.c: src/scanner.l
-	cd src; $(FLEX) -oscanner.c scanner.l
+	@mkdir -p src
+	$(FLEX) -o$@ $<
 
 sql/plproxy.sql: $(PLPROXY_SQL)
+	@mkdir -p sql
 	cat $^ > $@
 
+# plain plproxy.sql is not installed, but used in tests
 $(EXTSQL): $(PLPROXY_SQL)
+	@mkdir -p sql
 	echo "create extension plproxy;" > sql/plproxy.sql 
 	cat $^ > $@
 
@@ -117,32 +130,9 @@ test: install
 ack:
 	cp results/*.out expected/
 
-maintainer-clean: clean
-	rm -f src/scanner.[ch] src/parser.tab.[ch]
-	rm -rf debian/control debian/rules debian/packages debian/packages-tmp*
-
-deb82:
-	sed -e s/PGVER/8.2/g < debian/packages.in > debian/packages
-	yada rebuild
+deb:
 	debuild -uc -us -b
 
-deb83:
-	sed -e s/PGVER/8.3/g < debian/packages.in > debian/packages
-	yada rebuild
-	debuild -uc -us -b
-
-deb84:
-	sed -e s/PGVER/8.4/g < debian/packages.in > debian/packages
-	yada rebuild
-	debuild -uc -us -b
-
-deb90:
-	sed -e s/PGVER/9.0/g < debian/packages.in > debian/packages
-	yada rebuild
-	debuild -uc -us -b
-
-deb91:
-	sed -e s/PGVER/9.1/g < debian/packages.in > debian/packages
-	yada rebuild
-	debuild -uc -us -b
+orig:
+	make -f debian/rules orig
 

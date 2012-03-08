@@ -1,0 +1,61 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+DEB_BUILD_OPTIONS := nostrip nocheck
+export DEB_BUILD_OPTIONS
+
+PG_BUILDEXT = ./debian/pg_buildext
+
+debian/control-stamp: debian/control.in debian/pgversions debian/rules
+	grep-dctrl -vP PGVERSION debian/control.in > debian/control
+	for v in $$($(PG_BUILDEXT) supported-versions . ); \
+        do                                         \
+		grep -q "^$$v" debian/pgversions   \
+		&& grep-dctrl -P PGVERSION debian/control.in \
+		| sed -e "s:PGVERSION:$$v:" >> debian/control; \
+	done
+	touch $@
+
+clean: debian/control-stamp
+	for v in $$($(PG_BUILDEXT) supported-versions . ) ; do \
+		rm -rf debian/postgresql-plproxy-$${v}; \
+	done
+	dh_auto_clean -- clean || exit 0
+
+override_dh_auto_install: 
+	mkdir -p $(CURDIR)/debian/tmp
+	for v in $$($(PG_BUILDEXT) supported-versions . ) ; do \
+		echo "### Building for PostgreSQL $${v}" && \
+		$(MAKE) clean install \
+			PG_CONFIG=/usr/lib/postgresql/$${v}/bin/pg_config \
+			DESTDIR=$(CURDIR)/debian/tmp \
+		|| exit 1 ; \
+	done
+
+build binary override_dh_auto_build: debian/control-stamp
+
+build binary binary-arch binary-indep:
+	dh $@
+
+.PHONY: build  binary binary-arch binary-indep clean
+.PHONY: orig override_dh_auto_install override_dh_auto_clean override_dh_auto_build
+
+PKGVERS     = $(shell dpkg-parsechangelog | awk -F '[:-]' '/^Version:/ { print substr($$2, 2) }')
+srcpkg = plproxy2_$(PKGVERS)
+srctar = $(srcpkg).orig.tar.gz
+dst = ext/$(srcpkg)
+orig:
+	rm -rf ext
+	mkdir -p $(dst)
+	git archive HEAD | tar xf - -C $(dst)
+	rm -rf $(dst)/debian
+	cd ext && tar czf ../../$(srctar) $(srcpkg)
+	rm -rf ext
+
+realclean:
+	rm -rf debian/tmp debian/*.log debian/*.substvars
+	rm -f debian/control-stamp debian/files
+	grep-dctrl -vP PGVERSION debian/control.in > debian/control
+

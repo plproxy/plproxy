@@ -1,0 +1,2 @@
+usr/lib/postgresql/8.4/lib/plproxy.so
+usr/share/postgresql/8.4/contrib/plproxy.sql

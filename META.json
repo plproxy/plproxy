@@ -25,6 +25,7 @@
       }
    },
    "resources": {
+      "homepage": "http://wiki.postgresql.org/wiki/PL/Proxy",
       "bugtracker": {
          "web": "http://github.com/markokr/plproxy-dev/issues/"
       },
