@@ -1,6 +1,5 @@
+\set VERBOSITY terse
 set client_min_messages = 'warning';
-drop foreign data wrapper if exists plproxy cascade;
-create foreign data wrapper plproxy;
 create server sqlmedcluster foreign data wrapper plproxy 
     options (   partition_0 'dbname=test_part3 host=localhost',
                 partition_1 'dbname=test_part2 host=localhost',
@@ -40,14 +39,24 @@ reset session authorization;
 -- cluster definition validation
 -- partition numbers must be consecutive
 alter server sqlmedcluster options (drop partition_2);
+ERROR:  Pl/Proxy: partitions must be numbered consecutively
 select * from sqlmed_test1();
-ERROR:  PL/Proxy function public.sqlmed_test1(0): partitions numbers must be consecutive
+                 sqlmed_test1                  
+-----------------------------------------------
+ plproxy: user=test_user_bob dbname=test_part3
+(1 row)
+
 -- invalid partition count
 alter server sqlmedcluster options 
     (drop partition_3,
      add  partition_2 'dbname=test_part1 host=localhost');
+ERROR:  option "partition_2" provided more than once
 select * from sqlmed_test1();
-ERROR:  PL/Proxy function public.sqlmed_test1(0): invalid partition count
+                 sqlmed_test1                  
+-----------------------------------------------
+ plproxy: user=test_user_bob dbname=test_part3
+(1 row)
+
 -- switching betweem SQL/MED and compat mode
 create or replace function sqlmed_compat_test() returns setof text as $$
     cluster 'testcluster';

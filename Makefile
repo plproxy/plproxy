@@ -1,6 +1,7 @@
 EXTENSION  = plproxy
-EXTVERSION = $(shell grep default_version $(EXTENSION).control | \
-             sed -e "s/default_version[[:space:]]*=[[:space:]]*'\([^']*\)'/\1/")
+
+# sync with NEWS, META.json, plproxy.control, debian/changelog
+EXTVERSION = 2.3.0
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -10,30 +11,36 @@ PG_CONFIG = pg_config
 PQINC = $(shell $(PG_CONFIG) --includedir)
 PQLIB = $(shell $(PG_CONFIG) --libdir)
 
-# PostgreSQL version
-PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
-SQLMED = $(shell test $(PGVER) "<" "8.4" && echo "false" || echo "true")
-PG91 = $(shell test $(PGVER) "<" "9.1" && echo "false" || echo "true")
-
 # module setup
-MODULE_big = plproxy
+MODULE_big = $(EXTENSION)
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
-DATA_built = sql/plproxy.sql
-EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] sql/plproxy.sql
+EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.*
 PG_CPPFLAGS = -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-DISTNAME = plproxy-$(EXTVERSION)
+DISTNAME = $(EXTENSION)-$(EXTVERSION)
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
      plproxy_errors plproxy_clustermap plproxy_dynamic_record \
      plproxy_encoding plproxy_split plproxy_target
+REGRESS_OPTS = --dbname=regression --inputdir=test
+# pg9.1 ignores --dbname
+override CONTRIB_TESTDB := regression
 
-# SQL files
+# sql source
 PLPROXY_SQL = sql/plproxy_lang.sql
+# Generated SQL files
+EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql
+# Fixed SQL
+EXTMISC = sql/plproxy--unpackaged--2.3.0.sql
+
+# PostgreSQL version
+PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
+SQLMED = $(shell test $(PGVER) "<" "8.4" && echo "false" || echo "true")
+PG91 = $(shell test $(PGVER) "<" "9.1" && echo "false" || echo "true")
 
 # SQL/MED available, add foreign data wrapper and regression tests
 ifeq ($(SQLMED), true)
@@ -41,24 +48,20 @@ REGRESS += plproxy_sqlmed
 PLPROXY_SQL += sql/plproxy_fdw.sql
 endif
 
-# Extensions available, rename files as appropriate.
+# Extensions available
 ifeq ($(PG91),true)
-all: sql/$(EXTENSION)--$(EXTVERSION).sql
-
-sql/$(EXTENSION)--$(EXTVERSION).sql: sql/$(EXTENSION).sql
-	cp $< $@
-
-DATA = $(wildcard sql/*--*.sql) sql/$(EXTENSION)--$(EXTVERSION).sql
-EXTRA_CLEAN += sql/$(EXTENSION)--$(EXTVERSION).sql
+DATA_built = $(EXTSQL)
+DATA = $(EXTMISC)
+EXTRA_CLEAN += sql/plproxy.sql
+else
+DATA_built = sql/plproxy.sql
+EXTRA_CLEAN += $(EXTSQL)
 endif
 
 
-REGRESS_OPTS = --dbname=regression --inputdir=test
-
-# pg9.1 ignores --dbname
-override CONTRIB_TESTDB := regression
-
+#
 # load PGXS makefile
+#
 PGXS = $(shell $(PG_CONFIG) --pgxs)
 include $(PGXS)
 
@@ -83,6 +86,10 @@ src/scanner.c: src/scanner.l
 sql/plproxy.sql: $(PLPROXY_SQL)
 	cat $^ > $@
 
+$(EXTSQL): $(PLPROXY_SQL)
+	echo "create extension plproxy;" > sql/plproxy.sql 
+	cat $^ > $@
+
 # dependencies
 $(OBJS): src/plproxy.h src/rowstamp.h
 src/execute.o: src/poll_compat.h
@@ -105,7 +112,7 @@ doc-clean:
 	$(MAKE) -C doc clean
 
 test: install
-	$(MAKE) installcheck || { less regression.diffs; exit 1; }
+	$(MAKE) installcheck || { filterdiff --format=unified regression.diffs | less; exit 1; }
 
 ack:
 	cp results/*.out expected/

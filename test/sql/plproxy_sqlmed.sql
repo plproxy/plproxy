@@ -1,8 +1,6 @@
 
+\set VERBOSITY terse
 set client_min_messages = 'warning';
-
-drop foreign data wrapper if exists plproxy cascade;
-create foreign data wrapper plproxy;
 
 create server sqlmedcluster foreign data wrapper plproxy 
     options (   partition_0 'dbname=test_part3 host=localhost',

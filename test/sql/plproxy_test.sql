@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 
 -- test normal function
 create function testfunc(username text, id integer, data text)
