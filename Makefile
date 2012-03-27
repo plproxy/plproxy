@@ -15,10 +15,12 @@ PQLIB = $(shell $(PG_CONFIG) --libdir)
 # module setup
 MODULE_big = $(EXTENSION)
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
-       src/query.c src/result.c src/type.c src/poll_compat.c
+       src/query.c src/result.c src/type.c src/poll_compat.c src/aatree.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.* plproxy.so
 SHLIB_LINK = -L$(PQLIB) -lpq
+
+HDRS = src/plproxy.h src/rowstamp.h src/aatree.h src/poll_compat.h
 
 # Server include must come before client include, because there could
 # be mismatching libpq-dev and postgresql-server-dev installed.
@@ -104,9 +106,8 @@ $(EXTSQL): $(PLPROXY_SQL)
 	cat $^ > $@
 
 # dependencies
-$(OBJS): src/plproxy.h src/rowstamp.h
-src/execute.o: src/poll_compat.h
-src/poll_compat.o: src/poll_compat.h
+
+$(OBJS): $(HDRS)
 
 # utility rules
 

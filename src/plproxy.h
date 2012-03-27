@@ -55,6 +55,7 @@
 #include <utils/memutils.h>
 #include <utils/syscache.h>
 
+#include "aatree.h"
 #include "rowstamp.h"
 
 #include <libpq-fe.h>
@@ -176,6 +177,7 @@ typedef struct ProxyConnection
 /* Info about one cluster */
 typedef struct ProxyCluster
 {
+	struct AANode node;
 	struct ProxyCluster *next;	/* Pointer for building singly-linked list */
 
 	const char *name;			/* Cluster name */

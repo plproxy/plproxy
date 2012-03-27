@@ -41,7 +41,7 @@ static ProxyCluster *cluster_list = NULL;
  *
  * Cluster name will be actual connect string.
  */
-static ProxyCluster *fake_cluster_list = NULL;
+static struct AATree fake_cluster_tree;
 
 /* plan for fetching cluster version */
 static void *version_plan;
@@ -89,6 +89,14 @@ check_valid_partcount(int n)
 	return (n > 0) && !(n & (n - 1));
 }
 
+static int cluster_name_cmp(uintptr_t val, struct AANode *node)
+{
+	const char *name = (const char *)val;
+	const ProxyCluster *cluster = (ProxyCluster *)node;
+
+	return strcmp(name, cluster->name);
+}
+
 /*
  * Create cache memory area and prepare plans
  */
@@ -104,6 +112,7 @@ plproxy_cluster_cache_init(void)
 										ALLOCSET_SMALL_MINSIZE,
 										ALLOCSET_SMALL_INITSIZE,
 										ALLOCSET_SMALL_MAXSIZE);
+	aatree_init(&fake_cluster_tree, cluster_name_cmp, NULL);
 }
 
 /* initialize plans on demand */
@@ -827,16 +836,12 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 	ProxyCluster *cluster;
 	ProxyConnection *conn;
 	MemoryContext old_ctx;
+	struct AANode *n;
 
 	/* search if cached */
-	for (cluster = fake_cluster_list; cluster; cluster = cluster->next)
-	{
-		if (strcmp(cluster->name, connect_str) == 0)
-			break;
-	}
-
-	if (cluster)
-		return cluster;
+	n = aatree_search(&fake_cluster_tree, (uintptr_t)connect_str);
+	if (n)
+		return (ProxyCluster *)n;
 
 	/* create if not */
 
@@ -861,8 +866,7 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 
 	MemoryContextSwitchTo(old_ctx);
 
-	cluster->next = fake_cluster_list;
-	fake_cluster_list = cluster;
+	aatree_insert(&fake_cluster_tree, (uintptr_t)connect_str, &cluster->node);
 
 	return cluster;
 }
@@ -998,6 +1002,14 @@ clean_cluster(ProxyCluster *cluster, struct timeval * now)
 /*
  * Clean old connections and results from all clusters.
  */
+
+static void w_clean_cluster(struct AANode *n, void *arg)
+{
+	ProxyCluster *c = (ProxyCluster *)n;
+	struct timeval *now = arg;
+	clean_cluster(c, now);
+}
+
 void
 plproxy_cluster_maint(struct timeval * now)
 {
@@ -1005,6 +1017,5 @@ plproxy_cluster_maint(struct timeval * now)
 
 	for (cluster = cluster_list; cluster; cluster = cluster->next)
 		clean_cluster(cluster, now);
-	for (cluster = fake_cluster_list; cluster; cluster = cluster->next)
-		clean_cluster(cluster, now);
+	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, w_clean_cluster, now);
 }

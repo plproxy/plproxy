@@ -122,11 +122,11 @@ plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult 
  * Library load-time initialization.
  * Do the initialization when SPI is active to simplify the code.
  */
+static bool initialized = false;
+
 static void
 plproxy_startup_init(void)
 {
-	static bool initialized = false;
-
 	if (initialized)
 		return;
 
@@ -145,6 +145,9 @@ run_maint(void)
 {
 	static struct timeval last = {0, 0};
 	struct timeval now;
+
+	if (!initialized)
+		return;
 
 	gettimeofday(&now, NULL);
 	if (now.tv_sec - last.tv_sec < 2 * 60)
