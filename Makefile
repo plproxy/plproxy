@@ -17,7 +17,7 @@ MODULE_big = $(EXTENSION)
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
        src/query.c src/result.c src/type.c src/poll_compat.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
-EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.*
+EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.* plproxy.so
 SHLIB_LINK = -L$(PQLIB) -lpq
 
 # Server include must come before client include, because there could
@@ -110,8 +110,8 @@ src/poll_compat.o: src/poll_compat.h
 
 # utility rules
 
-tags:
-	cscope -I src -b -f .cscope.out src/*.c
+tags: $(SRCS) $(HDRS)
+	ctags $(SRCS) $(HDRS)
 
 tgz:
 	git archive -o $(DISTNAME).tar.gz --prefix=$(DISTNAME)/ HEAD
