@@ -148,6 +148,8 @@ typedef struct ProxyConnectionState {
 /* Single database connection */
 typedef struct ProxyConnection
 {
+	struct AANode node;
+
 	struct ProxyCluster *cluster;
 	const char *connstr;		/* Connection string for libpq */
 
@@ -185,10 +187,12 @@ typedef struct ProxyCluster
 
 	int			part_count;		/* Number of partitions - power of 2 */
 	int			part_mask;		/* Mask to use to get part number from hash */
-	ProxyConnection **part_map; /* Pointers to conn_list */
+	ProxyConnection **part_map; /* Pointers to ProxyConnections */
 
-	int			conn_count;		/* Number of actual database connections */
-	ProxyConnection *conn_list; /* List of actual database connections */
+	int active_count;			/* number of active connections */
+	ProxyConnection **active_list; /* active ProxyConnection in current query */
+
+	struct AATree conn_tree;	/* connstr -> ProxyConnection */
 
 	int			ret_cur_conn;	/* Result walking: index of current conn */
 	int			ret_cur_pos;	/* Result walking: index of current row */

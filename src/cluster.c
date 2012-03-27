@@ -96,6 +96,26 @@ static int cluster_name_cmp(uintptr_t val, struct AANode *node)
 	return strcmp(name, cluster->name);
 }
 
+static int conn_cstr_cmp(uintptr_t val, struct AANode *node)
+{
+	const char *name = (const char *)val;
+	const ProxyConnection *conn = (ProxyConnection *)node;
+
+	return strcmp(name, conn->connstr);
+}
+
+static void conn_free(struct AANode *node, void *arg)
+{
+	ProxyConnection *conn = (ProxyConnection *)node;
+
+	if (conn->res)
+		PQclear(conn->res);
+	if (conn->cur->db)
+		PQfinish(conn->cur->db);
+	pfree(conn->cur);
+	pfree(conn);
+}
+
 /*
  * Create cache memory area and prepare plans
  */
@@ -155,43 +175,21 @@ plproxy_cluster_plan_init(void)
 	init_done = 1;
 }
 
-static void free_state(ProxyConnectionState *st)
-{
-	if (!st)
-		return;
-	if (st->db)
-		PQfinish(st->db);
-	memset(st, 0, sizeof(*st));
-	pfree(st);
-}
-
 /*
  * Drop partition and connection data from cluster.
  */
 static void
 free_connlist(ProxyCluster *cluster)
 {
-	int			i;
-	ProxyConnection *conn;
+	aatree_destroy(&cluster->conn_tree);
 
-	for (i = 0; i < cluster->conn_count; i++)
-	{
-		conn = &cluster->conn_list[i];
-		if (conn->res)
-			PQclear(conn->res);
-		if (conn->connstr)
-			pfree((void *) conn->connstr);
-		free_state(conn->cur);
-		conn->cur = NULL;
-	}
 	pfree(cluster->part_map);
-	pfree(cluster->conn_list);
+	pfree(cluster->active_list);
 
 	cluster->part_map = NULL;
 	cluster->part_count = 0;
 	cluster->part_mask = 0;
-	cluster->conn_list = NULL;
-	cluster->conn_count = 0;
+	cluster->active_count = 0;
 }
 
 /*
@@ -200,7 +198,7 @@ free_connlist(ProxyCluster *cluster)
 static ProxyConnection *
 add_connection(ProxyCluster *cluster, char *connstr, int part_num)
 {
-	int			i;
+	struct AANode *node;
 	ProxyConnection *conn = NULL;
 	char	   *username;
 	StringInfo	final;
@@ -214,24 +212,22 @@ add_connection(ProxyCluster *cluster, char *connstr, int part_num)
 		username = GetUserNameFromId(GetSessionUserId());
 		appendStringInfo(final, " user=%s", username);
 	}
+	connstr = final->data;
 
 	/* check if already have it */
-	for (i = 0; i < cluster->conn_count && !conn; i++)
-	{
-		ProxyConnection *c = &cluster->conn_list[i];
-
-		if (strcmp(c->connstr, final->data) == 0)
-			conn = c;
-	}
+	node = aatree_search(&cluster->conn_tree, (uintptr_t)connstr);
+	if (node)
+		conn = (ProxyConnection *)node;
 
 	/* add new connection */
 	if (!conn)
 	{
-		conn = &cluster->conn_list[cluster->conn_count];
-		conn->connstr = MemoryContextStrdup(cluster_mem, final->data);
+		conn = MemoryContextAllocZero(cluster_mem, sizeof(ProxyConnection));
+		conn->connstr = MemoryContextStrdup(cluster_mem, connstr);
 		conn->cluster = cluster;
 		conn->cur = MemoryContextAllocZero(cluster_mem, sizeof(ProxyConnectionState));
-		cluster->conn_count++;
+
+		aatree_insert(&cluster->conn_tree, (uintptr_t)connstr, &conn->node);
 	}
 
 	cluster->part_map[part_num] = conn;
@@ -343,7 +339,7 @@ allocate_cluster_partitions(ProxyCluster *cluster, int nparts)
 	MemoryContext old_ctx;
 
 	/* free old one */
-	if (cluster->conn_list)
+	if (cluster->part_map)
 		free_connlist(cluster);
 
 	cluster->part_count = nparts;
@@ -351,9 +347,8 @@ allocate_cluster_partitions(ProxyCluster *cluster, int nparts)
 
 	/* allocate lists */
 	old_ctx = MemoryContextSwitchTo(cluster_mem);
-
 	cluster->part_map = palloc0(nparts * sizeof(ProxyConnection *));
-	cluster->conn_list = palloc0(nparts * sizeof(ProxyConnection));
+	cluster->active_list = palloc0(nparts * sizeof(ProxyConnection *));
 	MemoryContextSwitchTo(old_ctx);
 }
 
@@ -794,6 +789,8 @@ new_cluster(const char *name)
 	cluster->name = pstrdup(name);
 	cluster->needs_reload = true;
 
+	aatree_init(&cluster->conn_tree, conn_cstr_cmp, conn_free);
+
 	MemoryContextSwitchTo(old_ctx);
 
 	return cluster;
@@ -849,25 +846,25 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 		return (ProxyCluster *)n;
 
 	/* create if not */
+	cluster = new_cluster(connect_str);
 
 	old_ctx = MemoryContextSwitchTo(cluster_mem);
 
-	cluster = palloc0(sizeof(*cluster));
-	cluster->name = pstrdup(connect_str);
+	cluster->needs_reload = 0;
 	cluster->version = 1;
 	cluster->part_count = 1;
 	cluster->part_mask = 0;
-	cluster->conn_count = 1;
-	cluster->part_map = palloc(sizeof(ProxyConnection *));
-	cluster->conn_list = palloc0(sizeof(ProxyConnection));
-	conn = &cluster->conn_list[0];
+	cluster->part_map = palloc(cluster->part_count * sizeof(ProxyConnection *));
+	cluster->active_list = palloc(cluster->part_count * sizeof(ProxyConnection *));
+
+	conn = palloc0(sizeof(ProxyConnection));
 	conn->cluster = cluster;
-	cluster->part_map[0] = conn;
-
 	conn->connstr = pstrdup(cluster->name);
-
 	conn->cur = palloc0(sizeof(ProxyConnectionState));
 	conn->cur->state = C_NONE;
+
+	aatree_insert(&cluster->conn_tree, (uintptr_t)conn->connstr, &conn->node);
+	cluster->part_map[0] = conn;
 
 	MemoryContextSwitchTo(old_ctx);
 
@@ -954,68 +951,64 @@ plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 	return cluster;
 }
 
-static void
-clean_cluster(ProxyCluster *cluster, struct timeval * now)
-{
-	ProxyConnection *conn;
-	ProxyConnectionState *cur;
-	ProxyConfig *cf = &cluster->config;
-	time_t		age;
-	int			i;
-	bool		drop;
-
-	for (i = 0; i < cluster->conn_count; i++)
-	{
-		conn = &cluster->conn_list[i];
-		if (conn->res)
-		{
-			PQclear(conn->res);
-			conn->res = NULL;
-		}
-
-		cur = conn->cur;
-		if (!cur->db)
-			continue;
-
-		drop = false;
-		if (PQstatus(cur->db) != CONNECTION_OK)
-		{
-			drop = true;
-		}
-		else if (cf->connection_lifetime <= 0)
-		{
-			/* no aging */
-		}
-		else
-		{
-			age = now->tv_sec - cur->connect_time;
-			if (age >= cf->connection_lifetime)
-				drop = true;
-		}
-
-		if (drop)
-		{
-			PQfinish(cur->db);
-			cur->db = NULL;
-			cur->state = C_NONE;
-		}
-	}
-}
-
 /*
  * Clean old connections and results from all clusters.
  */
 
-static void w_clean_cluster(struct AANode *n, void *arg)
+static void clean_conn(struct AANode *node, void *arg)
 {
-	ProxyCluster *c = (ProxyCluster *)n;
+	ProxyConnection *conn = (ProxyConnection *)node;
+	ProxyConnectionState *cur;
+	ProxyConfig *cf = &conn->cluster->config;
 	struct timeval *now = arg;
-	clean_cluster(c, now);
+	time_t		age;
+	bool		drop;
+
+	if (conn->res)
+	{
+		PQclear(conn->res);
+		conn->res = NULL;
+	}
+
+	cur = conn->cur;
+	if (!cur->db)
+		return;
+
+	drop = false;
+	if (PQstatus(cur->db) != CONNECTION_OK)
+	{
+		drop = true;
+	}
+	else if (cf->connection_lifetime <= 0)
+	{
+		/* no aging */
+	}
+	else
+	{
+		age = now->tv_sec - cur->connect_time;
+		if (age >= cf->connection_lifetime)
+			drop = true;
+	}
+
+	if (drop)
+	{
+		PQfinish(cur->db);
+		cur->db = NULL;
+		cur->state = C_NONE;
+	}
+}
+
+static void clean_cluster(struct AANode *n, void *arg)
+{
+	ProxyCluster *cluster = (ProxyCluster *)n;
+	struct timeval *now = arg;
+
+	aatree_walk(&cluster->conn_tree, AA_WALK_IN_ORDER, clean_conn, now);
 }
 
 void
 plproxy_cluster_maint(struct timeval * now)
 {
-	aatree_walk(&cluster_tree, AA_WALK_IN_ORDER, w_clean_cluster, now);
-	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, w_clean_cluster, now);
+	aatree_walk(&cluster_tree, AA_WALK_IN_ORDER, clean_cluster, now);
+	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, clean_cluster, now);
 }

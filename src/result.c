@@ -118,10 +118,10 @@ walk_results(ProxyFunction *func, ProxyCluster *cluster)
 {
 	ProxyConnection *conn;
 
-	for (; cluster->ret_cur_conn < cluster->conn_count;
+	for (; cluster->ret_cur_conn < cluster->active_count;
 		 cluster->ret_cur_conn++)
 	{
-		conn = cluster->conn_list + cluster->ret_cur_conn;
+		conn = cluster->active_list[cluster->ret_cur_conn];
 		if (conn->res == NULL)
 			continue;
 		if (conn->pos == PQntuples(conn->res))

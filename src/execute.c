@@ -556,10 +556,10 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 	int numfds = 0;
 	int ev = 0;
 
-	if (pfd_allocated < cluster->conn_count)
+	if (pfd_allocated < cluster->active_count)
 	{
 		struct pollfd *tmp;
-		int num = cluster->conn_count;
+		int num = cluster->active_count;
 		if (num < 64)
 			num = 64;
 		if (pfd_cache == NULL)
@@ -572,9 +572,9 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 		pfd_allocated = num;
 	}
 
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 		if (!conn->run_tag)
 			continue;
 
@@ -615,9 +615,9 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 
 	/* now recheck the conns */
 	pf = pfd_cache;
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 		if (!conn->run_tag)
 			continue;
 
@@ -691,9 +691,9 @@ remote_execute(ProxyFunction *func)
 	struct timeval now;
 
 	/* either launch connection or send query */
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 		if (!conn->run_tag)
 			continue;
 
@@ -719,9 +719,9 @@ remote_execute(ProxyFunction *func)
 		/* recheck */
 		pending = 0;
 		gettimeofday(&now, NULL);
-		for (i = 0; i < cluster->conn_count; i++)
+		for (i = 0; i < cluster->active_count; i++)
 		{
-			conn = &cluster->conn_list[i];
+			conn = cluster->active_list[i];
 			if (!conn->run_tag)
 				continue;
 
@@ -737,9 +737,9 @@ remote_execute(ProxyFunction *func)
 	}
 
 	/* review results, calculate total */
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 
 		if ((conn->run_tag || conn->res)
 			&& !(conn->run_tag && conn->res))
@@ -775,9 +775,9 @@ remote_cancel(ProxyFunction *func)
 	if (cluster == NULL)
 		return;
 
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 		if (conn->cur->state == C_NONE ||
 			conn->cur->state == C_READY ||
 			conn->cur->state == C_DONE)
@@ -794,6 +794,22 @@ remote_cancel(ProxyFunction *func)
 		if (ret == 0)
 			elog(NOTICE, "Cancel query failed!");
 	}
+}
+
+/*
+ * Tag & move tagged connections to active list
+ */
+
+static void tag_part(struct ProxyCluster *cluster, int i, int tag)
+{
+	ProxyConnection *conn = cluster->part_map[i];
+
+	if (!conn->run_tag)
+	{
+		cluster->active_list[cluster->active_count] = conn;
+		cluster->active_count++;
+	}
+	conn->run_tag = tag;
 }
 
 /*
@@ -838,7 +854,7 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
 
 		hashval &= cluster->part_mask;
-		cluster->part_map[hashval]->run_tag = tag;
+		tag_part(cluster, hashval, tag);
 	}
 
 	/* sanity check */
@@ -889,17 +905,17 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			break;
 		case R_ALL:
 			for (i = 0; i < cluster->part_count; i++)
-				cluster->part_map[i]->run_tag = tag;
+				tag_part(cluster, i, tag);
 			break;
 		case R_EXACT:
 			i = func->exact_nr;
 			if (i < 0 || i >= cluster->part_count)
 				plproxy_error(func, "part number out of range");
-			cluster->part_map[i]->run_tag = tag;
+			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
 			i = random() & cluster->part_mask;
-			cluster->part_map[i]->run_tag = tag;
+			tag_part(cluster, i, tag);
 			break;
 		default:
 			plproxy_error(func, "uninitialized run_type");
@@ -979,9 +995,9 @@ prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 		tag_run_on_partitions(func, fcinfo, my_tag, arrays_to_split, row);
 
 		/* Add the array elements to the partitions tagged in previous step */
-		for (part = 0; part < cluster->conn_count; part++)
+		for (part = 0; part < cluster->active_count; part++)
 		{
-			ProxyConnection	   *conn = &cluster->conn_list[part];
+			ProxyConnection	   *conn = cluster->active_list[part];
 
 			if (conn->run_tag != my_tag)
 				continue;
@@ -1008,9 +1024,9 @@ prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 	 * Finally, copy the accumulated arrays to the actual connections
 	 * to be used as parameters.
 	 */
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		ProxyConnection *conn = &cluster->conn_list[i];
+		ProxyConnection *conn = cluster->active_list[i];
 
 		if (!conn->run_tag)
 			continue;
@@ -1056,9 +1072,9 @@ prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo)
 		}
 
 		/* Add the parameters to partitions */
-		for (part = 0; part < cluster->conn_count; part++)
+		for (part = 0; part < cluster->active_count; part++)
 		{
-			ProxyConnection *conn = &cluster->conn_list[part];
+			ProxyConnection *conn = cluster->active_list[part];
 
 			if (!conn->run_tag)
 				continue;
@@ -1103,9 +1119,9 @@ plproxy_clean_results(ProxyCluster *cluster)
 	cluster->ret_total = 0;
 	cluster->ret_cur_conn = 0;
 
-	for (i = 0; i < cluster->conn_count; i++)
+	for (i = 0; i < cluster->active_count; i++)
 	{
-		conn = &cluster->conn_list[i];
+		conn = cluster->active_list[i];
 		if (conn->res)
 		{
 			PQclear(conn->res);
@@ -1115,6 +1131,10 @@ plproxy_clean_results(ProxyCluster *cluster)
 		conn->run_tag = 0;
 		conn->bstate = NULL;
 	}
+
+	/* reset active_list */
+	cluster->active_count = 0;
+
 	/* conn state checks are done in prepare_conn */
 }
 
