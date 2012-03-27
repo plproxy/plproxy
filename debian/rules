@@ -57,5 +57,6 @@ orig:
 realclean:
 	rm -rf debian/tmp debian/*.log debian/*.substvars
 	rm -f debian/control-stamp debian/files
+	for v in `cat debian/pgversions`; do rm -rf debian/postgresql-plproxy-$${v}; done
 	grep-dctrl -vP PGVERSION debian/control.in > debian/control
 
