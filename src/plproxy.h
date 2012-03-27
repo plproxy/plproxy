@@ -135,21 +135,25 @@ typedef struct ProxyConfig
 	int			keepcnt;
 } ProxyConfig;
 
-/* Single database connection */
-typedef struct
-{
-	struct ProxyCluster *cluster;
-	const char *connstr;		/* Connection string for libpq */
-
-	/* state */
+typedef struct ProxyConnectionState {
 	PGconn	   *db;				/* libpq connection handle */
-	PGresult   *res;			/* last resultset */
-	int			pos;			/* Current position inside res */
 	ConnState	state;			/* Connection state */
 	time_t		connect_time;	/* When connection was started */
 	time_t		query_time;		/* When last query was sent */
 	bool		same_ver;		/* True if dest backend has same X.Y ver */
 	bool		tuning;			/* True if tuning query is running on conn */
+} ProxyConnectionState;
+
+/* Single database connection */
+typedef struct ProxyConnection
+{
+	struct ProxyCluster *cluster;
+	const char *connstr;		/* Connection string for libpq */
+
+	/* state */
+	PGresult   *res;			/* last resultset */
+	int			pos;			/* Current position inside res */
+	ProxyConnectionState *cur;
 
 	/*
 	 * Nonzero if this connection should be used. The actual tag value is only

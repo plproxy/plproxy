@@ -146,6 +146,16 @@ plproxy_cluster_plan_init(void)
 	init_done = 1;
 }
 
+static void free_state(ProxyConnectionState *st)
+{
+	if (!st)
+		return;
+	if (st->db)
+		PQfinish(st->db);
+	memset(st, 0, sizeof(*st));
+	pfree(st);
+}
+
 /*
  * Drop partition and connection data from cluster.
  */
@@ -158,12 +168,12 @@ free_connlist(ProxyCluster *cluster)
 	for (i = 0; i < cluster->conn_count; i++)
 	{
 		conn = &cluster->conn_list[i];
-		if (conn->db)
-			PQfinish(conn->db);
 		if (conn->res)
 			PQclear(conn->res);
 		if (conn->connstr)
 			pfree((void *) conn->connstr);
+		free_state(conn->cur);
+		conn->cur = NULL;
 	}
 	pfree(cluster->part_map);
 	pfree(cluster->conn_list);
@@ -208,9 +218,11 @@ add_connection(ProxyCluster *cluster, char *connstr, int part_num)
 	/* add new connection */
 	if (!conn)
 	{
-		conn = &cluster->conn_list[cluster->conn_count++];
+		conn = &cluster->conn_list[cluster->conn_count];
 		conn->connstr = MemoryContextStrdup(cluster_mem, final->data);
 		conn->cluster = cluster;
+		conn->cur = MemoryContextAllocZero(cluster_mem, sizeof(ProxyConnectionState));
+		cluster->conn_count++;
 	}
 
 	cluster->part_map[part_num] = conn;
@@ -843,7 +855,9 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 	cluster->part_map[0] = conn;
 
 	conn->connstr = pstrdup(cluster->name);
-	conn->state = C_NONE;
+
+	conn->cur = palloc0(sizeof(ProxyConnectionState));
+	conn->cur->state = C_NONE;
 
 	MemoryContextSwitchTo(old_ctx);
 
@@ -937,6 +951,7 @@ static void
 clean_cluster(ProxyCluster *cluster, struct timeval * now)
 {
 	ProxyConnection *conn;
+	ProxyConnectionState *cur;
 	ProxyConfig *cf = &cluster->config;
 	time_t		age;
 	int			i;
@@ -950,11 +965,13 @@ clean_cluster(ProxyCluster *cluster, struct timeval * now)
 			PQclear(conn->res);
 			conn->res = NULL;
 		}
-		if (!conn->db)
+
+		cur = conn->cur;
+		if (!cur->db)
 			continue;
 
 		drop = false;
-		if (PQstatus(conn->db) != CONNECTION_OK)
+		if (PQstatus(cur->db) != CONNECTION_OK)
 		{
 			drop = true;
 		}
@@ -964,16 +981,16 @@ clean_cluster(ProxyCluster *cluster, struct timeval * now)
 		}
 		else
 		{
-			age = now->tv_sec - conn->connect_time;
+			age = now->tv_sec - cur->connect_time;
 			if (age >= cf->connection_lifetime)
 				drop = true;
 		}
 
 		if (drop)
 		{
-			PQfinish(conn->db);
-			conn->db = NULL;
-			conn->state = C_NONE;
+			PQfinish(cur->db);
+			cur->db = NULL;
+			cur->state = C_NONE;
 		}
 	}
 }
