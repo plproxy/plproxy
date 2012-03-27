@@ -29,12 +29,11 @@
 static MemoryContext cluster_mem;
 
 /*
- * Singly linked list of clusters.
+ * Tree of clusters.
  *
- * For searching by name.  If there will be lots of clusters
- * should use some faster search method, HTAB probably.
+ * For searching by name.
  */
-static ProxyCluster *cluster_list = NULL;
+static struct AATree cluster_tree;
 
 /*
  * Similar list for fake clusters (for CONNECT functions).
@@ -112,6 +111,7 @@ plproxy_cluster_cache_init(void)
 										ALLOCSET_SMALL_MINSIZE,
 										ALLOCSET_SMALL_INITSIZE,
 										ALLOCSET_SMALL_MAXSIZE);
+	aatree_init(&cluster_tree, cluster_name_cmp, NULL);
 	aatree_init(&fake_cluster_tree, cluster_name_cmp, NULL);
 }
 
@@ -698,6 +698,35 @@ determine_compat_mode(ProxyCluster *cluster)
 		elog(ERROR, "Pl/Proxy: cluster not found: %s", cluster->name);
 }
 
+static void inval_fserver(struct AANode *n, void *arg)
+{
+	ProxyCluster *cluster = (ProxyCluster *)n;
+	SCInvalArg newStamp = *(SCInvalArg *)arg;
+
+	if (cluster->needs_reload)
+		/* already invalidated */
+		return;
+	else if (!cluster->sqlmed_cluster)
+		/* allow new SQL/MED servers to override compat definitions */
+		cluster->needs_reload = true;
+	else if (scstamp_check(FOREIGNSERVEROID, &cluster->clusterStamp, newStamp))
+		/* server definitions changed */
+		cluster->needs_reload = true;
+}
+
+static void inval_umapping(struct AANode *n, void *arg)
+{
+	ProxyCluster *cluster = (ProxyCluster *)n;
+	SCInvalArg newStamp = *(SCInvalArg *)arg;
+
+	if (cluster->needs_reload)
+		/* already invalidated */
+		return;
+	else if (scstamp_check(USERMAPPINGOID, &cluster->umStamp, newStamp))
+		/* user mappings changed */
+		cluster->needs_reload = true;
+}
+
 /*
  * Syscache inval callback function for foreign servers and user mappings.
  *
@@ -708,34 +737,10 @@ determine_compat_mode(ProxyCluster *cluster)
 static void
 ClusterSyscacheCallback(Datum arg, int cacheid, SCInvalArg newStamp)
 {
-	ProxyCluster *cluster;
-
-	for (cluster = cluster_list; cluster; cluster = cluster->next)
-	{
-		if (cluster->needs_reload)
-		{
-			/* already invalidated */
-			continue;
-		}
-		else if (!cluster->sqlmed_cluster)
-		{
-			/* allow new SQL/MED servers to override compat definitions */
-			if (cacheid == FOREIGNSERVEROID)
-				cluster->needs_reload = true;
-		}
-		else if (cacheid == USERMAPPINGOID)
-		{
-			/* user mappings changed */
-			if (scstamp_check(cacheid, &cluster->umStamp, newStamp))
-				cluster->needs_reload = true;
-		}
-		else if (cacheid == FOREIGNSERVEROID)
-		{
-			/* server definitions changed */
-			if (scstamp_check(cacheid, &cluster->clusterStamp, newStamp))
-				cluster->needs_reload = true;
-		}
-	}
+	if (cacheid == FOREIGNSERVEROID)
+		aatree_walk(&cluster_tree, AA_WALK_IN_ORDER, inval_fserver, &newStamp);
+	else if (cacheid == USERMAPPINGOID)
+		aatree_walk(&cluster_tree, AA_WALK_IN_ORDER, inval_umapping, &newStamp);
 }
 
 #endif
@@ -908,8 +913,9 @@ resolve_query(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *query)
 ProxyCluster *
 plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
-	ProxyCluster *cluster;
+	ProxyCluster *cluster = NULL;
 	const char *name;
+	struct AANode *node;
 
 
 	/* functions used CONNECT with query */
@@ -931,18 +937,15 @@ plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 		name = func->cluster_name;
 
 	/* search if cached */
-	for (cluster = cluster_list; cluster; cluster = cluster->next)
-	{
-		if (strcmp(cluster->name, name) == 0)
-			break;
-	}
+	node = aatree_search(&cluster_tree, (uintptr_t)name);
+	if (node)
+		cluster = (ProxyCluster *)node;
 
 	/* create if not */
 	if (!cluster)
 	{
 		cluster = new_cluster(name);
-		cluster->next = cluster_list;
-		cluster_list = cluster;
+		aatree_insert(&cluster_tree, (uintptr_t)name, &cluster->node);
 	}
 
 	/* determine cluster type, reload parts if necessary */
@@ -1013,9 +1016,6 @@ static void w_clean_cluster(struct AANode *n, void *arg)
 void
 plproxy_cluster_maint(struct timeval * now)
 {
-	ProxyCluster *cluster;
-
-	for (cluster = cluster_list; cluster; cluster = cluster->next)
-		clean_cluster(cluster, now);
+	aatree_walk(&cluster_tree, AA_WALK_IN_ORDER, w_clean_cluster, now);
 	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, w_clean_cluster, now);
 }

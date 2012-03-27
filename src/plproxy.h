@@ -177,8 +177,7 @@ typedef struct ProxyConnection
 /* Info about one cluster */
 typedef struct ProxyCluster
 {
-	struct AANode node;
-	struct ProxyCluster *next;	/* Pointer for building singly-linked list */
+	struct AANode node;			/* Node in name => cluster lookup tree */
 
 	const char *name;			/* Cluster name */
 	int			version;		/* Cluster version */
