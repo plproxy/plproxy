@@ -375,11 +375,26 @@ handle_notice(void *arg, const PGresult *res)
 	plproxy_remote_error(cluster->cur_func, conn, res, false);
 }
 
+static const char *
+get_connstr(ProxyConnection *conn)
+{
+	StringInfoData cstr;
+	ConnUserInfo *info = conn->cluster->cur_userinfo;
+
+	if (strstr(conn->connstr, "user=") != NULL)
+		return pstrdup(conn->connstr);
+
+	initStringInfo(&cstr);
+	appendStringInfo(&cstr, "%s %s", conn->connstr, info->connstr);
+	return cstr.data;
+}
+
 /* check existing conn status or launch new conn */
 static void
 prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 {
 	struct timeval now;
+	const char *connstr;
 
 	gettimeofday(&now, NULL);
 
@@ -409,7 +424,8 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 	conn->cur->connect_time = now.tv_sec;
 
 	/* launch new connection */
-	conn->cur->db = PQconnectStart(conn->connstr);
+	connstr = get_connstr(conn);
+	conn->cur->db = PQconnectStart(connstr);
 	if (conn->cur->db == NULL)
 		plproxy_error(func, "No memory for PGconn");
 
@@ -805,10 +821,8 @@ static void tag_part(struct ProxyCluster *cluster, int i, int tag)
 	ProxyConnection *conn = cluster->part_map[i];
 
 	if (!conn->run_tag)
-	{
-		cluster->active_list[cluster->active_count] = conn;
-		cluster->active_count++;
-	}
+		plproxy_activate_connection(conn);
+
 	conn->run_tag = tag;
 }
 
@@ -1130,6 +1144,8 @@ plproxy_clean_results(ProxyCluster *cluster)
 		conn->pos = 0;
 		conn->run_tag = 0;
 		conn->bstate = NULL;
+		conn->cur = NULL;
+		cluster->active_list[i] = NULL;
 	}
 
 	/* reset active_list */

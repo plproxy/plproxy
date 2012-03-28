@@ -136,7 +136,21 @@ typedef struct ProxyConfig
 	int			keepcnt;
 } ProxyConfig;
 
+typedef struct ConnUserInfo {
+	struct AANode node;
+
+	const char *username;
+	const char *connstr;
+
+	SysCacheStamp umStamp;
+	bool needs_reload;
+} ConnUserInfo;
+
 typedef struct ProxyConnectionState {
+	struct AANode node;			/* node head in user->state tree */
+
+	ConnUserInfo *userinfo;
+
 	PGconn	   *db;				/* libpq connection handle */
 	ConnState	state;			/* Connection state */
 	time_t		connect_time;	/* When connection was started */
@@ -152,6 +166,8 @@ typedef struct ProxyConnection
 
 	struct ProxyCluster *cluster;
 	const char *connstr;		/* Connection string for libpq */
+
+	struct AATree userstate_tree; /* user->state tree */
 
 	/* state */
 	PGresult   *res;			/* last resultset */
@@ -194,10 +210,14 @@ typedef struct ProxyCluster
 
 	struct AATree conn_tree;	/* connstr -> ProxyConnection */
 
+	struct AATree userinfo_tree; /* username->userinfo tree */
+	ConnUserInfo *cur_userinfo;	/* userinfo struct for current request */
+
 	int			ret_cur_conn;	/* Result walking: index of current conn */
 	int			ret_cur_pos;	/* Result walking: index of current row */
 	int			ret_total;		/* Result walking: total rows left */
 
+	bool		fake_cluster;	/* single connect-string cluster */
 	bool		sqlmed_cluster;	/* True if the cluster is defined using SQL/MED */
 	bool		needs_reload;	/* True if the cluster partition list should be reloaded */
 	bool		busy;			/* True if the cluster is already involved in execution */
@@ -207,7 +227,6 @@ typedef struct ProxyCluster
 	 * Used in to perform cluster invalidation in syscache callbacks.
 	 */
 	SysCacheStamp clusterStamp;
-	SysCacheStamp umStamp;
 
 	/* notice processing: provide info about currently executing function */
 	struct ProxyFunction	*cur_func;
@@ -398,6 +417,7 @@ void		plproxy_cluster_cache_init(void);
 void		plproxy_syscache_callback_init(void);
 ProxyCluster *plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_cluster_maint(struct timeval * now);
+void		plproxy_activate_connection(struct ProxyConnection *conn);
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);
