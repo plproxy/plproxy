@@ -69,6 +69,8 @@ static inline void scstamp_set(int cache, SysCacheStamp *stamp, HeapTuple tup)
 
 static inline bool scstamp_check(int cache, SysCacheStamp *stamp, uint32 hashValue)
 {
+	if (stamp->cacheid == 0)
+		return true;
 	if (cache != stamp->cacheid)
 		elog(WARNING, "cache id mismatch: stamp:%d cur:%d", stamp->cacheid, cache);
 	return !hashValue || stamp->hashValue == hashValue;
