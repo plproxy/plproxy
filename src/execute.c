@@ -385,7 +385,10 @@ get_connstr(ProxyConnection *conn)
 		return pstrdup(conn->connstr);
 
 	initStringInfo(&cstr);
-	appendStringInfo(&cstr, "%s %s", conn->connstr, info->connstr);
+	if (info->extra_connstr)
+		appendStringInfo(&cstr, "%s %s", conn->connstr, info->extra_connstr);
+	else
+		appendStringInfo(&cstr, "%s user='%s'", conn->connstr, info->username);
 	return cstr.data;
 }
 

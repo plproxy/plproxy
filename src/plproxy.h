@@ -138,9 +138,10 @@ typedef struct ProxyConfig
 
 typedef struct ConnUserInfo {
 	struct AANode node;
+	Oid user_oid;
 
-	const char *username;
-	const char *connstr;
+	char *username;
+	char *extra_connstr;		/* user= and password= */
 
 	SysCacheStamp umStamp;
 	bool needs_reload;
@@ -216,6 +217,8 @@ typedef struct ProxyCluster
 	int			ret_cur_conn;	/* Result walking: index of current conn */
 	int			ret_cur_pos;	/* Result walking: index of current row */
 	int			ret_total;		/* Result walking: total rows left */
+
+	Oid			sqlmed_server_oid;
 
 	bool		fake_cluster;	/* single connect-string cluster */
 	bool		sqlmed_cluster;	/* True if the cluster is defined using SQL/MED */
