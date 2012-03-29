@@ -65,10 +65,10 @@ $$ split a; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
 select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
             test_array             
 -----------------------------------
- test_part0 $1:d $2:e,f,g,h $3:foo
  test_part1 $1:a $2:e,f,g,h $3:foo
  test_part2 $1:b $2:e,f,g,h $3:foo
  test_part3 $1:c $2:e,f,g,h $3:foo
+ test_part0 $1:d $2:e,f,g,h $3:foo
 (4 rows)
 
 -- run on text hash, split two arrays (nop split)
@@ -86,10 +86,10 @@ $$ split a, b; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
 select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
          test_array          
 -----------------------------
- test_part0 $1:d $2:h $3:foo
  test_part1 $1:a $2:e $3:foo
  test_part2 $1:b $2:f $3:foo
  test_part3 $1:c $2:g $3:foo
+ test_part0 $1:d $2:h $3:foo
 (4 rows)
 
 select * from test_array(null, null, null);
@@ -127,10 +127,10 @@ $$ split all; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
 select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
          test_array          
 -----------------------------
- test_part0 $1:d $2:h $3:foo
  test_part1 $1:a $2:e $3:foo
  test_part2 $1:b $2:f $3:foo
  test_part3 $1:c $2:g $3:foo
+ test_part0 $1:d $2:h $3:foo
 (4 rows)
 
 -- run on arg

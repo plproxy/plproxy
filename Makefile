@@ -129,7 +129,7 @@ test: install
 	$(MAKE) installcheck || { filterdiff --format=unified regression.diffs | less; exit 1; }
 
 ack:
-	cp results/*.out expected/
+	cp results/*.out test/expected/
 
 deb:
 	debuild -uc -us -b
