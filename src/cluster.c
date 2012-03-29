@@ -548,6 +548,7 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 	StringInfoData      cstr;
 	ListCell		   *cell;
 	AclResult			aclresult;
+	bool				got_user;
 
 
 	um = GetUserMapping(userinfo->user_oid, cluster->sqlmed_server_oid);
@@ -579,14 +580,23 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, cluster->name);
 
 	/* Extract the common connect string elements from user mapping */
+	got_user = false;
 	initStringInfo(&cstr);
 	foreach(cell, um->options)
 	{
 		DefElem    *def = lfirst(cell);
 
+		if (strcmp(def->defname, "user") == 0)
+			got_user = true;
+
 		appendStringInfo(&cstr, " %s='%s'", def->defname, strVal(def->arg));
 	}
 
+	/* make sure we have 'user=' in connect string */
+	if (!got_user)
+		appendStringInfo(&cstr, " user='%s'", userinfo->username);
+
+	/* free old string */
 	if (userinfo->extra_connstr)
 	{
 		memset(userinfo->extra_connstr, 0, strlen(userinfo->extra_connstr));
@@ -594,8 +604,10 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 		userinfo->extra_connstr = NULL;
 	}
 
+	/* set up new connect string */
 	userinfo->extra_connstr = MemoryContextStrdup(cluster_mem, cstr.data);
 	memset(cstr.data, 0, cstr.len);
+	pfree(cstr.data);
 }
 
 /*
@@ -867,8 +879,9 @@ new_cluster(const char *name)
 /*
  * Invalidate all connections for particular user
  */
+#ifdef PLPROXY_USE_SQLMED
 
-static void drop_userinfo_state(struct AANode *node, void *arg)
+static void inval_userinfo_state(struct AANode *node, void *arg)
 {
 	ProxyConnectionState *cur = (ProxyConnectionState *)node;
 	ConnUserInfo *userinfo = arg;
@@ -881,18 +894,18 @@ static void drop_userinfo_state(struct AANode *node, void *arg)
 	}
 }
 
-static void drop_userinfo_conn(struct AANode *node, void *arg)
+static void inval_userinfo_conn(struct AANode *node, void *arg)
 {
 	ProxyConnection *conn = (ProxyConnection *)node;
 	ConnUserInfo *userinfo = arg;
 
-	aatree_walk(&conn->userstate_tree, AA_WALK_IN_ORDER, drop_userinfo_state, userinfo);
+	aatree_walk(&conn->userstate_tree, AA_WALK_IN_ORDER, inval_userinfo_state, userinfo);
 }
 
 static void inval_user_connections(ProxyCluster *cluster, ConnUserInfo *userinfo)
 {
 	/* find all connections with this user and drop them */
-	aatree_walk(&cluster->conn_tree, AA_WALK_IN_ORDER, drop_userinfo_conn, userinfo);
+	aatree_walk(&cluster->conn_tree, AA_WALK_IN_ORDER, inval_userinfo_conn, userinfo);
 
 	/*
 	 * We can clear the flag only when it's certain
@@ -900,6 +913,8 @@ static void inval_user_connections(ProxyCluster *cluster, ConnUserInfo *userinfo
 	 */
 	userinfo->needs_reload = false;
 }
+
+#endif
 
 /*
  * Initialize user info struct
@@ -943,11 +958,16 @@ refresh_cluster(ProxyFunction *func, ProxyCluster *cluster)
 	ConnUserInfo *uinfo;
 	Oid user_oid;
 
-	user_oid = GetSessionUserId();
+	/*
+	 * Use current_user to pick user mapping
+	 */
+	user_oid = GetUserId();
 
+	/* set up user cache */
 	uinfo = get_userinfo(cluster, user_oid);
 	cluster->cur_userinfo = uinfo;
 
+	/* SQL/MED server reload */
 #ifdef PLPROXY_USE_SQLMED
 	if (cluster->needs_reload)
 	{
@@ -972,6 +992,7 @@ refresh_cluster(ProxyFunction *func, ProxyCluster *cluster)
 
 #endif
 
+	/* SQL/MED user reload */
 	if (uinfo->needs_reload)
 	{
 #ifdef PLPROXY_USE_SQLMED
@@ -985,7 +1006,7 @@ refresh_cluster(ProxyFunction *func, ProxyCluster *cluster)
 			uinfo->needs_reload = false;
 	}
 
-	/* Either no SQL/MED support or no such foreign server */
+	/* old-style cluster reload */
 	if (!cluster->sqlmed_cluster && !cluster->fake_cluster)
 		reload_plproxy_cluster(func, cluster);
 
