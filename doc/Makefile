@@ -15,6 +15,6 @@ clean:
 web: $(HTML)
 	rsync -avz $(HTML) $(web)/doc/
 
-%.html: %.txt
+%.html: %.adoc
 	$(ASCIIDOC) -a toc $<
 
