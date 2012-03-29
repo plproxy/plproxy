@@ -14,8 +14,12 @@ create or replace function sqlmed_test1() returns setof text as $$
     select 'plproxy: user=' || current_user || ' dbname=' || current_database();
 $$ language plproxy;
 
+drop user if exists test_user_alice;
 drop user if exists test_user_bob;
+drop user if exists test_user_charlie;
+create user test_user_alice password 'supersecret';
 create user test_user_bob password 'secret';
+create user test_user_charlie password 'megasecret';
 
 -- no user mapping
 set session authorization test_user_bob;
@@ -37,6 +41,48 @@ grant usage on foreign server sqlmedcluster to test_user_bob;
 set session authorization test_user_bob;
 select * from sqlmed_test1();
 reset session authorization;
+
+-- test security definer
+
+create user mapping for test_user_alice server sqlmedcluster;
+create user mapping for test_user_charlie server sqlmedcluster;
+grant usage on foreign server sqlmedcluster to test_user_alice;
+grant usage on foreign server sqlmedcluster to test_user_charlie;
+
+create or replace function sqlmed_test_alice() returns setof text as $$
+    cluster 'sqlmedcluster';
+    run on 0;
+    select 'plproxy: user=' || current_user || ' dbname=' || current_database();
+$$ language plproxy security definer;
+alter function sqlmed_test_alice() owner to test_user_alice;
+
+create or replace function sqlmed_test_charlie() returns setof text as $$
+    cluster 'sqlmedcluster';
+    run on 0;
+    select 'plproxy: user=' || current_user || ' dbname=' || current_database();
+$$ language plproxy security definer;
+alter function sqlmed_test_charlie() owner to test_user_charlie;
+
+-- call as alice
+set session authorization test_user_alice;
+select * from sqlmed_test_alice();
+select * from sqlmed_test_charlie();
+reset session authorization;
+
+-- call as charlie
+set session authorization test_user_charlie;
+select * from sqlmed_test_alice();
+select * from sqlmed_test_charlie();
+reset session authorization;
+
+-- test refresh too
+alter user mapping for test_user_charlie
+    server sqlmedcluster
+    options (add user 'test_user_alice');
+set session authorization test_user_bob;
+select * from sqlmed_test_charlie();
+reset session authorization;
+
 
 -- cluster definition validation
 

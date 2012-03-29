@@ -10,12 +10,16 @@ create or replace function sqlmed_test1() returns setof text as $$
     run on 0;
     select 'plproxy: user=' || current_user || ' dbname=' || current_database();
 $$ language plproxy;
+drop user if exists test_user_alice;
 drop user if exists test_user_bob;
+drop user if exists test_user_charlie;
+create user test_user_alice password 'supersecret';
 create user test_user_bob password 'secret';
+create user test_user_charlie password 'megasecret';
 -- no user mapping
 set session authorization test_user_bob;
 select * from sqlmed_test1();
-ERROR:  user mapping not found for "test_user_bob"
+ERROR:  permission denied for foreign server sqlmedcluster
 reset session authorization;
 -- add a public user mapping 
 create user mapping for public server sqlmedcluster
@@ -33,6 +37,65 @@ select * from sqlmed_test1();
                  sqlmed_test1                  
 -----------------------------------------------
  plproxy: user=test_user_bob dbname=test_part3
+(1 row)
+
+reset session authorization;
+-- test security definer
+create user mapping for test_user_alice server sqlmedcluster;
+create user mapping for test_user_charlie server sqlmedcluster;
+grant usage on foreign server sqlmedcluster to test_user_alice;
+grant usage on foreign server sqlmedcluster to test_user_charlie;
+create or replace function sqlmed_test_alice() returns setof text as $$
+    cluster 'sqlmedcluster';
+    run on 0;
+    select 'plproxy: user=' || current_user || ' dbname=' || current_database();
+$$ language plproxy security definer;
+alter function sqlmed_test_alice() owner to test_user_alice;
+create or replace function sqlmed_test_charlie() returns setof text as $$
+    cluster 'sqlmedcluster';
+    run on 0;
+    select 'plproxy: user=' || current_user || ' dbname=' || current_database();
+$$ language plproxy security definer;
+alter function sqlmed_test_charlie() owner to test_user_charlie;
+-- call as alice
+set session authorization test_user_alice;
+select * from sqlmed_test_alice();
+                sqlmed_test_alice                
+-------------------------------------------------
+ plproxy: user=test_user_alice dbname=test_part3
+(1 row)
+
+select * from sqlmed_test_charlie();
+                sqlmed_test_charlie                
+---------------------------------------------------
+ plproxy: user=test_user_charlie dbname=test_part3
+(1 row)
+
+reset session authorization;
+-- call as charlie
+set session authorization test_user_charlie;
+select * from sqlmed_test_alice();
+                sqlmed_test_alice                
+-------------------------------------------------
+ plproxy: user=test_user_alice dbname=test_part3
+(1 row)
+
+select * from sqlmed_test_charlie();
+                sqlmed_test_charlie                
+---------------------------------------------------
+ plproxy: user=test_user_charlie dbname=test_part3
+(1 row)
+
+reset session authorization;
+-- test refresh too
+alter user mapping for test_user_charlie
+    server sqlmedcluster
+    options (add user 'test_user_alice');
+set session authorization test_user_bob;
+select * from sqlmed_test_charlie();
+               sqlmed_test_charlie               
+-------------------------------------------------
+ plproxy: user=test_user_alice dbname=test_part3
 (1 row)
 
 reset session authorization;
