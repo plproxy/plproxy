@@ -288,6 +288,13 @@ get_version(ProxyFunction *func, Datum dname)
 	return DatumGetInt32(bin_val);
 }
 
+/* forget old values */
+static void
+clear_config(ProxyConfig *cf)
+{
+	memset(cf, 0, sizeof(*cf));
+}
+
 /* set a configuration option. */
 static void
 set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char *val)
@@ -335,6 +342,8 @@ get_config(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 		plproxy_error(func, "Config column 1 must be text");
 	if (SPI_gettypeid(desc, 2) != TEXTOID)
 		plproxy_error(func, "Config column 2 must be text");
+
+	clear_config(&cluster->config);
 
 	/* fill values */
 	for (i = 0; i < SPI_processed; i++)
@@ -647,6 +656,9 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 	aclresult = pg_foreign_server_aclcheck(foreign_server->serverid, info->user_oid, ACL_USAGE);
 	if (aclresult != ACLCHECK_OK)
 		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, foreign_server->servername);
+
+	/* drop old config values */
+	clear_config(&cluster->config);
 
 	/*
 	 * Collect the configuration definitions from foreign data wrapper.
