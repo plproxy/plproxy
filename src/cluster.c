@@ -313,6 +313,8 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->keepintvl = atoi(val);
 	else if (pg_strcasecmp("keepalive_count", key) == 0)
 		cf->keepcnt = atoi(val);
+	else if (pg_strcasecmp("default_user", key) == 0)
+		snprintf(cf->default_user, sizeof(cf->default_user), "%s", val);
 	else
 		plproxy_error(func, "Unknown config param: %s", key);
 }
@@ -968,12 +970,31 @@ static void
 refresh_cluster(ProxyFunction *func, ProxyCluster *cluster)
 {
 	ConnUserInfo *uinfo;
+	ProxyConfig *cf = &cluster->config;
 	Oid user_oid;
 
 	/*
-	 * Use current_user to pick user mapping
+	 * Decide which user to use for connections.
 	 */
-	user_oid = GetUserId();
+	if (cf->default_user[0])
+	{
+		if (strcmp(cf->default_user, "session_user") == 0)
+			user_oid = GetSessionUserId();
+		else if (strcmp(cf->default_user, "current_user") == 0)
+			user_oid = GetUserId();
+		else if (1)
+			/* dont support custom users, seems unnecessary */
+			elog(ERROR, "default_user: Expect 'current_user' or 'session_user', got '%s'",
+				 cf->default_user);
+		else
+			/* easy to support, but seems confusing conceptually */
+			user_oid = get_role_oid(cf->default_user, false);
+	}
+	else
+	{
+		/* default: current_user */
+		user_oid = GetUserId();
+	}
 
 	/* set up user cache */
 	uinfo = get_userinfo(cluster, user_oid);

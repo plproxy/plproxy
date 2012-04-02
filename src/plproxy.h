@@ -134,6 +134,7 @@ typedef struct ProxyConfig
 	int			keepidle;
 	int			keepintvl;
 	int			keepcnt;
+	char		default_user[NAMEDATALEN];
 } ProxyConfig;
 
 typedef struct ConnUserInfo {

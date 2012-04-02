@@ -20,7 +20,7 @@ The following plproxy schema functions are used to define the clusters:
 
 === plproxy.get_cluster_version(cluster_name) ===
 
-----------------------
+---------------------
 plproxy.get_cluster_version(cluster_name text)
 returns integer
 ----------------------
@@ -161,6 +161,16 @@ or NULL then the parameter is disabled (a default value will be used)
 	with same name.  Its better to just add the parameter to
 	connect string.
 
+  default_user::
+
+	Either `current_user` (default) or `session_user`.  They have same
+	meaning as SQL tokens.  The specified user is used to look up SQL/MED
+	user mapping.  In case of non-SQL/MED cluster, the user is put directly
+	to connect string, unless there already exist `user=` key.  The user is
+	also used to cache the connections.  Thus PL/Proxy 2.4+ supports connecting
+	to single cluster from same backend with different users.
+	+
+	*Deprecated*: it's use is to restore pre-2.4 default of `session_user`.
 
 Example function without the use of separate tables for storing parameters.
 
