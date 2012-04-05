@@ -117,7 +117,7 @@ RETURNS SETOF record
 The get_cluster_config function returns a set of key-value pairs that can 
 consist of any of the following configuration parameters.  All of them are 
 optional. Timeouts/lifetime values are given in seconds.  If the value is 0
-or NULL then the parameter is disabled (a default value will be used)
+or NULL then the parameter is disabled (a default value will be used).
 
 
   connection_lifetime::
