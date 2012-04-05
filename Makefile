@@ -1,6 +1,7 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control, debian/changelog
+DISTVERSION = 2.4rc1
 EXTVERSION = 2.4.0
 
 # set to 1 to disallow functions containing SELECT
@@ -30,7 +31,7 @@ ifdef VPATH
 PG_CPPFLAGS += -I$(VPATH)/src
 endif
 
-DISTNAME = $(EXTENSION)-$(EXTVERSION)
+DISTNAME = $(EXTENSION)-$(DISTVERSION)
 
 # regression testing setup
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
@@ -115,7 +116,7 @@ tags: $(SRCS) $(HDRS)
 	ctags $(SRCS) $(HDRS)
 
 tgz:
-	git archive -o $(DISTNAME).tar.gz --prefix=$(DISTNAME)/ HEAD
+	git archive --prefix=$(DISTNAME)/ HEAD | gzip -9 > $(DISTNAME).tar.gz
 
 zip:
 	git archive -o $(DISTNAME).zip --format zip --prefix=$(DISTNAME)/ HEAD
