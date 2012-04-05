@@ -2,6 +2,11 @@
 
   = Features =
 
+    * Use `current_user` as default user for remote connections.
+      Support access with different users to same cluster
+      in same backend.  Old default was `session_user`,
+      but that does not seem useful anymore.
+
     * Support ENUM types.  (Zoltán Böszörményi)
 
     * Support building as PGXN extension.  (David E. Wheeler)
