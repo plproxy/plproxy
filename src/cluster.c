@@ -91,7 +91,7 @@ check_valid_partcount(int n)
 static int cluster_name_cmp(uintptr_t val, struct AANode *node)
 {
 	const char *name = (const char *)val;
-	const ProxyCluster *cluster = (ProxyCluster *)node;
+	const ProxyCluster *cluster = container_of(node, ProxyCluster, node);
 
 	return strcmp(name, cluster->name);
 }
@@ -99,14 +99,14 @@ static int cluster_name_cmp(uintptr_t val, struct AANode *node)
 static int conn_cstr_cmp(uintptr_t val, struct AANode *node)
 {
 	const char *name = (const char *)val;
-	const ProxyConnection *conn = (ProxyConnection *)node;
+	const ProxyConnection *conn = container_of(node, ProxyConnection, node);
 
 	return strcmp(name, conn->connstr);
 }
 
 static void conn_free(struct AANode *node, void *arg)
 {
-	ProxyConnection *conn = (ProxyConnection *)node;
+	ProxyConnection *conn = container_of(node, ProxyConnection, node);
 
 	aatree_destroy(&conn->userstate_tree);
 	if (conn->res)
@@ -117,14 +117,14 @@ static void conn_free(struct AANode *node, void *arg)
 static int state_user_cmp(uintptr_t val, struct AANode *node)
 {
 	const char *name = (const char *)val;
-	const ProxyConnectionState *state = (ProxyConnectionState *)node;
+	const ProxyConnectionState *state = container_of(node, ProxyConnectionState, node);
 
 	return strcmp(name, state->userinfo->username);
 }
 
 static void state_free(struct AANode *node, void *arg)
 {
-	ProxyConnectionState *state = (ProxyConnectionState *)node;
+	ProxyConnectionState *state = container_of(node, ProxyConnectionState, node);
 	if (state->db)
 		PQfinish(state->db);
 	memset(state, 0, sizeof(*state));
@@ -134,14 +134,14 @@ static void state_free(struct AANode *node, void *arg)
 static int userinfo_cmp(uintptr_t val, struct AANode *node)
 {
 	const char *name = (const char *)val;
-	const ConnUserInfo *info = (ConnUserInfo *)node;
+	const ConnUserInfo *info = container_of(node, ConnUserInfo, node);
 
 	return strcmp(name, info->username);
 }
 
 static void userinfo_free(struct AANode *node, void *arg)
 {
-	ConnUserInfo *info = (ConnUserInfo *)node;
+	ConnUserInfo *info = container_of(node, ConnUserInfo, node);
 	pfree(info->username);
 	if (info->extra_connstr)
 	{
@@ -241,7 +241,7 @@ add_connection(ProxyCluster *cluster, const char *connstr, int part_num)
 	/* check if already have it */
 	node = aatree_search(&cluster->conn_tree, (uintptr_t)connstr);
 	if (node)
-		conn = (ProxyConnection *)node;
+		conn = container_of(node, ProxyConnection, node);
 
 	/* add new connection */
 	if (!conn)
@@ -766,7 +766,7 @@ determine_compat_mode(ProxyCluster *cluster)
 
 static void inval_one_umap(struct AANode *n, void *arg)
 {
-	ConnUserInfo *info = (ConnUserInfo *)n;
+	ConnUserInfo *info = container_of(n, ConnUserInfo, node);
 	SCInvalArg newStamp;
 
 	if (info->needs_reload)
@@ -787,14 +787,14 @@ static void inval_one_umap(struct AANode *n, void *arg)
 
 static void inval_umapping(struct AANode *n, void *arg)
 {
-	ProxyCluster *cluster = (ProxyCluster *)n;
+	ProxyCluster *cluster = container_of(n, ProxyCluster, node);
 
 	aatree_walk(&cluster->userinfo_tree, AA_WALK_IN_ORDER, inval_one_umap, arg);
 }
 
 static void inval_fserver(struct AANode *n, void *arg)
 {
-	ProxyCluster *cluster = (ProxyCluster *)n;
+	ProxyCluster *cluster = container_of(n, ProxyCluster, node);
 	SCInvalArg newStamp = *(SCInvalArg *)arg;
 
 	if (cluster->needs_reload)
@@ -897,7 +897,7 @@ new_cluster(const char *name)
 
 static void inval_userinfo_state(struct AANode *node, void *arg)
 {
-	ProxyConnectionState *cur = (ProxyConnectionState *)node;
+	ProxyConnectionState *cur = container_of(node, ProxyConnectionState, node);
 	ConnUserInfo *userinfo = arg;
 
 	if (cur->userinfo == userinfo && cur->db)
@@ -910,7 +910,7 @@ static void inval_userinfo_state(struct AANode *node, void *arg)
 
 static void inval_userinfo_conn(struct AANode *node, void *arg)
 {
-	ProxyConnection *conn = (ProxyConnection *)node;
+	ProxyConnection *conn = container_of(node, ProxyConnection, node);
 	ConnUserInfo *userinfo = arg;
 
 	aatree_walk(&conn->userstate_tree, AA_WALK_IN_ORDER, inval_userinfo_state, userinfo);
@@ -945,7 +945,7 @@ get_userinfo(ProxyCluster *cluster, Oid user_oid)
 
 	node = aatree_search(&cluster->userinfo_tree, (uintptr_t)username);
 	if (node) {
-		userinfo = (ConnUserInfo *)node;
+		userinfo = container_of(node, ConnUserInfo, node);
 	} else {
 		userinfo = MemoryContextAllocZero(cluster_mem, sizeof(*userinfo));
 		userinfo->username = MemoryContextStrdup(cluster_mem, username);
@@ -1077,7 +1077,7 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 	n = aatree_search(&fake_cluster_tree, (uintptr_t)connect_str);
 	if (n)
 	{
-		cluster = (ProxyCluster *)n;
+		cluster = container_of(n, ProxyCluster, node);
 		goto done;
 	}
 
@@ -1167,7 +1167,7 @@ plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 	/* search if cached */
 	node = aatree_search(&cluster_tree, (uintptr_t)name);
 	if (node)
-		cluster = (ProxyCluster *)node;
+		cluster = container_of(node, ProxyCluster, node);
 
 	/* create if not */
 	if (!cluster)
@@ -1203,7 +1203,7 @@ void plproxy_activate_connection(struct ProxyConnection *conn)
 
 	node = aatree_search(&conn->userstate_tree, (uintptr_t)username);
 	if (node) {
-		cur = (ProxyConnectionState *)node;
+		cur = container_of(node, ProxyConnectionState, node);
 	} else {
 		cur = MemoryContextAlloc(cluster_mem, sizeof(*cur));
 		cur->userinfo = userinfo;
@@ -1223,7 +1223,7 @@ struct MaintInfo {
 
 static void clean_state(struct AANode *node, void *arg)
 {
-	ProxyConnectionState *cur = (ProxyConnectionState *)node;
+	ProxyConnectionState *cur = container_of(node, ProxyConnectionState, node);
 	ConnUserInfo *uinfo = cur->userinfo;
 	struct MaintInfo *maint = arg;
 	ProxyConfig *cf = maint->cf;
@@ -1264,7 +1264,7 @@ static void clean_state(struct AANode *node, void *arg)
 
 static void clean_conn(struct AANode *node, void *arg)
 {
-	ProxyConnection *conn = (ProxyConnection *)node;
+	ProxyConnection *conn = container_of(node, ProxyConnection, node);
 	struct MaintInfo *maint = arg;
 
 	if (conn->res)
@@ -1278,7 +1278,7 @@ static void clean_conn(struct AANode *node, void *arg)
 
 static void clean_cluster(struct AANode *n, void *arg)
 {
-	ProxyCluster *cluster = (ProxyCluster *)n;
+	ProxyCluster *cluster = container_of(n, ProxyCluster, node);
 	struct MaintInfo maint;
 
 	maint.cf = &cluster->config;
