@@ -963,6 +963,23 @@ get_userinfo(ProxyCluster *cluster, Oid user_oid)
 	return userinfo;
 }
 
+#if PG_VERSION_NUM < 90100
+
+static Oid
+get_role_oid(const char *rolname, bool missing_ok)
+{
+	Oid         oid;
+
+	oid = GetSysCacheOid1(AUTHNAME, CStringGetDatum(rolname));
+	if (!OidIsValid(oid) && !missing_ok)
+		ereport(ERROR,
+				(errcode(ERRCODE_UNDEFINED_OBJECT),
+				 errmsg("role \"%s\" does not exist", rolname)));
+	return oid;
+}
+
+#endif
+
 /*
  * Refresh the cluster.
  */
@@ -971,7 +988,7 @@ refresh_cluster(ProxyFunction *func, ProxyCluster *cluster)
 {
 	ConnUserInfo *uinfo;
 	ProxyConfig *cf = &cluster->config;
-	Oid user_oid;
+	Oid user_oid = InvalidOid;
 
 	/*
 	 * Decide which user to use for connections.
