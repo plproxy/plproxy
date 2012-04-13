@@ -970,7 +970,7 @@ get_role_oid(const char *rolname, bool missing_ok)
 {
 	Oid         oid;
 
-	oid = GetSysCacheOid1(AUTHNAME, CStringGetDatum(rolname));
+	oid = GetSysCacheOid(AUTHNAME, CStringGetDatum(rolname), 0, 0, 0);
 	if (!OidIsValid(oid) && !missing_ok)
 		ereport(ERROR,
 				(errcode(ERRCODE_UNDEFINED_OBJECT),
