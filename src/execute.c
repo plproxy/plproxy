@@ -416,10 +416,7 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 		case C_QUERY_WRITE:
 			/* close rotten connection */
 			elog(NOTICE, "PL/Proxy: dropping stale conn");
-			PQfinish(conn->cur->db);
-			conn->cur->db = NULL;
-			conn->cur->state = C_NONE;
-			conn->cur->tuning = 0;
+			plproxy_disconnect(conn->cur);
 		case C_NONE:
 			break;
 	}
@@ -1155,6 +1152,20 @@ plproxy_clean_results(ProxyCluster *cluster)
 	cluster->active_count = 0;
 
 	/* conn state checks are done in prepare_conn */
+}
+
+/* Drop one connection */
+void plproxy_disconnect(ProxyConnectionState *cur)
+{
+	if (cur->db)
+		PQfinish(cur->db);
+	cur->db = NULL;
+	cur->state = C_NONE;
+	cur->tuning = 0;
+	cur->connect_time = 0;
+	cur->query_time = 0;
+	cur->same_ver = 0;
+	cur->tuning = 0;
 }
 
 /* Select partitions and execute query on them */

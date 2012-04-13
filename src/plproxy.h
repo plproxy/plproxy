@@ -403,6 +403,7 @@ ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, bool validate);
 /* execute.c */
 void		plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_clean_results(ProxyCluster *cluster);
+void		plproxy_disconnect(ProxyConnectionState *cur);
 
 /* scanner.c */
 int			plproxy_yyget_lineno(void);

@@ -125,8 +125,8 @@ static int state_user_cmp(uintptr_t val, struct AANode *node)
 static void state_free(struct AANode *node, void *arg)
 {
 	ProxyConnectionState *state = container_of(node, ProxyConnectionState, node);
-	if (state->db)
-		PQfinish(state->db);
+
+	plproxy_disconnect(state);
 	memset(state, 0, sizeof(*state));
 	pfree(state);
 }
@@ -901,11 +901,7 @@ static void inval_userinfo_state(struct AANode *node, void *arg)
 	ConnUserInfo *userinfo = arg;
 
 	if (cur->userinfo == userinfo && cur->db)
-	{
-		PQfinish(cur->db);
-		cur->db = NULL;
-		cur->state = C_NONE;
-	}
+		plproxy_disconnect(cur);
 }
 
 static void inval_userinfo_conn(struct AANode *node, void *arg)
@@ -1205,7 +1201,7 @@ void plproxy_activate_connection(struct ProxyConnection *conn)
 	if (node) {
 		cur = container_of(node, ProxyConnectionState, node);
 	} else {
-		cur = MemoryContextAlloc(cluster_mem, sizeof(*cur));
+		cur = MemoryContextAllocZero(cluster_mem, sizeof(*cur));
 		cur->userinfo = userinfo;
 		aatree_insert(&conn->userstate_tree, (uintptr_t)username, &cur->node);
 	}
@@ -1255,11 +1251,7 @@ static void clean_state(struct AANode *node, void *arg)
 	}
 
 	if (drop)
-	{
-		PQfinish(cur->db);
-		cur->db = NULL;
-		cur->state = C_NONE;
-	}
+		plproxy_disconnect(cur);
 }
 
 static void clean_conn(struct AANode *node, void *arg)
