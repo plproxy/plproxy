@@ -1,7 +1,7 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control, debian/changelog
-DISTVERSION = 2.4rc2
+DISTVERSION = 2.4
 EXTVERSION = 2.4.0
 
 # set to 1 to disallow functions containing SELECT

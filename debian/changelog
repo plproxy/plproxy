@@ -1,3 +1,9 @@
+plproxy2 (2.4-1) unstable; urgency=low
+
+  * v2.4
+
+ -- Marko Kreen <marko.kreen@skype.net>  Mon, 07 May 2012 17:08:58 +0300
+
 plproxy2 (2.4~rc2-1) unstable; urgency=low
 
   * v2.4rc2
