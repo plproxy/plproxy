@@ -298,6 +298,8 @@ typedef struct ProxyComposite
 	char	  **name_list;		/* Quoted column names */
 	int			nfields;		/* number of non-dropped fields */
 	bool		use_binary;		/* True if all columns support binary recv */
+	bool		alterable;		/* if it's real table that can change */
+	RowStamp	stamp;
 } ProxyComposite;
 
 /* Temp structure for query parsing */
@@ -427,6 +429,7 @@ Datum		plproxy_recv_type(ProxyType *type, char *str, int len, bool bin);
 HeapTuple	plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *fmts);
 void		plproxy_free_type(ProxyType *type);
 void		plproxy_free_composite(ProxyComposite *meta);
+bool		plproxy_composite_valid(ProxyComposite *type);
 
 /* cluster.c */
 void		plproxy_cluster_cache_init(void);

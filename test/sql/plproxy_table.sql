@@ -31,14 +31,27 @@ select * from test_table1();
 
 -- add column
 alter table ret_table add column data2 text;
---select * from test_table1(); -- invalidate does not work
+select * from test_table1();
 \c regression
 select * from test_table1();
 
 -- drop & add
 alter table ret_table drop column data2;
 alter table ret_table add column data3 text;
+select * from test_table1();
 \c regression
 select * from test_table1();
 
+-- drop
+alter table ret_table drop column data3;
+select * from test_table1();
+\c regression
+select * from test_table1();
+
+-- add again
+alter table ret_table add column data3 text;
+alter table ret_table add column data2 text;
+select * from test_table1();
+\c regression
+select * from test_table1();
 

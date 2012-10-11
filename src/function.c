@@ -426,13 +426,14 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	TypeFuncClass rtc;
 	TupleDesc tuple_current, tuple_cached;
 	MemoryContext old_ctx;
+	Oid tuple_oid;
 	int natts;
 
 	/*
 	 * Compare cached tuple to current one.
 	 */
 	tuple_cached = func->ret_composite->tupdesc;
-	rtc = get_call_result_type(fcinfo, NULL, &tuple_current);
+	rtc = get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
 	Assert(rtc == TYPEFUNC_COMPOSITE);
 	if (equalTupleDescs(tuple_current, tuple_cached))
 		return;
@@ -448,7 +449,7 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	pfree(func->remote_sql);
 
 	/* construct new data */
-	func->ret_composite = plproxy_composite_info(func, tuple_current);	
+	func->ret_composite = plproxy_composite_info(func, tuple_current);
 	natts = func->ret_composite->tupdesc->natts;
 	func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
 	func->remote_sql = plproxy_standard_query(func, true);
@@ -550,6 +551,11 @@ plproxy_compile(FunctionCallInfo fcinfo, bool validate)
 	{
 		/* in case of untyped RECORD, check if cached type is valid */
 		fn_refresh_record(fcinfo, f, proc_tuple);
+	}
+	else if (f->ret_composite)
+	{
+		if (!plproxy_composite_valid(f->ret_composite))
+			fn_refresh_record(fcinfo, f, proc_tuple);
 	}
 
 	ReleaseSysCache(proc_tuple);

@@ -71,6 +71,33 @@ static bool usable_binary(Oid oid)
 	}
 }
 
+bool
+plproxy_composite_valid(ProxyComposite *type)
+{
+	HeapTuple type_tuple;
+	HeapTuple rel_tuple;
+	Form_pg_type pg_type;
+	Oid oid = type->tupdesc->tdtypeid;
+	bool res;
+
+	if (!type->alterable)
+		return true;
+	type_tuple = SearchSysCache(TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
+	if (!HeapTupleIsValid(type_tuple))
+		elog(ERROR, "cache lookup failed for type %u", oid);
+
+	pg_type = (Form_pg_type) GETSTRUCT(type_tuple);
+	rel_tuple = SearchSysCache(RELOID, ObjectIdGetDatum(pg_type->typrelid), 0, 0, 0);
+	if (!HeapTupleIsValid(rel_tuple))
+		elog(ERROR, "cache lookup failed for type relation %u", pg_type->typrelid);
+
+	res = plproxy_check_stamp(&type->stamp, rel_tuple);
+
+	ReleaseSysCache(rel_tuple);
+	ReleaseSysCache(type_tuple);
+
+	return res;
+}
 /*
  * Collects info about fields of a composite type.
  *
@@ -86,6 +113,7 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 	Form_pg_attribute a;
 	ProxyType  *type;
 	const char *name;
+	Oid oid = tupdesc->tdtypeid;
 
 	old_ctx = MemoryContextSwitchTo(func->ctx);
 
@@ -94,6 +122,29 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 	ret->name_list = palloc0(sizeof(char *) * natts);
 	ret->tupdesc = BlessTupleDesc(tupdesc);
 	ret->use_binary = 1;
+
+	ret->alterable = 0;
+	if (oid != RECORDOID)
+	{
+		HeapTuple type_tuple;
+		HeapTuple rel_tuple;
+		Form_pg_type pg_type;
+
+		type_tuple = SearchSysCache(TYPEOID, ObjectIdGetDatum(oid), 0, 0, 0);
+		if (!HeapTupleIsValid(type_tuple))
+			elog(ERROR, "cache lookup failed for type %u", oid);
+		pg_type = (Form_pg_type) GETSTRUCT(type_tuple);
+		rel_tuple = SearchSysCache(RELOID, ObjectIdGetDatum(pg_type->typrelid), 0, 0, 0);
+		if (!HeapTupleIsValid(rel_tuple))
+			elog(ERROR, "cache lookup failed for type relation %u", pg_type->typrelid);
+		plproxy_set_stamp(&ret->stamp, rel_tuple);
+		ReleaseSysCache(rel_tuple);
+		ReleaseSysCache(type_tuple);
+		ret->alterable = 1;
+
+		if (ret->tupdesc->tdtypeid != oid)
+			elog(ERROR, "lost oid");
+	}
 
 	MemoryContextSwitchTo(old_ctx);
 

@@ -33,7 +33,12 @@ select * from test_table1();
 
 -- add column
 alter table ret_table add column data2 text;
---select * from test_table1(); -- invalidate does not work
+select * from test_table1();
+ id | data  | data2 
+----+-------+-------
+  1 | Data1 | Data2
+(1 row)
+
 \c regression
 select * from test_table1();
  id | data  | data2 
@@ -44,10 +49,47 @@ select * from test_table1();
 -- drop & add
 alter table ret_table drop column data2;
 alter table ret_table add column data3 text;
+select * from test_table1();
+ id | data  | data3 
+----+-------+-------
+  1 | Data1 | Data3
+(1 row)
+
 \c regression
 select * from test_table1();
  id | data  | data3 
 ----+-------+-------
   1 | Data1 | Data3
+(1 row)
+
+-- drop
+alter table ret_table drop column data3;
+select * from test_table1();
+ id | data  
+----+-------
+  1 | Data1
+(1 row)
+
+\c regression
+select * from test_table1();
+ id | data  
+----+-------
+  1 | Data1
+(1 row)
+
+-- add again
+alter table ret_table add column data3 text;
+alter table ret_table add column data2 text;
+select * from test_table1();
+ id | data  | data3 | data2 
+----+-------+-------+-------
+  1 | Data1 | Data3 | Data2
+(1 row)
+
+\c regression
+select * from test_table1();
+ id | data  | data3 | data2 
+----+-------+-------+-------
+  1 | Data1 | Data3 | Data2
 (1 row)
 
