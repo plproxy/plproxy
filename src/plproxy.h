@@ -169,6 +169,7 @@ typedef struct ProxyConnectionState {
 	time_t		query_time;		/* When last query was sent */
 	bool		same_ver;		/* True if dest backend has same X.Y ver */
 	bool		tuning;			/* True if tuning query is running on conn */
+	bool		waitCancel;		/* True if waiting for answer from cancel */
 } ProxyConnectionState;
 
 /* Single database connection */
