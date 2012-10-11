@@ -42,8 +42,9 @@ name_matches(ProxyFunction *func, const char *aname, PGresult *res, int col)
 static void
 map_results(ProxyFunction *func, PGresult *res)
 {
-	int			i,
-				j,
+	int			i,  /* non-dropped column index */
+				xi, /* tupdesc index */
+				j,  /* result column index */
 				natts,
 				nfields = PQnfields(res);
 	Form_pg_attribute a;
@@ -58,21 +59,26 @@ map_results(ProxyFunction *func, PGresult *res)
 	}
 
 	natts = func->ret_composite->tupdesc->natts;
-	if (nfields < natts)
+	if (nfields < func->ret_composite->nfields)
 		plproxy_error(func, "Got too few fields from remote end");
-	if (nfields > natts)
+	if (nfields > func->ret_composite->nfields)
 		plproxy_error(func, "Got too many fields from remote end");
 
-	for (i = 0; i < natts; i++)
+	for (i = -1, xi = 0; xi < natts; xi++)
 	{
 		/* ->name_list has quoted names, take unquoted from ->tupdesc */
-		a = func->ret_composite->tupdesc->attrs[i];
-		aname = NameStr(a->attname);
+		a = func->ret_composite->tupdesc->attrs[xi];
 
-		func->result_map[i] = -1;
+		func->result_map[xi] = -1;
+
+		if (a->attisdropped)
+			continue;
+		i++;
+
+		aname = NameStr(a->attname);
 		if (name_matches(func, aname, res, i))
 			/* fast case: 1:1 mapping */
-			func->result_map[i] = i;
+			func->result_map[xi] = i;
 		else
 		{
 			/* slow case: messed up ordering */
@@ -87,28 +93,14 @@ map_results(ProxyFunction *func, PGresult *res)
 				 */
 				if (name_matches(func, aname, res, j))
 				{
-					func->result_map[i] = j;
+					func->result_map[xi] = j;
 					break;
 				}
 			}
 		}
-		if (func->result_map[i] < 0)
+		if (func->result_map[xi] < 0)
 			plproxy_error(func,
 						  "Field %s does not exists in result", aname);
-
-		/* oid sanity check.  does not seem to work. */
-		if (0)
-		{
-			Oid			arg_oid = func->ret_composite->type_list[i]->type_oid;
-			Oid			col_oid = PQftype(res, func->result_map[i]);
-
-			if (arg_oid < 2000 || col_oid < 2000)
-			{
-				if (arg_oid != col_oid)
-					elog(WARNING, "oids do not match:%d/%d",
-						 arg_oid, col_oid);
-			}
-		}
 	}
 }
 
@@ -157,7 +149,7 @@ return_composite(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fc
 	for (i = 0; i < meta->tupdesc->natts; i++)
 	{
 		col = func->result_map[i];
-		if (PQgetisnull(conn->res, conn->pos, col))
+		if (col < 0 || PQgetisnull(conn->res, conn->pos, col))
 		{
 			values[i] = NULL;
 			lengths[i] = 0;

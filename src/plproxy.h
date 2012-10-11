@@ -296,6 +296,7 @@ typedef struct ProxyComposite
 	TupleDesc	tupdesc;		/* Return tuple descriptor */
 	ProxyType **type_list;		/* Column type info */
 	char	  **name_list;		/* Quoted column names */
+	int			nfields;		/* number of non-dropped fields */
 	bool		use_binary;		/* True if all columns support binary recv */
 } ProxyComposite;
 

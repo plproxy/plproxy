@@ -97,11 +97,17 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 
 	MemoryContextSwitchTo(old_ctx);
 
+	ret->nfields = 0;
 	for (i = 0; i < natts; i++)
 	{
 		a = tupdesc->attrs[i];
 		if (a->attisdropped)
-			plproxy_error(func, "dropped attrs not supported");
+		{
+			ret->name_list[i] = NULL;
+			ret->type_list[i] = NULL;
+			continue;
+		}
+		ret->nfields++;
 
 		name = quote_identifier(NameStr(a->attname));
 		ret->name_list[i] = plproxy_func_strdup(func, name);
@@ -125,7 +131,8 @@ plproxy_free_composite(ProxyComposite *rec)
 	for (i = 0; i < natts; i++)
 	{
 		plproxy_free_type(rec->type_list[i]);
-		pfree(rec->name_list[i]);
+		if (rec->name_list[i])
+			pfree(rec->name_list[i]);
 	}
 	pfree(rec->type_list);
 	pfree(rec->name_list);
@@ -136,6 +143,9 @@ plproxy_free_composite(ProxyComposite *rec)
 void
 plproxy_free_type(ProxyType *type)
 {
+	if (type == NULL)
+		return;
+
 	if (type->name)
 		pfree(type->name);
 
@@ -169,7 +179,11 @@ plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *f
 	for (i = 0; i < natts; i++)
 	{
 		if (tupdesc->attrs[i]->attisdropped)
-			elog(ERROR, "dropped attrs not supported");
+		{
+			dvalues[i] = (Datum)NULL;
+			nulls[i] = 'n';
+			continue;
+		}
 
 		dvalues[i] = plproxy_recv_type(meta->type_list[i],
 									   values[i], lengths[i], fmts[i]);
