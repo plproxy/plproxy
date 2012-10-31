@@ -1,3 +1,17 @@
+2012-11-xx  -  PlProxy 2.5  -  ""
+
+  = Fixes =
+
+    * When sending cancel request to server, wait for answer
+      and discard it.  Without waiting the local backend might
+      be killed and cancel request dropped before it reaches
+      remote server - eg. when there is pgbouncer in the middle.
+
+    * When return record is based on type or table, detect changes
+      and reload the type.
+
+    * Allow type or table to have dropped fields.
+
 2012-05-07  -  PlProxy 2.4  -  "Light Eater"
 
   = Features =
