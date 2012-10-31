@@ -144,6 +144,9 @@ ack:
 deb:
 	debuild -uc -us -b
 
+debclean:
+	$(MAKE) -f debian/rules realclean
+
 orig:
 	make -f debian/rules orig
 
