@@ -1,8 +1,9 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control, debian/changelog
-DISTVERSION = 2.4
-EXTVERSION = 2.4.0
+DISTVERSION = 2.5
+EXTVERSION = 2.5.0
+UPGRADE_VERS = 2.3.0 2.4.0
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -45,9 +46,9 @@ override CONTRIB_TESTDB := regression
 # sql source
 PLPROXY_SQL = sql/plproxy_lang.sql
 # Generated SQL files
-EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql
-# Fixed SQL
-EXTMISC = sql/plproxy--unpackaged--2.3.0.sql
+EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql \
+	$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql) \
+	sql/plproxy--unpackaged--$(EXTVERSION).sql
 
 # PostgreSQL version
 PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
@@ -102,10 +103,17 @@ sql/plproxy.sql: $(PLPROXY_SQL)
 	cat $^ > $@
 
 # plain plproxy.sql is not installed, but used in tests
-$(EXTSQL): $(PLPROXY_SQL)
+sql/$(EXTENSION)--$(EXTVERSION).sql: $(PLPROXY_SQL)
 	@mkdir -p sql
 	echo "create extension plproxy;" > sql/plproxy.sql 
 	cat $^ > $@
+
+$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql):
+	touch $@
+
+sql/plproxy--unpackaged--$(EXTVERSION).sql: sql/ext_unpackaged.sql
+	@mkdir -p sql
+	cat $< > $@
 
 # dependencies
 
