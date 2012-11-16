@@ -356,15 +356,29 @@ fn_get_arguments(ProxyFunction *func,
 
 	for (i = 0; i < total; i++)
 	{
-		if (modes && modes[i] == 'o')
-			continue;
-		type = plproxy_find_type_info(func, types[i], 1);
-		pos = func->arg_count++;
-		func->arg_types[pos] = type;
-		if (names && names[i])
-			func->arg_names[pos] = plproxy_func_strdup(func, names[i]);
-		else
-			func->arg_names[pos] = NULL;
+		char mode = modes ? modes[i] : PROARGMODE_IN;
+		switch (mode) {
+		case PROARGMODE_IN:
+		case PROARGMODE_INOUT:
+			type = plproxy_find_type_info(func, types[i], 1);
+			pos = func->arg_count++;
+			func->arg_types[pos] = type;
+			if (names && names[i])
+				func->arg_names[pos] = plproxy_func_strdup(func, names[i]);
+			else
+				func->arg_names[pos] = NULL;
+			break;
+		case PROARGMODE_VARIADIC:
+			elog(ERROR, "PL/Proxy does not support variadic args");
+			break;
+		case PROARGMODE_OUT:
+		case PROARGMODE_TABLE:
+			/* output args, ignore */
+			break;
+		default:
+			elog(ERROR, "PL/Proxy: unknown value in proargmodes: %c", mode);
+			break;
+		}
 	}
 }
 

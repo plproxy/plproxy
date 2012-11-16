@@ -96,6 +96,26 @@
 #endif
 
 /*
+ * backwards compat with 8.4
+ */
+#ifndef PROARGMODE_IN
+#define PROARGMODE_IN       'i'
+#endif
+#ifndef PROARGMODE_OUT
+#define PROARGMODE_OUT      'o'
+#endif
+#ifndef PROARGMODE_INOUT
+#define PROARGMODE_INOUT    'b'
+#endif
+#ifndef PROARGMODE_VARIADIC
+#define PROARGMODE_VARIADIC 'v'
+#endif
+#ifndef PROARGMODE_TABLE
+#define PROARGMODE_TABLE    't'
+#endif
+
+
+/*
  * Determine if this argument is to SPLIT
  */
 #define IS_SPLIT_ARG(func, arg)	((func)->split_args && (func)->split_args[arg])
