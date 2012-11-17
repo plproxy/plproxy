@@ -54,6 +54,7 @@ EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql \
 PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
 SQLMED = $(shell test "$(PGVER)" "<" "8.4" && echo "false" || echo "true")
 PG91 = $(shell test "$(PGVER)" "<" "9.1" && echo "false" || echo "true")
+PG92 = $(shell test "$(PGVER)" "<" "9.2" && echo "false" || echo "true")
 
 # SQL/MED available, add foreign data wrapper and regression tests
 ifeq ($(SQLMED), true)
@@ -71,6 +72,9 @@ DATA_built = sql/plproxy.sql
 EXTRA_CLEAN += $(EXTSQL)
 endif
 
+ifeq ($(PG92), true)
+REGRESS += plproxy_range
+endif
 
 #
 # load PGXS makefile
