@@ -57,7 +57,7 @@ PG91 = $(shell test "$(PGVER)" "<" "9.1" && echo "false" || echo "true")
 
 # SQL/MED available, add foreign data wrapper and regression tests
 ifeq ($(SQLMED), true)
-REGRESS += plproxy_sqlmed
+REGRESS += plproxy_sqlmed plproxy_table
 PLPROXY_SQL += sql/plproxy_fdw.sql
 endif
 
