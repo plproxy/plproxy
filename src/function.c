@@ -479,7 +479,7 @@ fn_compile(FunctionCallInfo fcinfo,
 	Form_pg_proc proc_struct;
 
 	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
-	if (proc_struct->provolatile != 'v')
+	if (proc_struct->provolatile != PROVOLATILE_VOLATILE)
 		elog(ERROR, "PL/Proxy functions must be volatile");
 
 	f = fn_new(fcinfo, proc_tuple);
