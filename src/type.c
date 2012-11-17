@@ -302,14 +302,18 @@ plproxy_find_type_info(ProxyFunction *func, Oid oid, bool for_send)
 	switch (s_type->typtype)
 	{
 		default:
-		case 'p':
+		case TYPTYPE_RANGE:
+			plproxy_error(func, "unsupported type code: %s (%u)", namebuf, oid);
+			break;
+		case TYPTYPE_PSEUDO:
 			if (oid != VOIDOID)
 				plproxy_error(func, "unsupported pseudo type: %s (%u)",
 							  namebuf, oid);
-		case 'b':
-		case 'c':
-		case 'd':
-		case 'e':
+			break;
+		case TYPTYPE_BASE:
+		case TYPTYPE_COMPOSITE:
+		case TYPTYPE_DOMAIN:
+		case TYPTYPE_ENUM:
 			break;
 	}
 

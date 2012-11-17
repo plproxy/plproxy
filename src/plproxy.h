@@ -114,6 +114,24 @@
 #define PROARGMODE_TABLE    't'
 #endif
 
+#ifndef TYPTYPE_BASE
+#define TYPTYPE_BASE 'b'
+#endif
+#ifndef TYPTYPE_COMPOSITE
+#define TYPTYPE_COMPOSITE 'c'
+#endif
+#ifndef TYPTYPE_DOMAIN
+#define TYPTYPE_DOMAIN 'd'
+#endif
+#ifndef TYPTYPE_ENUM
+#define TYPTYPE_ENUM 'e'
+#endif
+#ifndef TYPTYPE_PSEUDO
+#define TYPTYPE_PSEUDO 'p'
+#endif
+#ifndef TYPTYPE_RANGE
+#define TYPTYPE_RANGE 'r'
+#endif
 
 /*
  * Determine if this argument is to SPLIT
