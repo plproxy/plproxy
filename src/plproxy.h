@@ -37,12 +37,17 @@
 #include <catalog/pg_user_mapping.h>
 #endif
 
+#if PG_VERSION_NUM >= 90300
+#include <access/htup_details.h>
+#endif
+
 #include <access/reloptions.h>
 #include <access/tupdesc.h>
 #include <catalog/pg_namespace.h>
 #include <catalog/pg_proc.h>
 #include <catalog/pg_type.h>
 #include <commands/trigger.h>
+#include <lib/stringinfo.h>
 #include <mb/pg_wchar.h>
 #include <miscadmin.h>
 #include <nodes/value.h>
