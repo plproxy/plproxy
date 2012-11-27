@@ -1,7 +1,7 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control, debian/changelog
-DISTVERSION = 2.5rc1
+DISTVERSION = 2.5
 EXTVERSION = 2.5.0
 UPGRADE_VERS = 2.3.0 2.4.0
 

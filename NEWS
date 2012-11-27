@@ -1,4 +1,12 @@
-2012-11-xx  -  PlProxy 2.5  -  ""
+2012-11-27  -  PlProxy 2.5  -  "With Extra Leg For Additional Stability"
+
+  = Features =
+
+    * Support RETURNS TABLE syntax.
+
+    * Support range types.
+
+    * Make it build against 9.3dev.  (Peter Eisentraut)
 
   = Fixes =
 
@@ -11,6 +19,8 @@
       and reload the type.
 
     * Allow type or table to have dropped fields.
+
+    * Fix crash when RETURNS TABLE syntax is used.
 
 2012-05-07  -  PlProxy 2.4  -  "Light Eater"
 
