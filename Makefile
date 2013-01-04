@@ -146,6 +146,8 @@ ack:
 	cp results/*.out test/expected/
 
 deb:
+	rm -f debian/control
+	make -f debian/rules debian/control
 	debuild -uc -us -b
 
 debclean:

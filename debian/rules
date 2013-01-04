@@ -6,19 +6,11 @@
 DEB_BUILD_OPTIONS := nostrip nocheck
 export DEB_BUILD_OPTIONS
 
-PG_BUILDEXT = ./debian/pg_buildext
+PG_BUILDEXT = pg_buildext
 
-debian/control-stamp: debian/control.in debian/pgversions debian/rules
-	grep-dctrl -vP PGVERSION debian/control.in > debian/control
-	for v in $$($(PG_BUILDEXT) supported-versions . ); \
-        do                                         \
-		grep -q "^$$v" debian/pgversions   \
-		&& grep-dctrl -P PGVERSION debian/control.in \
-		| sed -e "s:PGVERSION:$$v:" >> debian/control; \
-	done
-	touch $@
+include /usr/share/postgresql-common/pgxs_debian_control.mk
 
-clean: debian/control-stamp
+override_dh_auto_clean:
 	for v in $$($(PG_BUILDEXT) supported-versions . ) ; do \
 		rm -rf debian/postgresql-plproxy-$${v}; \
 	done
@@ -34,13 +26,10 @@ override_dh_auto_install:
 		|| exit 1 ; \
 	done
 
-build binary override_dh_auto_build: debian/control-stamp
-
-build binary binary-arch binary-indep:
+%:
 	dh $@
 
-.PHONY: build  binary binary-arch binary-indep clean
-.PHONY: orig override_dh_auto_install override_dh_auto_clean override_dh_auto_build
+.PHONY: orig realclean
 
 PKGVERS     = $(shell dpkg-parsechangelog | awk -F '[:-]' '/^Version:/ { print substr($$2, 2) }')
 srcpkg = plproxy2_$(PKGVERS)
