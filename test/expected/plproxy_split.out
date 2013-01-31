@@ -31,23 +31,39 @@ $$ language sql;
 -- invalid arg reference
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split $4; cluster 'testcluster'; run on 0;$$ language plproxy;
-select * from test_array(array['a'], array['g'], 'foo');
 ERROR:  PL/Proxy function public.test_array(3): Compile error at line 1: invalid argument reference: $4
+select * from test_array(array['a'], array['g'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['g'], 'foo');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- invalid arg name
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split x; cluster 'testcluster'; run on 0; $$ language plproxy;
-select * from test_array(array['a'], array['b', 'c'], 'foo');
 ERROR:  PL/Proxy function public.test_array(3): Compile error at line 1: invalid argument reference: x
+select * from test_array(array['a'], array['b', 'c'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['b', 'c'], 'foo')...
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- cannot split more than once
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split a, b, b; cluster 'testcluster'; run on 0; $$ language plproxy;
-select * from test_array(array['a'], array['b', 'c'], 'foo');
 ERROR:  PL/Proxy function public.test_array(3): SPLIT parameter specified more than once: b
+select * from test_array(array['a'], array['b', 'c'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['b', 'c'], 'foo')...
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- attempt to split non-array
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split $3; cluster 'testcluster'; run on 0;$$ language plproxy;
-select * from test_array(array['a'], array['g'], 'foo');
 ERROR:  PL/Proxy function public.test_array(3): SPLIT parameter is not an array: $3
+select * from test_array(array['a'], array['g'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['g'], 'foo');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 -- array size/dimensions mismatch
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split a, b; cluster 'testcluster'; run on 0; $$ language plproxy;

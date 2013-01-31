@@ -14,8 +14,12 @@ returns text as $$
     cluster 'testcluster';
     run on hashtext($2);
 $$ language plproxy;
-select * from test_err2('dat');
 ERROR:  PL/Proxy function public.test_err2(1): Compile error at line 3: invalid argument reference: $2
+select * from test_err2('dat');
+ERROR:  function test_err2(unknown) does not exist
+LINE 1: select * from test_err2('dat');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 create function test_err3(dat text)
 returns text as $$
     cluster 'nonexists';
@@ -62,5 +66,62 @@ returns record as $$
     run on hashtext(dat);
     select dat as res2, 'foo' as res1;
 $$ language plproxy;
-select * from test_map_err4('dat');
 ERROR:  PL/Proxy function public.test_map_err4(1): Compile error at line 5: CLUSTER statement missing
+select * from test_map_err4('dat');
+ERROR:  function test_map_err4(unknown) does not exist
+LINE 1: select * from test_map_err4('dat');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+create function test_variadic_err(first text, rest variadic text[])
+returns text as $$
+    cluster 'testcluster';
+$$ language plproxy;
+ERROR:  PL/Proxy does not support variadic args
+select * from test_variadic_err('dat', 'dat', 'dat');
+ERROR:  function test_variadic_err(unknown, unknown, unknown) does not exist
+LINE 1: select * from test_variadic_err('dat', 'dat', 'dat');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+create function test_volatile_err(dat text)
+returns text
+stable
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+ERROR:  PL/Proxy functions must be volatile
+select * from test_volatile_err('dat');
+ERROR:  function test_volatile_err(unknown) does not exist
+LINE 1: select * from test_volatile_err('dat');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+create function test_pseudo_arg_err(dat cstring)
+returns text
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+ERROR:  PL/Proxy function public.test_pseudo_arg_err(0): unsupported pseudo type: cstring (2275)
+select * from test_pseudo_arg_err(textout('dat'));
+ERROR:  function test_pseudo_arg_err(cstring) does not exist
+LINE 1: select * from test_pseudo_arg_err(textout('dat'));
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+create function test_pseudo_ret_err(dat text)
+returns cstring
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+-- not detected in validator
+select * from test_pseudo_ret_err('dat');
+ERROR:  PL/Proxy function public.test_pseudo_ret_err(0): unsupported pseudo type: cstring (2275)
+create function test_runonall_err(dat text)
+returns text
+as $$
+    cluster 'testcluster';
+    run on all;
+$$ language plproxy;
+ERROR:  PL/Proxy function public.test_runonall_err(1): RUN ON ALL requires set-returning function
+select * from test_runonall_err('dat');
+ERROR:  function test_runonall_err(unknown) does not exist
+LINE 1: select * from test_runonall_err('dat');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

@@ -57,7 +57,39 @@ returns record as $$
 $$ language plproxy;
 select * from test_map_err4('dat');
 
+create function test_variadic_err(first text, rest variadic text[])
+returns text as $$
+    cluster 'testcluster';
+$$ language plproxy;
+select * from test_variadic_err('dat', 'dat', 'dat');
 
+create function test_volatile_err(dat text)
+returns text
+stable
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+select * from test_volatile_err('dat');
 
+create function test_pseudo_arg_err(dat cstring)
+returns text
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+select * from test_pseudo_arg_err(textout('dat'));
 
+create function test_pseudo_ret_err(dat text)
+returns cstring
+as $$
+    cluster 'testcluster';
+$$ language plproxy;
+-- not detected in validator
+select * from test_pseudo_ret_err('dat');
 
+create function test_runonall_err(dat text)
+returns text
+as $$
+    cluster 'testcluster';
+    run on all;
+$$ language plproxy;
+select * from test_runonall_err('dat');

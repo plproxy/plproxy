@@ -14,7 +14,7 @@
          "abstract": "Database partitioning implemented as procedural language",
          "file": "sql/plproxy.sql",
          "docfile": "doc/tutorial.txt",
-         "version": "2.5.0"
+         "version": "2.5.1"
       }
    },
    "prereqs": {

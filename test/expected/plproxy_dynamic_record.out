@@ -45,5 +45,9 @@ returns setof record as $x$
     run on all;
     select id, username from dynamic_query_test;
 $x$ language plproxy;
-select * from dynamic_query_select() as (id integer, username text);
 ERROR:  PL/Proxy function public.dynamic_query_select(0): SELECT statement not allowed for dynamic RECORD functions
+select * from dynamic_query_select() as (id integer, username text);
+ERROR:  function dynamic_query_select() does not exist
+LINE 1: select * from dynamic_query_select() as (id integer, usernam...
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

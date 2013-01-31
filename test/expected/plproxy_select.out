@@ -33,8 +33,12 @@ returns integer as $$
     select id from sel_test where username = xuser;
     select id from sel_test where username = xuser;
 $$ language plproxy;
-select * from test_select_err('user', true);
 ERROR:  PL/Proxy function public.test_select_err(2): Compile error at line 5: Only one SELECT statement allowed
+select * from test_select_err('user', true);
+ERROR:  function test_select_err(unknown, boolean) does not exist
+LINE 1: select * from test_select_err('user', true);
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 create function get_zero()
 returns setof integer as $x$
     cluster 'testcluster';

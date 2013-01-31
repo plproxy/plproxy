@@ -227,7 +227,7 @@ fn_returns_dynamic_record(HeapTuple proc_tuple)
  * where everything is allocated.
  */
 static ProxyFunction *
-fn_new(FunctionCallInfo fcinfo, HeapTuple proc_tuple)
+fn_new(HeapTuple proc_tuple)
 {
 	ProxyFunction *f;
 	MemoryContext f_ctx,
@@ -243,7 +243,7 @@ fn_new(FunctionCallInfo fcinfo, HeapTuple proc_tuple)
 
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
-	f->oid = fcinfo->flinfo->fn_oid;
+	f->oid = HeapTupleGetOid(proc_tuple);
 	plproxy_set_stamp(&f->stamp, proc_tuple);
 
 	if (fn_returns_dynamic_record(proc_tuple))
@@ -337,7 +337,6 @@ fn_parse(ProxyFunction *func, HeapTuple proc_tuple)
  */
 static void
 fn_get_arguments(ProxyFunction *func,
-				 FunctionCallInfo fcinfo,
 				 HeapTuple proc_tuple)
 {
 	Oid		   *types;
@@ -469,28 +468,41 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	func->remote_sql = plproxy_standard_query(func, true);
 }
 
-/* Show part of compilation -- get source and parse */
-static ProxyFunction *
-fn_compile(FunctionCallInfo fcinfo,
+/*
+ * Show part of compilation -- get source and parse
+ *
+ * When called from the validator, validate_only is true, but there is no
+ * fcinfo.
+ */
+ProxyFunction *
+plproxy_compile(FunctionCallInfo fcinfo,
 		   HeapTuple proc_tuple,
-		   bool validate)
+		   bool validate_only)
 {
 	ProxyFunction *f;
 	Form_pg_proc proc_struct;
+
+	Assert(fcinfo || validate_only);
 
 	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
 	if (proc_struct->provolatile != PROVOLATILE_VOLATILE)
 		elog(ERROR, "PL/Proxy functions must be volatile");
 
-	f = fn_new(fcinfo, proc_tuple);
+	f = fn_new(proc_tuple);
 
 	/* keep reference in case of error half-way */
-	partial_func = f;
+	if (!validate_only)
+		partial_func = f;
 
 	/* info from system tables */
 	fn_set_name(f, proc_tuple);
-	fn_get_return_type(f, fcinfo, proc_tuple);
-	fn_get_arguments(f, fcinfo, proc_tuple);
+	/*
+	 * Cannot check return type in validator, because there is no call info to
+	 * resolve polymorphic types against.
+	 */
+	if (!validate_only)
+		fn_get_return_type(f, fcinfo, proc_tuple);
+	fn_get_arguments(f, proc_tuple);
 
 	/* parse body */
 	fn_parse(f, proc_tuple);
@@ -498,20 +510,10 @@ fn_compile(FunctionCallInfo fcinfo,
 	if (f->dynamic_record && f->remote_sql)
 		plproxy_error(f, "SELECT statement not allowed for dynamic RECORD functions");
 
-	/* create SELECT stmt if not specified */
-	if (f->remote_sql == NULL)
-		f->remote_sql = plproxy_standard_query(f, true);
-
-	/* prepare local queries */
-	if (f->cluster_sql)
-		plproxy_query_prepare(f, fcinfo, f->cluster_sql, false);
-	if (f->hash_sql)
-		plproxy_query_prepare(f, fcinfo, f->hash_sql, true);
-	if (f->connect_sql)
-		plproxy_query_prepare(f, fcinfo, f->connect_sql, false);
-
 	/* sanity check */
-	if (f->run_type == R_ALL && !fcinfo->flinfo->fn_retset)
+	if (f->run_type == R_ALL && (fcinfo
+								 ? !fcinfo->flinfo->fn_retset
+								 : !get_func_retset(HeapTupleGetOid(proc_tuple))))
 		plproxy_error(f, "RUN ON ALL requires set-returning function");
 
 	return f;
@@ -521,7 +523,7 @@ fn_compile(FunctionCallInfo fcinfo,
  * Compile and cache PL/Proxy function.
  */
 ProxyFunction *
-plproxy_compile(FunctionCallInfo fcinfo, bool validate)
+plproxy_compile_and_cache(FunctionCallInfo fcinfo)
 {
 	ProxyFunction *f;
 	HeapTuple	proc_tuple;
@@ -554,7 +556,19 @@ plproxy_compile(FunctionCallInfo fcinfo, bool validate)
 
 	if (!f)
 	{
-		f = fn_compile(fcinfo, proc_tuple, validate);
+		f = plproxy_compile(fcinfo, proc_tuple, false);
+
+		/* create SELECT stmt if not specified */
+		if (f->remote_sql == NULL)
+			f->remote_sql = plproxy_standard_query(f, true);
+
+		/* prepare local queries */
+		if (f->cluster_sql)
+			plproxy_query_prepare(f, fcinfo, f->cluster_sql, false);
+		if (f->hash_sql)
+			plproxy_query_prepare(f, fcinfo, f->hash_sql, true);
+		if (f->connect_sql)
+			plproxy_query_prepare(f, fcinfo, f->connect_sql, false);
 
 		fn_cache_insert(f);
 

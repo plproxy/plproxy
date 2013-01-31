@@ -2,8 +2,8 @@ EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control, debian/changelog
 DISTVERSION = 2.5
-EXTVERSION = 2.5.0
-UPGRADE_VERS = 2.3.0 2.4.0
+EXTVERSION = 2.5.1
+UPGRADE_VERS = 2.3.0 2.4.0 2.5.0
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -112,8 +112,9 @@ sql/$(EXTENSION)--$(EXTVERSION).sql: $(PLPROXY_SQL)
 	echo "create extension plproxy;" > sql/plproxy.sql 
 	cat $^ > $@
 
-$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql):
-	touch $@
+$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql): sql/ext_update_validator.sql
+	@mkdir -p sql
+	cat $< >$@
 
 sql/plproxy--unpackaged--$(EXTVERSION).sql: sql/ext_unpackaged.sql
 	@mkdir -p sql

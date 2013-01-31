@@ -434,6 +434,7 @@ typedef struct ProxyFunction
 
 /* main.c */
 Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
+Datum		plproxy_validator(PG_FUNCTION_ARGS);
 void		plproxy_error(ProxyFunction *func, const char *fmt, ...)
 	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
 void		plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult *res, bool iserr);
@@ -445,7 +446,8 @@ char	   *plproxy_func_strdup(ProxyFunction *func, const char *s);
 int			plproxy_get_parameter_index(ProxyFunction *func, const char *ident);
 bool		plproxy_split_add_ident(ProxyFunction *func, const char *ident);
 void		plproxy_split_all_arrays(ProxyFunction *func);
-ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, bool validate);
+ProxyFunction *plproxy_compile_and_cache(FunctionCallInfo fcinfo);
+ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, HeapTuple proc_tuple, bool validate_only);
 
 /* execute.c */
 void		plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo);
