@@ -83,6 +83,7 @@ returns cstring
 as $$
     cluster 'testcluster';
 $$ language plproxy;
+-- not detected in validator
 select * from test_pseudo_ret_err('dat');
 
 create function test_runonall_err(dat text)

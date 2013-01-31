@@ -27,8 +27,12 @@ returns text as $$
     target test_target_dst;
     target test_target_dst;
 $$ language plproxy;
-select * from test_target_err1('asd');
 ERROR:  PL/Proxy function public.test_target_err1(1): Compile error at line 5: Only one TARGET statement allowed
+select * from test_target_err1('asd');
+ERROR:  function test_target_err1(unknown) does not exist
+LINE 1: select * from test_target_err1('asd');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
 create function test_target_err2(xuser text)
 returns text as $$
     cluster 'testcluster';
@@ -36,5 +40,9 @@ returns text as $$
     target test_target_dst;
     select 1;
 $$ language plproxy;
-select * from test_target_err2('asd');
 ERROR:  PL/Proxy function public.test_target_err2(1): Compile error at line 6: TARGET cannot be used with SELECT
+select * from test_target_err2('asd');
+ERROR:  function test_target_err2(unknown) does not exist
+LINE 1: select * from test_target_err2('asd');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.

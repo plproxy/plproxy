@@ -57,6 +57,7 @@ PG_MODULE_MAGIC;
 #endif
 
 PG_FUNCTION_INFO_V1(plproxy_call_handler);
+PG_FUNCTION_INFO_V1(plproxy_validator);
 
 /*
  * Centralised error reporting.
@@ -178,7 +179,7 @@ compile_and_execute(FunctionCallInfo fcinfo)
 	plproxy_startup_init();
 
 	/* compile code */
-	func = plproxy_compile(fcinfo, false);
+	func = plproxy_compile_and_cache(fcinfo);
 
 	/* get actual cluster to run on */
 	cluster = plproxy_find_cluster(func, fcinfo);
@@ -265,4 +266,25 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 		plproxy_clean_results(func->cur_cluster);
 	}
 	return ret;
+}
+
+/*
+ * This function is called when a PL/Proxy function is created to
+ * check the syntax.
+ */
+Datum
+plproxy_validator(PG_FUNCTION_ARGS)
+{
+	Oid oid = PG_GETARG_OID(0);
+	HeapTuple	proc_tuple;
+
+	proc_tuple = SearchSysCache(PROCOID, ObjectIdGetDatum(oid), 0, 0, 0);
+	if (!HeapTupleIsValid(proc_tuple))
+		elog(ERROR, "cache lookup failed for function %u", oid);
+
+	plproxy_compile(NULL, proc_tuple, true);
+
+	ReleaseSysCache(proc_tuple);
+
+	PG_RETURN_VOID();
 }
