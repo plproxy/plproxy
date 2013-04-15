@@ -816,7 +816,7 @@ remote_wait_for_cancel(ProxyFunction *func)
 			if (!conn->run_tag)
 				continue;
 
-			if (conn->cur->state != C_DONE)
+			if (conn->cur->state == C_QUERY_READ)
 				pending++;
 			check_timeouts(func, cluster, conn, now.tv_sec);
 		}
