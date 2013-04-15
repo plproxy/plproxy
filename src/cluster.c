@@ -80,7 +80,7 @@ PG_FUNCTION_INFO_V1(plproxy_fdw_validator);
 #endif
 
 /*
- * Connsetion count should be non-zero and power of 2.
+ * Connection count should be non-zero and power of 2.
  */
 static bool
 check_valid_partcount(int n)
