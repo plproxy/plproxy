@@ -794,18 +794,14 @@ remote_wait_for_cancel(ProxyFunction *func)
 	ProxyConnection *conn;
 	ProxyCluster *cluster = func->cur_cluster;
 	int			i,
-				pending = 1;
+				pending;
 	struct timeval now;
 
 	/* now loop until all results are arrived */
-	while (pending)
+	while (1)
 	{
 		/* allow postgres to cancel processing */
 		CHECK_FOR_INTERRUPTS();
-
-		/* wait for events */
-		if (poll_conns(func, cluster) == 0)
-			continue;
 
 		/* recheck */
 		pending = 0;
@@ -820,6 +816,11 @@ remote_wait_for_cancel(ProxyFunction *func)
 				pending++;
 			check_timeouts(func, cluster, conn, now.tv_sec);
 		}
+		if (!pending)
+			break;
+
+		/* wait for events */
+		poll_conns(func, cluster);
 	}
 
 	/* review results, calculate total */
