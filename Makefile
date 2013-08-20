@@ -154,6 +154,16 @@ deb:
 debclean:
 	$(MAKE) -f debian/rules realclean
 
+# rpm build hack to set the minor version number to git id
+rpm:
+	git archive --output=plproxy-rpm-src.tar.gz --prefix=plproxy/ HEAD
+	rpmbuild -ta plproxy-rpm-src.tar.gz \
+		--define "major_version $(DISTVERSION)" \
+		--define "minor_version `git describe --tags --long --always | \
+		                         sed -e s,\`git describe --tags --abbrev=0 --always\`-,, \
+		                             -e s,-,.,g`"
+	$(RM) plproxy-rpm-src.tar.gz
+
 orig:
 	make -f debian/rules orig
 
