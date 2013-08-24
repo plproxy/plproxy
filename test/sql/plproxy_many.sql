@@ -54,6 +54,7 @@ returns setof integer as $$ cluster 'testcluster'; run on 2; $$ language plproxy
 select test_multi(0, 'foo');
 
 -- test RUN ON RANDOM
+select setseed(0.5);
 drop function test_multi(integer, text);
 create function test_multi(part integer, username text)
 returns setof integer as $$ cluster 'testcluster'; run on any; $$ language plproxy;
