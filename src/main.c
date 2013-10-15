@@ -65,7 +65,7 @@ PG_FUNCTION_INFO_V1(plproxy_validator);
  * Also frees any pending results.
  */
 void
-plproxy_error(ProxyFunction *func, const char *fmt,...)
+plproxy_error_with_state(ProxyFunction *func, int sqlstate, const char *fmt, ...)
 {
 	char		msg[1024];
 	va_list		ap;
@@ -76,8 +76,10 @@ plproxy_error(ProxyFunction *func, const char *fmt,...)
 
 	plproxy_clean_results(func->cur_cluster);
 
-	elog(ERROR, "PL/Proxy function %s(%d): %s",
-		 func->name, func->arg_count, msg);
+	ereport(ERROR, (
+		errcode(sqlstate),
+		errmsg("PL/Proxy function %s(%d): %s",
+			func->name, func->arg_count, msg)));
 }
 
 /*
@@ -260,8 +262,10 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 	{
 		func = compile_and_execute(fcinfo);
 		if (func->cur_cluster->ret_total != 1)
-			plproxy_error(func, "Non-SETOF function requires 1 row from remote query, got %d",
-						  func->cur_cluster->ret_total);
+			plproxy_error_with_state(func,
+				(func->cur_cluster->ret_total < 1) ? ERRCODE_NO_DATA_FOUND : ERRCODE_TOO_MANY_ROWS,
+				"Non-SETOF function requires 1 row from remote query, got %d",
+					func->cur_cluster->ret_total);
 		ret = plproxy_result(func, fcinfo);
 		plproxy_clean_results(func->cur_cluster);
 	}
