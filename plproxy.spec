@@ -28,6 +28,9 @@ make install DESTDIR=%{buildroot}
 %clean
 rm -rf %{buildroot}
 
+%check
+EXTVERSION=%{ext_version} ./runtests.sh
+
 %files
 %defattr(-,root,root,-)
 %doc AUTHORS COPYRIGHT NEWS README doc/*

@@ -1,10 +1,10 @@
 \set VERBOSITY terse
 set client_min_messages = 'warning';
-create server sqlmedcluster foreign data wrapper plproxy 
-    options (   partition_0 'dbname=test_part3 host=localhost',
-                partition_1 'dbname=test_part2 host=localhost',
-                partition_2 'dbname=test_part1 host=localhost',
-                partition_3 'dbname=test_part0 host=localhost');
+create server sqlmedcluster foreign data wrapper plproxy
+    options (   partition_0 'host=localhost dbname=test_part3',
+                partition_1 'host=localhost dbname=test_part2',
+                partition_2 'host=localhost dbname=test_part1',
+                partition_3 'host=localhost dbname=test_part0');
 create or replace function sqlmed_test1() returns setof text as $$
     cluster 'sqlmedcluster';
     run on 0;
@@ -110,9 +110,9 @@ select * from sqlmed_test1();
 (1 row)
 
 -- invalid partition count
-alter server sqlmedcluster options 
+alter server sqlmedcluster options
     (drop partition_3,
-     add  partition_2 'dbname=test_part1 host=localhost');
+     add  partition_2 'host=localhost dbname=test_part1');
 ERROR:  option "partition_2" provided more than once
 select * from sqlmed_test1();
                  sqlmed_test1                  
@@ -135,8 +135,8 @@ select * from sqlmed_compat_test();
 
 -- override the test cluster with a SQL/MED definition
 drop server if exists testcluster cascade;
-create server testcluster foreign data wrapper plproxy 
-    options (partition_0 'dbname=regression host=localhost');
+create server testcluster foreign data wrapper plproxy
+    options (partition_0 'host=localhost dbname=regression');
 create user mapping for public server testcluster;
 -- sqlmed testcluster
 select * from sqlmed_compat_test();

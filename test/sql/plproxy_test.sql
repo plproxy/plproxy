@@ -145,18 +145,18 @@ select * from test_types2('types', NULL, NULL, NULL);
 
 -- test CONNECT
 create function test_connect1() returns text
-as $$ connect 'dbname=test_part'; select current_database(); $$ language plproxy;
+as $$ connect 'host=127.0.0.1 dbname=test_part'; select current_database(); $$ language plproxy;
 select * from test_connect1();
 
 -- test CONNECT $argument
 create function test_connect2(connstr text) returns text
 as $$ connect connstr; select current_database(); $$ language plproxy;
-select * from test_connect2('dbname=test_part');
+select * from test_connect2('host=127.0.0.1 dbname=test_part');
 
 -- test CONNECT function($argument)
 create function test_connect3(connstr text) returns text
 as $$ connect text(connstr); select current_database(); $$ language plproxy;
-select * from test_connect3('dbname=test_part');
+select * from test_connect3('host=127.0.0.1 dbname=test_part');
 
 -- test quoting function
 create type "RetWeird" as (
@@ -272,7 +272,7 @@ select * from test_error2();
 
 create function test_error3() returns int4
 as $$
-    connect 'dbname=test_part';
+    connect 'host=127.0.0.1 dbname=test_part';
 $$ language plproxy;
 select * from test_error3();
 
@@ -285,7 +285,7 @@ select * from test_bad_db();
 
 create function test_bad_db2() returns int4
 as $$
-    connect 'dbname=wrong_name_db';
+    connect 'host=127.0.0.1 dbname=wrong_name_db';
 $$ language plproxy;
 select * from test_bad_db2();
 

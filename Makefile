@@ -158,6 +158,7 @@ debclean:
 rpm:
 	git archive --output=plproxy-rpm-src.tar.gz --prefix=plproxy/ HEAD
 	rpmbuild -ta plproxy-rpm-src.tar.gz \
+		--define "ext_version $(EXTVERSION)" \
 		--define "major_version $(DISTVERSION)" \
 		--define "minor_version `git describe --tags --long --always | \
 		                         sed -e s,\`git describe --tags --abbrev=0 --always\`-,, \
