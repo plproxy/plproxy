@@ -85,7 +85,7 @@ PG_FUNCTION_INFO_V1(plproxy_fdw_validator);
 static bool
 check_valid_partcount(int n)
 {
-	return (n > 0) && !(n & (n - 1));
+	return (n > 0); /* && !(n & (n - 1));*/
 }
 
 static int cluster_name_cmp(uintptr_t val, struct AANode *node)
