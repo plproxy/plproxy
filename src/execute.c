@@ -961,8 +961,9 @@ tag_custom_nodes_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int ta
         TupleDesc       desc;
         Oid                     htype;
         ProxyCluster *cluster = func->cur_cluster;
-	 /* execute cached plan */
-plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
+	    /* execute cached plan */
+        plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
+
         /* get header */
         desc = SPI_tuptable->tupdesc;
         htype = SPI_gettypeid(desc, 1);
@@ -970,7 +971,7 @@ plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
         /* tag connections */
         for (i = 0; i < SPI_processed; i++)
         {
-		bool            isnull;
+		        bool            isnull;
                 uint32          hashval = 0;
                 HeapTuple       row = SPI_tuptable->vals[i];
                 Datum           val = SPI_getbinval(row, desc, 1, &isnull);
@@ -986,10 +987,9 @@ plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
                         hashval = DatumGetInt16(val);
                 else
                         plproxy_error(func, "Hash result must be int2, int4 or int8");
-                /*hashval &= cluster->part_mask;*/
                 tag_part(cluster, val, tag);
         }
-/* sanity check */
+        /* sanity check */
         if (SPI_processed == 0 || SPI_processed > 1)
                 if (!fcinfo->flinfo->fn_retset)
                         plproxy_error(func, "Only set-returning function"

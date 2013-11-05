@@ -151,8 +151,7 @@ useparts_stmt: USEPARTS useparts_spec ';'	{
 						}
 		;
 
-useparts_spec:	hash_func sql_token_list      { xfunc->run_type = R_CUSTOM_NODES; }
-               |  hash_direct	{ xfunc->run_type = R_CUSTOM_NODES; }
+useparts_spec:	hash_func sql_token_list  { xfunc->run_type = R_CUSTOM_NODES; }
 		;
 
 
@@ -163,9 +162,8 @@ run_stmt: RUN ON run_spec ';'	{ if (got_run)
 
 run_spec: hash_func sql_token_list	{ xfunc->run_type = R_HASH; }
 		| NUMBER		{ xfunc->run_type = R_EXACT; xfunc->exact_nr = atoi($1); }
-                | ANY			{ xfunc->run_type = R_ANY; }
+        | ANY			{ xfunc->run_type = R_ANY; }
 		| ALL			{ xfunc->run_type = R_ALL; }
-		| CUSTOM_NODES          { xfunc->run_type = R_CUSTOM_NODES; }
 		| hash_direct		{ xfunc->run_type = R_HASH; }
 		;
 
