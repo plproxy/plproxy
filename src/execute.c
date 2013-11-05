@@ -831,7 +831,7 @@ remote_wait_for_cancel(ProxyFunction *func)
 		if (!conn->run_tag)
 			continue;
 
-		if (conn->cur->state != C_DONE)
+		if (conn->cur->state != C_DONE && conn->cur->state != C_NONE)
 			plproxy_error(func, "Unfinished connection: %d", conn->cur->state);
 		if (conn->res != NULL)
 		{
