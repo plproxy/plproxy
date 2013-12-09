@@ -25,6 +25,7 @@
 #define plproxy_h_included
 
 #include <postgres.h>
+#include <postgres_ext.h>
 #include <funcapi.h>
 #include <fmgr.h>
 #include <executor/spi.h>
