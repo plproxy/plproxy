@@ -947,12 +947,56 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 		tag_part(cluster, hashval, tag);
 	}
 
-	/* sanity check */
-	if (SPI_processed == 0 || SPI_processed > 1)
-		if (!fcinfo->flinfo->fn_retset)
-			plproxy_error(func, "Only set-returning function"
-						  " allows hashcount <> 1");
+	        if (SPI_processed == 0 || SPI_processed > 1)
+                if (!fcinfo->flinfo->fn_retset)
+                        plproxy_error(func, "Only set-returning function"
+                                                  " allows hashcount <> 1");
 }
+
+static void
+tag_custom_nodes_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
+                                        DatumArray **array_params, int array_row)
+{
+        int                     i;
+        TupleDesc       desc;
+        Oid                     htype;
+        ProxyCluster *cluster = func->cur_cluster;
+	    /* execute cached plan */
+        plproxy_query_exec(func, fcinfo, func->hash_sql, array_params, array_row);
+
+        /* get header */
+        desc = SPI_tuptable->tupdesc;
+        htype = SPI_gettypeid(desc, 1);
+
+        /* tag connections */
+        for (i = 0; i < SPI_processed; i++)
+        {
+		        bool            isnull;
+                uint32          hashval = 0;
+                HeapTuple       row = SPI_tuptable->vals[i];
+                Datum           val = SPI_getbinval(row, desc, 1, &isnull);
+
+                if (isnull)
+                        plproxy_error(func, "Hash function returned NULL");
+
+                if (htype == INT4OID)
+                        hashval = DatumGetInt32(val);
+                else if (htype == INT8OID)
+                        hashval = DatumGetInt64(val);
+		else if (htype == INT2OID)
+                        hashval = DatumGetInt16(val);
+                else
+                        plproxy_error(func, "Hash result must be int2, int4 or int8");
+                tag_part(cluster, val, tag);
+        }
+        /* sanity check */
+        if (SPI_processed == 0 || SPI_processed > 1)
+                if (!fcinfo->flinfo->fn_retset)
+                        plproxy_error(func, "Only set-returning function"
+                                                  " allows hashcount <> 1");
+}
+
+
 
 /*
  * Deconstruct an array type to array of Datums, note NULL elements
@@ -1006,6 +1050,9 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 		case R_ANY:
 			i = random() & cluster->part_mask;
 			tag_part(cluster, i, tag);
+			break;
+		case R_CUSTOM_NODES:
+			tag_custom_nodes_partitions(func, fcinfo, tag, array_params, array_row);
 			break;
 		default:
 			plproxy_error(func, "uninitialized run_type");

@@ -57,7 +57,7 @@ static void reset_parser_vars(void)
 
 %name-prefix="plproxy_yy"
 
-%token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
+%token <str> USEPARTS CONNECT CLUSTER RUN ON CUSTOM_NODES ALL ANY SELECT
 %token <str> IDENT NUMBER FNCALL SPLIT STRING
 %token <str> SQLIDENT SQLPART TARGET
 
@@ -70,7 +70,7 @@ static void reset_parser_vars(void)
 
 body: | body stmt ;
 
-stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt | target_stmt;
+stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt | target_stmt | useparts_stmt;
 
 connect_stmt: CONNECT connect_spec ';'	{
 					if (got_connect)
@@ -131,20 +131,29 @@ split_stmt: SPLIT split_spec ';' {
 								yyerror("Only one SPLIT statement allowed");
 							got_split = 1;
 						}
-			;
+		;
 
 split_spec:	ALL						{ plproxy_split_all_arrays(xfunc); }
 		  | split_param_list
-		  ;
+		;
 
 split_param_list: split_param
 			| split_param_list ',' split_param
-			;
+		;
 
 split_param: IDENT {
 				if (!plproxy_split_add_ident(xfunc, $1))
 					yyerror("invalid argument reference: %s", $1);
 			}
+		;
+
+useparts_stmt: USEPARTS useparts_spec ';'	{ 
+						}
+		;
+
+useparts_spec:	hash_func sql_token_list  { xfunc->run_type = R_CUSTOM_NODES; }
+		;
+
 
 run_stmt: RUN ON run_spec ';'	{ if (got_run)
 									yyerror("Only one RUN statement allowed");
@@ -152,11 +161,12 @@ run_stmt: RUN ON run_spec ';'	{ if (got_run)
 		;
 
 run_spec: hash_func sql_token_list	{ xfunc->run_type = R_HASH; }
-		| NUMBER					{ xfunc->run_type = R_EXACT; xfunc->exact_nr = atoi($1); }
-		| ANY						{ xfunc->run_type = R_ANY; }
-		| ALL						{ xfunc->run_type = R_ALL; }
-		| hash_direct				{ xfunc->run_type = R_HASH; }
+		| NUMBER		{ xfunc->run_type = R_EXACT; xfunc->exact_nr = atoi($1); }
+        | ANY			{ xfunc->run_type = R_ANY; }
+		| ALL			{ xfunc->run_type = R_ALL; }
+		| hash_direct		{ xfunc->run_type = R_HASH; }
 		;
+
 
 hash_direct: IDENT	{	hash_sql = plproxy_query_start(xfunc, false);
 						cur_sql = hash_sql;
@@ -171,6 +181,8 @@ hash_func: FNCALL	{ hash_sql = plproxy_query_start(xfunc, false);
 	 				  plproxy_query_add_const(cur_sql, "select * from ");
 	 				  plproxy_query_add_const(cur_sql, $1); }
 		 ;
+
+
 
 select_stmt: sql_start sql_token_list ';' ;
 
@@ -253,7 +265,7 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	plproxy_yylex_destroy();
 
 	/* copy hash data if needed */
-	if (xfunc->run_type == R_HASH)
+	if (xfunc->run_type == R_HASH || xfunc->run_type == R_CUSTOM_NODES)
 		xfunc->hash_sql = plproxy_query_finish(hash_sql);
 
 	/* store sql */
