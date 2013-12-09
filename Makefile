@@ -9,9 +9,9 @@ UPGRADE_VERS = 2.3.0 2.4.0 2.5.0
 NO_SELECT = 0
 
 # libpq config
-PG_CONFIG = /usr/lib/postgresql/9.2/bin/pg_config
+PG_CONFIG = pg_config
 PQINCSERVER = $(shell $(PG_CONFIG) --includedir-server)
-PQINC = ../../src/include/ #$(shell $(PG_CONFIG) --includedir)
+PQINC = $(shell $(PG_CONFIG) --includedir)
 PQLIB = $(shell $(PG_CONFIG) --libdir)
 
 # module setup
