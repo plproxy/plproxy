@@ -278,7 +278,7 @@ plproxy_validator(PG_FUNCTION_ARGS)
 	Oid oid = PG_GETARG_OID(0);
 	HeapTuple	proc_tuple;
 
-	if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, funcoid))
+	if (!CheckFunctionValidatorAccess(fcinfo->flinfo->fn_oid, oid))
 		PG_RETURN_VOID();
 
 	proc_tuple = SearchSysCache(PROCOID, ObjectIdGetDatum(oid), 0, 0, 0);
