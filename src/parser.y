@@ -19,9 +19,7 @@
  */
 
 #include "plproxy.h"
-
-/* define scanner.c functions */
-void plproxy_yy_scan_bytes(const char *bytes, int len);
+#include "scanner.h"
 
 /* avoid permanent allocations */
 #define YYMALLOC palloc

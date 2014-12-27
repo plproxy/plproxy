@@ -98,9 +98,11 @@ src/parser.tab.c: src/parser.y
 	@mkdir -p src
 	$(BISON) -b src/parser -d $<
 
+src/parser.o: src/scanner.h
+src/scanner.h: src/scanner.c
 src/scanner.c: src/scanner.l
 	@mkdir -p src
-	$(FLEX) -o$@ $<
+	$(FLEX) -o$@ --header-file=$(@:.c=.h) $<
 
 sql/plproxy.sql: $(PLPROXY_SQL)
 	@mkdir -p sql
