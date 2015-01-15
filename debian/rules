@@ -7,6 +7,7 @@ DEB_BUILD_OPTIONS := nostrip nocheck
 export DEB_BUILD_OPTIONS
 
 PG_BUILDEXT = pg_buildext
+export PG_UPDATECONTROL=1
 
 include /usr/share/postgresql-common/pgxs_debian_control.mk
 
