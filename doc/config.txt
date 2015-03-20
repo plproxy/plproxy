@@ -29,7 +29,7 @@ The get_cluster_version function is called on each request, it should return
 the version number of the current configuration for a particular cluster.  
 If the version number returned by this function is higher than the one plproxy 
 has cached, then the configuration and partition information will be reloaded
-by calling the get_cluster_config() and get_cluster_paritions() functions.
+by calling the get_cluster_config() and get_cluster_partitions() functions.
 
 This is an example function that does not lookup the version number for an 
 external source such as a configuration table.
