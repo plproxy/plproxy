@@ -67,7 +67,7 @@ This will cause PL/Proxy to connect to the partition database using
 the same username as was used to connect to the proxy database.
 This also avoids the accidental 'user=postgres' connections.
 
-There are several appriaches how to handle passwords:
+There are several approaches how to handle passwords:
 
 * Store passwords in .pgpass / pg_service.conf.  Secure (unless you have dblink
   installed on same Postgres instance.)  Only problem is that it's not
