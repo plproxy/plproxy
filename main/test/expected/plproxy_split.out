@@ -1,0 +1,172 @@
+-- partition functions
+\c test_part0
+create or replace function test_array(a text[], b text[], c text) returns text as
+$$
+select current_database() || ' $1:' || array_to_string($1, ',')
+                          || ' $2:' || array_to_string($2, ',')
+                          || ' $3:' || $3;
+$$ language sql;
+\c test_part1
+create or replace function test_array(a text[], b text[], c text) returns text as
+$$
+select current_database() || ' $1:' || array_to_string($1, ',')
+                          || ' $2:' || array_to_string($2, ',')
+                          || ' $3:' || $3;
+$$ language sql;
+\c test_part2
+create or replace function test_array(a text[], b text[], c text) returns text as
+$$
+select current_database() || ' $1:' || array_to_string($1, ',')
+                          || ' $2:' || array_to_string($2, ',')
+                          || ' $3:' || $3;
+$$ language sql;
+\c test_part3
+create or replace function test_array(a text[], b text[], c text) returns text as
+$$
+select current_database() || ' $1:' || array_to_string($1, ',')
+                          || ' $2:' || array_to_string($2, ',')
+                          || ' $3:' || $3;
+$$ language sql;
+\c regression
+-- invalid arg reference
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split $4; cluster 'testcluster'; run on 0;$$ language plproxy;
+ERROR:  PL/Proxy function public.test_array(3): Compile error at line 1: invalid argument reference: $4
+select * from test_array(array['a'], array['g'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['g'], 'foo');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- invalid arg name
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split x; cluster 'testcluster'; run on 0; $$ language plproxy;
+ERROR:  PL/Proxy function public.test_array(3): Compile error at line 1: invalid argument reference: x
+select * from test_array(array['a'], array['b', 'c'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['b', 'c'], 'foo')...
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- cannot split more than once
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split a, b, b; cluster 'testcluster'; run on 0; $$ language plproxy;
+ERROR:  PL/Proxy function public.test_array(3): SPLIT parameter specified more than once: b
+select * from test_array(array['a'], array['b', 'c'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['b', 'c'], 'foo')...
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- attempt to split non-array
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split $3; cluster 'testcluster'; run on 0;$$ language plproxy;
+ERROR:  PL/Proxy function public.test_array(3): SPLIT parameter is not an array: $3
+select * from test_array(array['a'], array['g'], 'foo');
+ERROR:  function test_array(text[], text[], unknown) does not exist
+LINE 1: select * from test_array(array['a'], array['g'], 'foo');
+                      ^
+HINT:  No function matches the given name and argument types. You might need to add explicit type casts.
+-- array size/dimensions mismatch
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split a, b; cluster 'testcluster'; run on 0; $$ language plproxy;
+select * from test_array(array['a'], array['b', 'c'], 'foo');
+ERROR:  PL/Proxy function public.test_array(3): split arrays must be of identical lengths
+select * from test_array(array['a','b','c','d'], null, 'foo');
+ERROR:  PL/Proxy function public.test_array(3): split arrays must be of identical lengths
+select * from test_array(null, array['e','f','g','h'], 'foo');
+ERROR:  PL/Proxy function public.test_array(3): split arrays must be of identical lengths
+select * from test_array(array[array['a1'],array['a2']], array[array['b1'],array['b2']], 'foo');
+ERROR:  PL/Proxy function public.test_array(3): split multi-dimensional arrays are not supported
+-- run on array hash, split one array
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split a; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+            test_array             
+-----------------------------------
+ test_part1 $1:a $2:e,f,g,h $3:foo
+ test_part2 $1:b $2:e,f,g,h $3:foo
+ test_part3 $1:c $2:e,f,g,h $3:foo
+ test_part0 $1:d $2:e,f,g,h $3:foo
+(4 rows)
+
+-- run on text hash, split two arrays (nop split)
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split a, b; cluster 'testcluster'; run on ascii(c);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+               test_array                
+-----------------------------------------
+ test_part2 $1:a,b,c,d $2:e,f,g,h $3:foo
+(1 row)
+
+-- run on array hash, split two arrays
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split a, b; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+         test_array          
+-----------------------------
+ test_part1 $1:a $2:e $3:foo
+ test_part2 $1:b $2:f $3:foo
+ test_part3 $1:c $2:g $3:foo
+ test_part0 $1:d $2:h $3:foo
+(4 rows)
+
+select * from test_array(null, null, null);
+ test_array 
+------------
+(0 rows)
+
+select * from test_array('{}'::text[], '{}'::text[], 'foo');
+ test_array 
+------------
+(0 rows)
+
+-- run on text hash, split all arrays
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(c);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+               test_array                
+-----------------------------------------
+ test_part2 $1:a,b,c,d $2:e,f,g,h $3:foo
+(1 row)
+
+-- run on text hash, attempt to split all arrays but none are present
+create or replace function test_nonarray_split(a text, b text, c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(a); select * from test_array(array[a], array[b], c);
+$$ language plproxy;
+select * from test_nonarray_split('a', 'b', 'c');
+    test_nonarray_split    
+---------------------------
+ test_part1 $1:a $2:b $3:c
+(1 row)
+
+-- run on array hash, split all arrays
+create or replace function test_array(a text[], b text[], c text) returns setof text as
+$$ split all; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+         test_array          
+-----------------------------
+ test_part1 $1:a $2:e $3:foo
+ test_part2 $1:b $2:f $3:foo
+ test_part3 $1:c $2:g $3:foo
+ test_part0 $1:d $2:h $3:foo
+(4 rows)
+
+-- run on arg
+create or replace function test_array_direct(a integer[], b text[], c text) returns setof text as
+$$ split a; cluster 'testcluster'; run on a; select test_array('{}'::text[], b, c);$$ language plproxy;
+select * from test_array_direct(array[2,3], array['a','b','c','d'], 'foo');
+        test_array_direct         
+----------------------------------
+ test_part2 $1: $2:a,b,c,d $3:foo
+ test_part3 $1: $2:a,b,c,d $3:foo
+(2 rows)
+
+create or replace function test_array_direct(a integer[], b text[], c text) returns setof text as
+$$ split a, b; cluster 'testcluster'; run on a; select test_array('{}'::text[], b, c);$$ language plproxy;
+select * from test_array_direct(array[0,1,2,3], array['a','b','c','d'], 'foo');
+     test_array_direct      
+----------------------------
+ test_part0 $1: $2:a $3:foo
+ test_part1 $1: $2:b $3:foo
+ test_part2 $1: $2:c $3:foo
+ test_part3 $1: $2:d $3:foo
+(4 rows)
+

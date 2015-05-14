@@ -1,0 +1,16 @@
+results/
+*.so
+tmp/
+*.o
+*.zip
+*.tgz
+*.tar.gz
+regression.diffs
+regression.out
+sql/plproxy--unpackaged--2*
+sql/plproxy--2*
+sql/plproxy.sql
+src/scanner.c
+src/scanner.h
+src/parser.tab.c
+src/parser.tab.h

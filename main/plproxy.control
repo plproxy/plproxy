@@ -1,0 +1,7 @@
+# plproxy extension
+comment = 'Database partitioning implemented as procedural language'
+default_version = '2.6.0'
+module_pathname = '$libdir/plproxy'
+relocatable = false
+# schema = pg_catalog
+superuser = true
