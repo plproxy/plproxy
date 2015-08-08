@@ -435,9 +435,10 @@ typedef struct ProxyFunction
 /* main.c */
 Datum		plproxy_call_handler(PG_FUNCTION_ARGS);
 Datum		plproxy_validator(PG_FUNCTION_ARGS);
-void		plproxy_error(ProxyFunction *func, const char *fmt, ...)
-	__attribute__((format(PG_PRINTF_ATTRIBUTE, 2, 3)));
+void		plproxy_error_with_state(ProxyFunction *func, int sqlstate, const char *fmt, ...)
+	__attribute__((format(PG_PRINTF_ATTRIBUTE, 3, 4)));
 void		plproxy_remote_error(ProxyFunction *func, ProxyConnection *conn, const PGresult *res, bool iserr);
+#define plproxy_error(func,...) plproxy_error_with_state((func), ERRCODE_INTERNAL_ERROR, __VA_ARGS__)
 
 /* function.c */
 void		plproxy_function_cache_init(void);
