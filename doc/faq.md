@@ -1,8 +1,9 @@
-= PL/Proxy FAQ =
 
-== General ==
+# PL/Proxy FAQ
 
-=== What is PL/Proxy? ===
+## General
+
+### What is PL/Proxy?
 
 PL/Proxy is compact language for remote calls between PostgreSQL
 databases. Syntax is similar to PL/pgSql and language contains only 4
@@ -20,7 +21,7 @@ When such proxy function is called, PL/Proxy:
  4. Passes the query result back as function result
 
 
-=== Why functions? ===
+### Why functions?
 
 Concentrating on just function-calls allows PL/Proxy to keep
 its code small and also to present user simple and compact API.
@@ -54,7 +55,7 @@ Using function-based database access has more general good points:
   locks that transactions aquire are released on COMMIT.
 
 
-=== Why not develop it into Remote Parallel PL/SQL? ===
+### Why not develop it into Remote Parallel PL/SQL?
 
 Huge benefit of PL/Proxy is it's compactness and efficiency.
 As it does not need to parse queries going through it adds very
@@ -74,7 +75,7 @@ behind PL/Proxy only when load gets too high and we need
 to partition a database.
 
 
-=== What can PL/Proxy be used for? ===
+### What can PL/Proxy be used for?
 
 - Remote calls from one database to another either used inside SQL or other procedures.
   (If used as part of local transaction need to make sure only
@@ -89,7 +90,7 @@ to partition a database.
 - Load balancing if you have several read only replicas of your data.
 
 
-=== How does it compare to dblink? ===
+### How does it compare to dblink?
 
 - PL/Proxy handles connections automatically, dblink forces user to handle them.
 
@@ -105,7 +106,7 @@ to partition a database.
   offer much simpler API.
 
 
-=== How are PL/Proxy and PgBouncer related? ===
+### How are PL/Proxy and PgBouncer related?
 
 PL/Proxy version 1 had PL and pooler integrated.  But such design
 caused a lot of unnecessary complexity.  With PL/Proxy version 2,
@@ -119,26 +120,28 @@ So PgBouncer can be used with PL/Proxy to lessen connection count
 on partition server, but such usage is not mandatory.
 
 
-== Internals ==
+## Internals
 
-=== What are the external dependencies? ===
+### What are the external dependencies?
 
 It depends only on libpq and poll(2) + gettimeofday(2) system calls.
 So it should be quite portable.
 
 
-=== How the remote calls are done? ===
+### How the remote calls are done?
 
 First a SELECT query is generated based on PL/Proxy function
 signature.
 
 A function signature of:
 
-  CREATE FUNCTION get_data(IN first_name text, IN last_name text, OUT bdate date, OUT balance numeric(20,10))
+    CREATE FUNCTION get_data(IN first_name text, IN last_name text,
+                             OUT bdate date, OUT balance numeric(20,10))
 
 Results in following query:
 
-  SELECT bdate::date, balance::numeric(20,10) FROM public.get_data($1::text, $2::text);
+    SELECT bdate::date, balance::numeric(20,10)
+      FROM public.get_data($1::text, $2::text);
 
 The casts and explicit `OUT` parameter names are used to survive minor type or
 result column order differences between local and remote databases.
@@ -165,7 +168,7 @@ acquired resultsets from all connections and then returns
 them to local backend.
 
 
-=== How does PL/Proxy handle connections? ===
+### How does PL/Proxy handle connections?
 
 It opens them lazily - only when needed.  Then keeps them
 open until it libpq reports error on it or connection
@@ -177,29 +180,33 @@ connection.  If poll() shows events the connection
 is dropped to avoid use of likely broken connection.
 
 
-=== Can PL/Proxy survive different settings in local and remote database? ===
+### Can PL/Proxy survive different settings in local and remote database?
 
-client_encoding::
+* `client_encoding`
+
   If it differs, PL/Proxy sets the `client_encoding` on remote database
   to be equal to local one.
 
-standard_conforming_strings::
+* `standard_conforming_strings`
+  
   Query parameters are passed separately, so in general the difference
   should not matter.  Except when function uses explicit SELECT
   and it contains literal strings.  Fix is to avoid use of SELECT.
 
-datestyle, timezone::
+* `datestyle`, `timezone`
+
   Currently no handling is done.
 
-Rest of parameters::
+* Rest of parameters
+
   Cannot be handled.
 
 
-=== Why does PL/Proxy require the number of partition be power of 2? ===
+### Why does PL/Proxy require the number of partition be power of 2?
 
 There is no deep reason, mostly because of following points:
 
-- To have minimal sanity-checking on the output of get_cluster_partitions().
+- To have minimal sanity-checking on the output of `get_cluster_partitions()`.
 - To have clear way to map hashes to partition.  As users quite
   likely need to write their own code for splitting and sanity checking
   their data, the algorithm should be as simple as possible.
@@ -223,9 +230,9 @@ the database can be split to 16 partitions and then 2 servers
 get 5 partitions and last one 6.
 
 
-== Partitioning ==
+## Partitioning
 
-=== How to partition data? ===
+### How to partition data?
 
 There are several usage patterns how PL/Proxy can be used
 to distribute load on several servers
@@ -250,29 +257,16 @@ In many of these scenarios good replication software like Londiste from SkyTools
 is handy.
 
 
-=== How to spread single large query over several partitions? ===
+### How to spread single large query over several partitions?
 
 If each partition holds only part of the total data this
 happens automatically - just use RUN ON ALL.
 
 If the partitions are copies of each other or the query does
-not follow the split pattern for some other reason, it will
-be bit more tricky.  Best way would be to assign each partition
-number and later pass an array of parameters to RUN ON ALL;
-query where each partition picks it's values to work on.
-The values can be even actual SQL queries, giving maximum
-flexibility on whats possible to do.
+not follow the split pattern for some other reason, you need
+to use `SPLIT` command to give each partition part of the data.
 
-There is a preliminary design for feature that lets user
-run a query on different partitions with different parameters:
-http://lists.pgfoundry.org/pipermail/plproxy-users/2008-June/000093.html[]
-
-Whether this gets implemented depends if there is any *actual*
-use-cases for this and whether there are any developers interested
-in working on the feature.
-
-
-=== How to do aggregated queries? ===
+### How to do aggregated queries?
 
 Aggregation needs to happen in 3 steps:
 
@@ -290,7 +284,7 @@ Instead each partition must do `sum() + count()` and the top-level
 aggregator calculates actual average.
 
 
-=== How to add partitions? ===
+### How to add partitions?
 
 The simple way would be to collect data from all partitions
 together then split it again to new partitions.  But that
@@ -312,7 +306,7 @@ Few things to keep in mind to make the addition easier:
   for partitions that are not split yet.
 
 
-=== Can I have foreign keys on my data? ===
+### Can I have foreign keys on my data?
 
 Yes, unless the data you want to partition on references
 itself.
@@ -326,7 +320,7 @@ partition.  That gives single place to manipulate data
 and correct transactionality when spreading data out.
 
 
-=== What happens if I do updates in remote database? ===
+### What happens if I do updates in remote database?
 
 PL/Proxy is in autocommit mode so if remote function succeeds then changes are
 automatically committed at once. Special handling is needed if updates are done
@@ -335,7 +329,7 @@ succeeds and local updates fail then only local updates are rolled back.
 Usually PgQ based solutions are used in these situations.
 
 
-=== How to handle sequences? ===
+### How to handle sequences?
 
 Best way is to use separate ranges for each partition.
 
@@ -344,9 +338,4 @@ use wrapper function that combines unique ID each database
 has and plain sequence.  That way we don't need to manage
 sequences explicitly, instead only thing we need to do
 is to assign each database unique ID.
-
-
-// todo
-// === How to handle queries that don't follow partitioning? ===
-
 

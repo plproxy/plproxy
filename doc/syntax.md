@@ -1,5 +1,5 @@
 
-= PL/Proxy Language Syntax =
+# PL/Proxy Language Syntax
 
 The language is similar to plpgsql - string quoting, comments,
 semicolon at the statements end.
@@ -15,89 +15,69 @@ query generated based on proxy function signature.
 The `RUN` statment is also optional, it defaults to `RUN ON ANY`
 which means the query will be run random partition.
 
-== CONNECT ==
+## CONNECT
 
---------
-CONNECT 'libpq connstr';
---------
+    CONNECT 'libpq connstr';
 
 Specifies exact location where to connect and execute the query.
 If several functions have same connstr, they will use same connection.
 
---------
-CONNECT connect_func(...);
-CONNECT argname;
-CONNECT $argnr;
---------
+    CONNECT connect_func(...);
+    CONNECT argname;
+    CONNECT $argnr;
 
 Connect string is taken from function result or directly from argument.
 If several functions have same connstr, they will use same connection.
 _(New in 2.0.9)_
 
-*NB*: giving untrusted users ability to specify full connect string creates
+**NB**: giving untrusted users ability to specify full connect string creates
 security hole.  Eg it can used to read cleartext passwords from `~/.pgpass`
 or `pg_service.conf`.  If such function cannot be avoided, it's access rights
 need to be restricted.
 
 
-== CLUSTER ==
+## CLUSTER
 
---------
-CLUSTER 'cluster_name';
---------
+    CLUSTER 'cluster_name';
 
 Specifies exact cluster name to be run on.  The cluster name will
-be passed to plproxy.get_cluster_* functions.
+be passed to `plproxy.get_cluster_*` functions.
  
---------
-CLUSTER cluster_func(..);
---------
+    CLUSTER cluster_func(..);
 
 Cluster name can be dynamically decided upon proxy function arguments.
 `cluster_func` should return text value of final cluster name.
 
-== RUN ON ==
+## RUN ON ...
 
---------
-RUN ON ALL;
---------
+    RUN ON ALL;
 
 Query will be run on all partitions in cluster in parallel.
 
---------
-RUN ON ANY;
---------
+    RUN ON ANY;
 
 Query will be run on random partition.
 
---------
-RUN ON <NR>;
---------
+    RUN ON <NR>;
 
 Run on partition number `<NR>`.
 
---------
-RUN ON partition_func(..);
---------
+    RUN ON partition_func(..);
 
-Run partition_func() which should return one or more hash values.  (int4)
-query will be run on tagged partitions.  If more than one partition was
+Run `partition_func()` which should return one or more hash values.  (int4)
+Query will be run on tagged partitions.  If more than one partition was
 tagged, query will be sent in parallel to them.
 
---------
-RUN ON argname;
-RUN ON $1;
---------
+    RUN ON argname;
+    RUN ON $1;
 
 Take hash value directly from function argument.  _(New in 2.0.8)_
 
 
-== SPLIT ==
+## SPLIT
 
---------
-SPLIT array_arg_1 [ , array_arg_2 ... ] ;
-SPLIT ALL ;
---------
+    SPLIT array_arg_1 [ , array_arg_2 ... ] ;
+    SPLIT ALL ;
 
 Split the input arrays based on RUN ON statement into per-partition arrays.
 This is done by evaluating RUN ON condition for each array element and building
@@ -107,94 +87,71 @@ _(New in 2.1)_
 
 The semantics of RUN ON statement is slightly changed with SPLIT arrays:
 
---------
-RUN ON partition_func(..);
---------
+    RUN ON partition_func(..);
 
 The array is split between the partitions matching `partition_func()`. Any
 SPLIT parameters passed to the function are actually replaced with the
 individual array elements.
 
---------
-RUN ON argname;
-RUN ON $1;
---------
+    RUN ON argname;
+    RUN ON $1;
 
 An array of partition numbers (or hashes) can be passed as `argname`. The function
 shall be run on the partitions specified in the array.
 
---------
-RUN ON ANY;
---------
+    RUN ON ANY;
 
 Each element is assigned to random partition.
 
---------
-RUN ON ALL;
-RUN ON <NR>;
---------
+    RUN ON ALL;
+    RUN ON <NR>;
 
 Unaffected, except for the added overhead of array copying.
 
 Example:
 
---------
-CREATE FUNCTION set_profiles(i_users text[], i_profiles text[])
-RETURNS SETOF text AS $$
-    CLUSTER 'userdb';
-    SPLIT i_users, i_profiles;
-    RUN ON hashtext(i_users);
-$$ LANGUAGE plproxy;
---------
+    CREATE FUNCTION set_profiles(i_users text[], i_profiles text[])
+    RETURNS SETOF text AS $$
+        CLUSTER 'userdb';
+        SPLIT i_users, i_profiles;
+        RUN ON hashtext(i_users);
+    $$ LANGUAGE plproxy;
 
 Given query:
 
---------
-SELECT * FROM set_profiles(ARRAY['foo', 'bar'], ARRAY['a', 'b']);
---------
+    SELECT * FROM set_profiles(ARRAY['foo', 'bar'], ARRAY['a', 'b']);
 
 The hash function is called 2 times:
 
---------
-SELECT * FROM hashtext('foo');
-SELECT * FROM hashtext('bar');
---------
+    SELECT * FROM hashtext('foo');
+    SELECT * FROM hashtext('bar');
 
 And target partitions get queries:
 
---------
-SELECT * FROM set_profiles(ARRAY['foo'], ARRAY['a']);
-SELECT * FROM set_profiles(ARRAY['bar'], ARRAY['b']);
---------
+    SELECT * FROM set_profiles(ARRAY['foo'], ARRAY['a']);
+    SELECT * FROM set_profiles(ARRAY['bar'], ARRAY['b']);
 
-
-== TARGET ==
+## TARGET
 
 Specify function name on remote side to be called.  By default
 PL/Proxy uses current function name.  _(New in 2.2)_
 
 Following function:
 
---------
-CREATE FUNCTION some_function(username text, num int4)
-RETURNS SETOF text AS $$
-    CLUSTER 'userdb';
-    RUN ON hashtext(username);
-    TARGET other_function;
-$$ LANGUAGE plproxy;
---------
+    CREATE FUNCTION some_function(username text, num int4)
+    RETURNS SETOF text AS $$
+        CLUSTER 'userdb';
+        RUN ON hashtext(username);
+        TARGET other_function;
+    $$ LANGUAGE plproxy;
 
 will run following query on remote side:
 
---------
-SELECT * FROM other_function(username, num);
---------
+    SELECT * FROM other_function(username, num);
 
-== SELECT ==
+## SELECT
 
---------
-SELECT .... ;
---------
+    SELECT .... ;
 
 By default, PL/Proxy generates query based on its own signature.
 But this can be overrided by giving explicit `SELECT` statement to run.
@@ -207,12 +164,12 @@ table aliases should be used.
 Query result should have same number of columns as function result
 and same names too.
 
-== Argument substitution ==
+## Argument substitution
 
 Proxy function arguments can be referenced using name or `$n` syntax.
 Everything that is not argument reference is just passed on.
 
-== Dynamic records ==
+## Dynamic records
 
 PL/Proxy supports function returning plain RECORD type.  Such functions
 need the result type specified at call site.  Main use-case is to run
@@ -220,36 +177,31 @@ random queries on partitions. _(New in 2.0.6)_
 
 Very simple example:
 
---------
-CREATE OR REPLACE FUNCTION dynamic_query(q text)
-RETURNS SETOF RECORD AS $$
-    CLUSTER 'mycluster';
-    RUN ON ALL;
-$$ LANGUAGE plproxy;
---------
+    CREATE OR REPLACE FUNCTION dynamic_query(q text)
+    RETURNS SETOF RECORD AS $$
+        CLUSTER 'mycluster';
+        RUN ON ALL;
+    $$ LANGUAGE plproxy;
 
 Corresponding function in partitions:
 
---------
-CREATE OR REPLACE FUNCTION dynamic_query(sql text)
-RETURNS SETOF RECORD AS $$
-DECLARE
-    rec RECORD;
-BEGIN
-    FOR rec IN EXECUTE sql
-    LOOP
+    CREATE OR REPLACE FUNCTION dynamic_query(sql text)
+    RETURNS SETOF RECORD AS $$
+    DECLARE
+        rec RECORD;
+    BEGIN
+        FOR rec IN EXECUTE sql
+        LOOP
         RETURN NEXT rec;
-    END LOOP;
-    RETURN;
-END;
-$$ LANGUAGE plpgsql;
---------
+        END LOOP;
+        RETURN;
+    END;
+    $$ LANGUAGE plpgsql;
 
 Sample request:
 
---------
-SELECT * FROM dynamic_query('SELECT id, username FROM sometable') AS (id integer, username text);
---------
+    SELECT * FROM dynamic_query('SELECT id, username FROM sometable')
+                            AS (id integer, username text);
 
 The types given in AS clause must match actual types from query.
 
