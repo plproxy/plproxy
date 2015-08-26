@@ -13,7 +13,7 @@
       "plproxy": {
          "abstract": "Database partitioning implemented as procedural language",
          "file": "sql/plproxy.sql",
-         "docfile": "doc/tutorial.txt",
+         "docfile": "doc/tutorial.md",
          "version": "2.6.0"
       }
    },
@@ -25,13 +25,13 @@
       }
    },
    "resources": {
-      "homepage": "http://wiki.postgresql.org/wiki/PL/Proxy",
+      "homepage": "https://plproxy.github.com/",
       "bugtracker": {
-         "web": "http://github.com/markokr/plproxy-dev/issues/"
+         "web": "https://github.com/plproxy/plproxy/issues/"
       },
       "repository": {
-        "url":  "https://github.com/markokr/plproxy-dev.git",
-        "web":  "https://github.com/markokr/plproxy-dev/",
+        "url":  "https://github.com/plproxy/plproxy.git",
+        "web":  "https://github.com/plproxy/plproxy/",
         "type": "git"
       }
    },

@@ -137,11 +137,6 @@ tgz:
 zip:
 	git archive -o $(DISTNAME).zip --format zip --prefix=$(DISTNAME)/ HEAD
 
-clean: doc-clean
-
-doc-clean:
-	$(MAKE) -C doc clean
-
 test: install
 	$(MAKE) installcheck || { filterdiff --format=unified regression.diffs | less; exit 1; }
 
