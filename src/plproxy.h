@@ -24,6 +24,8 @@
 #ifndef plproxy_h_included
 #define plproxy_h_included
 
+#include <libpq-fe.h>
+
 #include <postgres.h>
 #include <funcapi.h>
 #include <fmgr.h>
@@ -63,7 +65,6 @@
 #include "aatree.h"
 #include "rowstamp.h"
 
-#include <libpq-fe.h>
 
 #ifndef PG_MODULE_MAGIC
 #error PL/Proxy requires 8.2+
