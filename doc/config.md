@@ -213,10 +213,10 @@ users are unable to use the cluster.
             OPTIONS (
                     connection_lifetime '1800',
                     disable_binary '1',
-                    p0 'dbname=part00 hostname=127.0.0.1',
-                    p1 'dbname=part01 hostname=127.0.0.1',
-                    p2 'dbname=part02 hostname=127.0.0.1',
-                    p3 'dbname=part03 hostname=127.0.0.1'
+                    p0 'dbname=part00 host=127.0.0.1',
+                    p1 'dbname=part01 host=127.0.0.1',
+                    p2 'dbname=part02 host=127.0.0.1',
+                    p3 'dbname=part03 host=127.0.0.1'
                     );
 
 Finally we need to create a user mapping for the Pl/Proxy users. One might
