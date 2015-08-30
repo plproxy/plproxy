@@ -1,7 +1,7 @@
 
 # PL/Proxy Changelog
 
-**2015-08-26  -  PlProxy 2.6  -  "Released via Bottle Mail"**
+**2015-08-26  -  PL/Proxy 2.6  -  "Released via Bottle Mail"**
 
 - Features
 
@@ -28,7 +28,7 @@
 
   * Debian packaging cleanup.
 
-**2012-11-27  -  PlProxy 2.5  -  "With Extra Leg For Additional Stability"**
+**2012-11-27  -  PL/Proxy 2.5  -  "With Extra Leg For Additional Stability"**
 
 - Features
 
@@ -52,7 +52,7 @@
 
   * Fix crash when `RETURNS TABLE` syntax is used.
 
-**2012-05-07  -  PlProxy 2.4  -  "Light Eater"**
+**2012-05-07  -  PL/Proxy 2.4  -  "Light Eater"**
 
 - Features
 
@@ -69,7 +69,7 @@
   * Support Postgres 9.2.
 
 
-**2011-10-25  -  PlProxy 2.3  -  "Unmanned Crowd Control"**
+**2011-10-25  -  PL/Proxy 2.3  -  "Unmanned Crowd Control"**
 
 - Features
 
@@ -88,7 +88,7 @@
 
   * Use Asciidoc ListingBlock for code - results in nicer HTML.
 
-**2011-02-18  -  PlProxy 2.2  -  "Cover With Milk To See Secret Message"**
+**2011-02-18  -  PL/Proxy 2.2  -  "Cover With Milk To See Secret Message"**
 
 - Features
 
@@ -115,7 +115,7 @@
     Old compat assument bitmap representation for fd_set,
     but win32 uses array.
 
-**2010-04-23  -  PlProxy 2.1  -  "Quality Horrorshow"**
+**2010-04-23  -  PL/Proxy 2.1  -  "Quality Horrorshow"**
 
 - Features
 
@@ -152,7 +152,7 @@
   * deb: per-version packaging: `make debXY` will create
     `postgresql-plproxy-X.Y` package.
 
-**2009-10-28  -  PlProxy 2.0.9  -  "Five-Nines Guarantee For Not Bricking The Server"**
+**2009-10-28  -  PL/Proxy 2.0.9  -  "Five-Nines Guarantee For Not Bricking The Server"**
 
 - Features
 
@@ -188,7 +188,7 @@
 
   * geterrcode(): Switch memory context to work around Assert() in CopyErrorData().
 
-**2009-01-16  -  PlProxy 2.0.8  -  "Simple Multi-Tentacle Arhitecture"**
+**2009-01-16  -  PL/Proxy 2.0.8  -  "Simple Multi-Tentacle Arhitecture"**
 
 - Features
 
@@ -209,7 +209,7 @@
 
     Reported and analyzed by Jonah Harris.
 
-**2008-09-29  -  PlProxy 2.0.7  -  "The Ninja of Shadow"**
+**2008-09-29  -  PL/Proxy 2.0.7  -  "The Ninja of Shadow"**
 
 - Fixes
 
@@ -246,7 +246,7 @@
   * deb: Survive empty FLEX/BISON defs from PGXS.
     Accept also postgresql-server-dev-8.3 as build dep.
 
-**2008-09-05  -  PlProxy 2.0.6  -  "Agile Voodoo"**
+**2008-09-05  -  PL/Proxy 2.0.6  -  "Agile Voodoo"**
 
 - Features
 
@@ -278,7 +278,7 @@
   * Make regtest tolerant to random() implementation differneces
     between different OSes.
 
-**2008-06-06  -  PlProxy 2.0.5  -  "Universal Shredder"**
+**2008-06-06  -  PL/Proxy 2.0.5  -  "Universal Shredder"**
 
 - Fixes:
 
@@ -290,7 +290,7 @@
     functions easier easier.
   * Make compat poll() function behave more like actual poll().
 
-**2008-01-04  -  PlProxy 2.0.4  -  "Vampire-proof"**
+**2008-01-04  -  PL/Proxy 2.0.4  -  "Vampire-proof"**
 
 - Fixes
 
@@ -306,7 +306,7 @@
     to avoid problems when local and remote Postgres have
     different setting for integer_datetimes.
 
-**2007-12-10  -  PlProxy 2.0.3  -  "Faster Than A Fresh Zombie"**
+**2007-12-10  -  PL/Proxy 2.0.3  -  "Faster Than A Fresh Zombie"**
 
 - Features
 
@@ -351,7 +351,7 @@
     when working thru pgbouncer, so its better to drop it completely.
     The setting can be always set via normal ways.
 
-**2007-04-16  -  PlProxy 2.0.2  -  "No news is good news?"**
+**2007-04-16  -  PL/Proxy 2.0.2  -  "No news is good news?"**
 
 - Cleanups
 
@@ -360,7 +360,7 @@
   * Clean `add_connection()` function by using StringInfo instead
     open-coded string shuffling.
 
-**2007-03-30  -  PlProxy 2.0.1 - "PlProxy 2.0.1"**
+**2007-03-30  -  PL/Proxy 2.0.1 - "PL/Proxy 2.0.1"**
 
 - Fixes
 
@@ -368,7 +368,7 @@
 
   * Seems v2.0 invalidated cache more than intended. Fix.
 
-**2007-03-13  -  PlProxy 2.0 - "Skype Presents"**
+**2007-03-13  -  PL/Proxy 2.0 - "Skype Presents"**
 
 - Initial
   [public release](http://www.postgresql.org/message-id/54335.194.126.108.9.1173801315.squirrel@mail.skype.net)
