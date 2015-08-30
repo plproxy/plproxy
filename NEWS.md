@@ -310,53 +310,67 @@
 
 - Features
 
-    * Explicitly specify result column names and types in query.
+  * Explicitly specify result column names and types in query.
 
-      Lets say there is function somefunc(out id int4, out data text).
-      Previously pl/proxy issued following query:
+    Lets say there is function somefunc(out id int4, out data text).
+    Previously pl/proxy issued following query:
 
-          SELECT * FROM somefunc()
-      
-      And later tried to work out which column goes where.  Now it issues:
+        SELECT * FROM somefunc()
 
-          SELECT id::int4, data::text FROM somefunc()
+    And later tried to work out which column goes where.  Now it issues:
 
-      For functions without named return paramenters, eg. just "RETURNS text":
+        SELECT id::int4, data::text FROM somefunc()
 
-          SELECT r::text FROM anotherfunc() r
+    For functions without named return paramenters, eg. just "RETURNS text":
 
-      This gives better type safety when using binary I/O, allows signatures
-      differ in deterministic ways and creates safe upgrade path for signatures.
+        SELECT r::text FROM anotherfunc() r
 
-      Only downside is that existing functions with wildly different signatures
-      stop working, but as they work on pure luck anyway, I'm not worried.
+    This gives better type safety when using binary I/O, allows signatures
+    differ in deterministic ways and creates safe upgrade path for signatures.
 
-    * Quote function and result column names properly.
+    Only downside is that existing functions with wildly different signatures
+    stop working, but as they work on pure luck anyway, I'm not worried.
 
-    * Set `client_encoding` on remote database to be equal to local one.
+  * Quote function and result column names properly.
 
-    * Tutorial by Steve Singer.
+  * Set `client_encoding` on remote database to be equal to local one.
+
+  * Tutorial by Steve Singer.
 
 - Fixes
 
-    * Support 8.3 (handle short varlena header)
+  * Support 8.3 (handle short varlena header)
 
-    * Support old flex (2.5.4)  Previously flex >= 2.5.33 was required.
+  * Support old flex (2.5.4)  Previously flex >= 2.5.33 was required.
 
-    * Fix `make deb`, include actual debian/changelog.
+  * Fix `make deb`, include actual debian/changelog.
 
-    * Remove config paramenter `statement_timeout`.
-    
-      It was ignored previously and it cannot be made work in live env
-      when working thru pgbouncer, so its better to drop it completely.
-      The setting can be always set via normal ways.
-      
+  * Remove config paramenter `statement_timeout`.
+
+    It was ignored previously and it cannot be made work in live env
+    when working thru pgbouncer, so its better to drop it completely.
+    The setting can be always set via normal ways.
 
 **2007-04-16  -  PlProxy 2.0.2  -  "No news is good news?"**
 
 - Cleanups
 
-    * Include plproxy.sql.in in tgz.
-    * Clean `add_connection()` function by using StringInfo instead
-      open-coded string shuffling.
+  * Include plproxy.sql.in in tgz.
+
+  * Clean `add_connection()` function by using StringInfo instead
+    open-coded string shuffling.
+
+**2007-03-30  -  PlProxy 2.0.1 - "PlProxy 2.0.1"**
+
+- Fixes
+
+  * Support for 8.3
+
+  * Seems v2.0 invalidated cache more than intended. Fix.
+
+**2007-03-13  -  PlProxy 2.0 - "Skype Presents"**
+
+- Initial
+  [public release](http://www.postgresql.org/message-id/54335.194.126.108.9.1173801315.squirrel@mail.skype.net)
+  of v2.0 rewrite.
 
