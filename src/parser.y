@@ -53,7 +53,7 @@ static void reset_parser_vars(void)
 
 %}
 
-%name-prefix="plproxy_yy"
+%name-prefix "plproxy_yy"
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
 %token <str> IDENT NUMBER FNCALL SPLIT STRING
