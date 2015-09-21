@@ -219,12 +219,12 @@ plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *f
 	TupleDesc	tupdesc = meta->tupdesc;
 	int			natts = tupdesc->natts;
 	Datum	   *dvalues;
-	char	   *nulls;
+	bool	   *nulls;
 	int			i;
 	HeapTuple	tuple;
 
 	dvalues = (Datum *) palloc(natts * sizeof(Datum));
-	nulls = (char *) palloc(natts * sizeof(char));
+	nulls = (bool *) palloc(natts * sizeof(bool));
 
 	/* Call the recv function for each attribute */
 	for (i = 0; i < natts; i++)
@@ -232,24 +232,24 @@ plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *f
 		if (tupdesc->attrs[i]->attisdropped)
 		{
 			dvalues[i] = (Datum)NULL;
-			nulls[i] = 'n';
+			nulls[i] = true;
 			continue;
 		}
 
 		dvalues[i] = plproxy_recv_type(meta->type_list[i],
 									   values[i], lengths[i], fmts[i]);
-		nulls[i] = (values[i] != NULL) ? ' ' : 'n';
+		nulls[i] = (values[i] == NULL);
 	}
 
 	/* Form a tuple */
-	tuple = heap_formtuple(tupdesc, dvalues, nulls);
+	tuple = heap_form_tuple(tupdesc, dvalues, nulls);
 
 	/*
 	 * Release locally palloc'd space.
 	 */
 	for (i = 0; i < natts; i++)
 	{
-		if (nulls[i] == 'n')
+		if (nulls[i])
 			continue;
 		if (meta->type_list[i]->by_value)
 			continue;
