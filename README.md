@@ -22,7 +22,7 @@ Notes:
 
 * Location to `pg_config` can be set via `PG_CONFIG` variable:
 
-      $ make PG_CONFIG=/path/to/pg_config
-      $ make install PG_CONFIG=/path/to/pg_config
-      $ make installcheck PG_CONFIG=/path/to/pg_config
+    $ make PG_CONFIG=/path/to/pg_config
+    $ make install PG_CONFIG=/path/to/pg_config
+    $ make installcheck PG_CONFIG=/path/to/pg_config
 
