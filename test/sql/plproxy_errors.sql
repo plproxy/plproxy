@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 
 -- test bad arg
 create function test_err1(dat text)
