@@ -15,14 +15,12 @@ To run regression tests:
 
     $ make installcheck
 
-Notes:
+Location to `pg_config` can be set via `PG_CONFIG` variable:
 
-* Encoding regression test fails if the Postres instance is not created with C locale.
-  It can be considered expected failure then.
+    $ make PG_CONFIG=/path/to/pg_config
+    $ make install PG_CONFIG=/path/to/pg_config
+    $ make installcheck PG_CONFIG=/path/to/pg_config
 
-* Location to `pg_config` can be set via `PG_CONFIG` variable:
-
-      $ make PG_CONFIG=/path/to/pg_config
-      $ make install PG_CONFIG=/path/to/pg_config
-      $ make installcheck PG_CONFIG=/path/to/pg_config
+Note: Encoding regression test fails if the Postres instance is not created with C locale.
+It can be considered expected failure then.
 
