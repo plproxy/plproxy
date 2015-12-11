@@ -506,12 +506,6 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 		{
 			if (extract_part_num(def->defname, &part_num))
 			{
-				/* partition definition */
-				if (part_num != part_count)
-					ereport(ERROR,
-							(errcode(ERRCODE_SYNTAX_ERROR),
-							 errmsg("Pl/Proxy: partitions must be numbered consecutively"),
-							 errhint("next valid partition number is %d", part_count)));
 				++part_count;
 			}
 			else
@@ -544,6 +538,24 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("Pl/Proxy: invalid number of partitions"),
 					 errhint("the number of partitions in a cluster must be power of 2 (attempted %d)", part_count)));
+
+		foreach(cell, options_list)
+		{
+			DefElem    *def = lfirst(cell);
+			char	   *arg = strVal(def->arg);
+			int			part_num;
+
+			if (!extract_part_num(def->defname, &part_num))
+				continue;
+
+			elog(DEBUG1, "PL/Proxy: foreign server partition read: %s [%d] - %s", def->defname, part_num, arg);
+
+			if (part_num < 0 || part_num >= part_count)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("Pl/Proxy: wrong partitions number - %d", part_num),
+						 errhint("the partitions number in a cluster must be >= 0 and < %d (attempted %d)", part_count, part_num)));
+		}
 	}
 
 	PG_RETURN_BOOL(true);
@@ -635,6 +647,8 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 	ListCell		   *cell;
 	int					part_count = 0;
 	int					part_num;
+	int					i;
+	char			  **part_ordered;
 
 
 	fdw = GetForeignDataWrapper(foreign_server->fdwid);
@@ -683,9 +697,6 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 
 		if (extract_part_num(def->defname, &part_num))
 		{
-			if (part_num != part_count)
-				plproxy_error(func, "partitions numbers must be consecutive");
-
 			part_count++;
 		}
 		else
@@ -701,15 +712,31 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 	 */
 	allocate_cluster_partitions(cluster, part_count);
 
+	part_ordered = palloc0(part_count * sizeof(char *));
+
 	foreach(cell, foreign_server->options)
 	{
 		DefElem    *def = lfirst(cell);
+		char	   *arg = strVal(def->arg);
 
 		if (!extract_part_num(def->defname, &part_num))
 			continue;
 
-		add_connection(cluster, strVal(def->arg), part_num);
+		elog(DEBUG1, "PL/Proxy: foreign server partition read: %s [%d] - %s", def->defname, part_num, arg);
+
+		if (part_num < 0 || part_num >= part_count)
+			plproxy_error(func, "wrong partitions number, must be >= 0 and < %d", part_count);
+
+		part_ordered[part_num] = arg;
 	}
+
+	for(i = 0; i < part_count; i++)
+	{
+		elog(DEBUG1, "PL/Proxy: foreign server partition add: [%d] - %s", i, part_ordered[i]);
+		add_connection(cluster, part_ordered[i], i);
+	}
+
+	pfree(part_ordered);
 }
 
 /*

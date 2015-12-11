@@ -102,7 +102,7 @@ reset session authorization;
 -- cluster definition validation
 -- partition numbers must be consecutive
 alter server sqlmedcluster options (drop partition_2);
-ERROR:  Pl/Proxy: partitions must be numbered consecutively
+ERROR:  Pl/Proxy: invalid number of partitions
 select * from sqlmed_test1();
                  sqlmed_test1                  
 -----------------------------------------------
