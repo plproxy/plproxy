@@ -278,7 +278,7 @@ get_version(ProxyFunction *func, Datum dname)
 					  SPI_result_code_string(err));
 	if (SPI_processed != 1)
 		plproxy_error(func, "get_version: got %d rows",
-					  SPI_processed);
+					  (int) SPI_processed);
 
 	bin_val = SPI_getbinval(SPI_tuptable->vals[0],
 							SPI_tuptable->tupdesc, 1, &isnull);
@@ -1118,7 +1118,7 @@ resolve_query(ProxyFunction *func, FunctionCallInfo fcinfo, ProxyQuery *query)
 
 	if (SPI_processed != 1)
 		plproxy_error(func, "'%s' returned %d rows, expected 1",
-					  query->sql, SPI_processed);
+					  query->sql, (int) SPI_processed);
 
 	desc = SPI_tuptable->tupdesc;
 	if (SPI_gettypeid(desc, 1) != TEXTOID)
