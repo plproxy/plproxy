@@ -1,3 +1,9 @@
+plproxy2 (2.7-1) unstable; urgency=low
+
+  * v2.7
+
+ -- Marko Kreen <markokr@gmail.com>  Tue, 27 Dec 2016 14:26:21 +0200
+
 plproxy2 (2.6-1) unstable; urgency=low
 
   * v2.6-final

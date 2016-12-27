@@ -1,6 +1,15 @@
 
 # PL/Proxy Changelog
 
+**2016-12-27  -  PL/Proxy 2.7  -  "Never Trust Sober Santa"**
+
+- Fixes
+  * Update to newer `heap_form_tuple()` API.
+    (Peter Eisentraut)
+
+  * Handle 64-bit `SPI_processed`.
+    (Peter Eisentraut)
+
 **2015-08-26  -  PL/Proxy 2.6  -  "Released via Bottle Mail"**
 
 - Features
