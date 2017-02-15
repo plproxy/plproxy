@@ -27,6 +27,7 @@
 #include <libpq-fe.h>
 
 #include <postgres.h>
+#include <postgres_ext.h>
 #include <funcapi.h>
 #include <fmgr.h>
 #include <executor/spi.h>
@@ -162,7 +163,8 @@ typedef enum RunOnType
 	R_HASH = 1,				/* partition(s) returned by hash function */
 	R_ALL = 2,				/* on all partitions */
 	R_ANY = 3,				/* decide randomly during runtime */
-	R_EXACT = 4				/* exact part number */
+	R_EXACT = 4,				/* exact part number */
+        R_CUSTOM_NODES = 5
 } RunOnType;
 
 /* Connection states for async handler */

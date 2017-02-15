@@ -175,13 +175,14 @@ DOLQ		({DOLQ_START}{DOLQ_CONT}*)
 %%
 
 	/* PL/Proxy language keywords */
-
+useparts                { return USEPARTS; }
 cluster			{ return CLUSTER; }
 connect			{ return CONNECT; }
 run			{ return RUN; }
 on			{ return ON; }
 all			{ return ALL; }
 any			{ return ANY; }
+custom_nodes            { return CUSTOM_NODES; }
 split		{ return SPLIT; }
 target		{ return TARGET; }
 select			{ BEGIN(sql); yylval.str = yytext; return SELECT; }
