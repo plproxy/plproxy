@@ -67,7 +67,7 @@ map_results(ProxyFunction *func, PGresult *res)
 	for (i = -1, xi = 0; xi < natts; xi++)
 	{
 		/* ->name_list has quoted names, take unquoted from ->tupdesc */
-		a = func->ret_composite->tupdesc->attrs[xi];
+		a = TupleDescAttr(func->ret_composite->tupdesc, xi);
 
 		func->result_map[xi] = -1;
 

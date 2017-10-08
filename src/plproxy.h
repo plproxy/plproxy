@@ -139,6 +139,10 @@
 #define TYPTYPE_RANGE 'r'
 #endif
 
+#ifndef TupleDescAttr
+#define TupleDescAttr(tupdesc, i) ((tupdesc)->attrs[(i)])
+#endif
+
 /*
  * Determine if this argument is to SPLIT
  */

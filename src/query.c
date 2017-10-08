@@ -183,7 +183,7 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 		ProxyComposite *t = func->ret_composite;
 		for (i = 0; i < t->tupdesc->natts; i++)
 		{
-			if (t->tupdesc->attrs[i]->attisdropped)
+			if (TupleDescAttr(t->tupdesc, i)->attisdropped)
 				continue;
 			appendStringInfo(&sql, "%s%s::%s",
 							 ((i > 0) ? ", " : ""),
@@ -219,7 +219,7 @@ plproxy_standard_query(ProxyFunction *func, bool add_types)
 		appendStringInfo(&sql, " as (");
 		for (i = 0; i < t->tupdesc->natts; i++)
 		{
-			if (t->tupdesc->attrs[i]->attisdropped)
+			if (TupleDescAttr(t->tupdesc, i)->attisdropped)
 				continue;
 			appendStringInfo(&sql, "%s%s %s",
 							((i > 0) ? ", " : ""),

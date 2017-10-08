@@ -151,7 +151,7 @@ plproxy_composite_info(ProxyFunction *func, TupleDesc tupdesc)
 	ret->nfields = 0;
 	for (i = 0; i < natts; i++)
 	{
-		a = tupdesc->attrs[i];
+		a = TupleDescAttr(tupdesc, i);
 		if (a->attisdropped)
 		{
 			ret->name_list[i] = NULL;
@@ -229,7 +229,7 @@ plproxy_recv_composite(ProxyComposite *meta, char **values, int *lengths, int *f
 	/* Call the recv function for each attribute */
 	for (i = 0; i < natts; i++)
 	{
-		if (tupdesc->attrs[i]->attisdropped)
+		if (TupleDescAttr(tupdesc, i)->attisdropped)
 		{
 			dvalues[i] = (Datum)NULL;
 			nulls[i] = true;
