@@ -52,8 +52,8 @@ EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql \
 
 # PostgreSQL version
 PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
-PGMAJOR = $(shell echo $(PGVER) | cut -d'.' -f1 | sed -r "s/([0-9]+)(((beta)|(alpha)|(rc))[0-9]*)?/\1/")
-PGMINOR = $(shell echo $(PGVER) | cut -d'.' -f2 | sed -r "s/([0-9]+)(((beta)|(alpha)|(rc))[0-9]*)?/\1/")
+PGMAJOR = $(shell echo $(PGVER) | cut -d'.' -f1 | sed -r "s/([0-9]+)([^0-9].*)?/\1/")
+PGMINOR = $(shell echo $(PGVER) | cut -d'.' -f2 | sed -r "s/([0-9]+)([^0-9].*)?/\1/")
 
 SQLMED = $(shell test $(PGMAJOR) -lt 8 -o \( $(PGMAJOR) -eq 8 -a $(PGMINOR) -lt 4 \) && echo "false" || echo "true")
 PG91 = $(shell test $(PGMAJOR) -lt 9 -o \( $(PGMAJOR) -eq 9 -a $(PGMINOR) -lt 1 \) && echo "false" || echo "true")
