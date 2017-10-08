@@ -2,7 +2,7 @@
    "name": "plproxy",
    "abstract": "Database partitioning implemented as procedural language",
    "description": "PL/Proxy is database partitioning system implemented as PL language.",
-   "version": "2.6.0",
+   "version": "2.8.0",
    "maintainer": [
       "Marko Kreen <markokr@gmail.com>"
    ],
@@ -14,7 +14,7 @@
          "abstract": "Database partitioning implemented as procedural language",
          "file": "sql/plproxy.sql",
          "docfile": "doc/tutorial.md",
-         "version": "2.7.0"
+         "version": "2.8.0"
       }
    },
    "prereqs": {
@@ -25,13 +25,13 @@
       }
    },
    "resources": {
-      "homepage": "https://plproxy.github.com/",
+      "homepage": "https://plproxy.github.io/",
       "bugtracker": {
          "web": "https://github.com/plproxy/plproxy/issues/"
       },
       "repository": {
-        "url":  "https://github.com/plproxy/plproxy.git",
-        "web":  "https://github.com/plproxy/plproxy/",
+        "url":  "https://github.com/plproxy/plproxy",
+        "web":  "https://github.com/plproxy/plproxy",
         "type": "git"
       }
    },
