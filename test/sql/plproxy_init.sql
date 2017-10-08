@@ -28,11 +28,11 @@ plproxy.get_cluster_partitions(cluster_name text)
 returns setof text as $$
 begin
     if cluster_name = 'testcluster' then
-        return next 'host=127.0.0.1 dbname=test_part';
+        return next 'host=/home/saaros/dev/plproxy/regressiondb port=12865 dbname=test_part';
         return;
     end if;
     if cluster_name = 'badcluster' then
-        return next 'host=127.0.0.1 dbname=nonex_db';
+        return next 'host=/home/saaros/dev/plproxy/regressiondb port=12865 dbname=nonex_db';
         return;
     end if;
     raise exception 'no such cluster: %', cluster_name;
