@@ -21,6 +21,6 @@ Location to `pg_config` can be set via `PG_CONFIG` variable:
     $ make install PG_CONFIG=/path/to/pg_config
     $ make installcheck PG_CONFIG=/path/to/pg_config
 
-Note: Encoding regression test fails if the Postres instance is not created with C locale.
+Note: Encoding regression test fails if the Postgres instance is not created with C locale.
 It can be considered expected failure then.
 
