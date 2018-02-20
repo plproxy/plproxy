@@ -991,6 +991,8 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 	switch (func->run_type)
 	{
 		case R_HASH:
+			if (cluster->config.disable_hashing)
+				plproxy_error(func, "hash based partitioning is disabled");
 			tag_hash_partitions(func, fcinfo, tag, array_params, array_row);
 			break;
 		case R_ALL:
@@ -1004,7 +1006,10 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
-			i = random() & cluster->part_mask;
+			if (cluster->config.disable_hashing)
+				i = random() % cluster->part_count;
+			else
+				i = random() & cluster->part_mask;
 			tag_part(cluster, i, tag);
 			break;
 		default:

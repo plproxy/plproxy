@@ -188,6 +188,7 @@ typedef struct ProxyConfig
 	int			query_timeout;			/* How long query may take (secs) */
 	int			connection_lifetime;	/* How long the connection may live (secs) */
 	int			disable_binary;			/* Avoid binary I/O */
+	int			disable_hashing;		/* Disable hashing to support non power-of-2 partitions */
 	/* keepalive parameters */
 	int			keepidle;
 	int			keepintvl;

@@ -68,6 +68,7 @@ static const char *cluster_config_options[] = {
 	"connection_lifetime",
 	"query_timeout",
 	"disable_binary",
+	"disable_hashing",
 	"keepalive_idle",
 	"keepalive_interval",
 	"keepalive_count",
@@ -83,9 +84,9 @@ PG_FUNCTION_INFO_V1(plproxy_fdw_validator);
  * Connection count should be non-zero and power of 2.
  */
 static bool
-check_valid_partcount(int n)
+check_valid_partcount(ProxyConfig *cf, int n)
 {
-	return (n > 0) && !(n & (n - 1));
+	return (n > 0) && (cf->disable_hashing ||  !(n & (n - 1)));
 }
 
 static int cluster_name_cmp(uintptr_t val, struct AANode *node)
@@ -307,6 +308,8 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->query_timeout = atoi(val);
 	else if (pg_strcasecmp("disable_binary", key) == 0)
 		cf->disable_binary = atoi(val);
+	else if (pg_strcasecmp("disable_hashing", key) == 0)
+		cf->disable_hashing = atoi(val);
 	else if (pg_strcasecmp("keepalive_idle", key) == 0)
 		cf->keepidle = atoi(val);
 	else if (pg_strcasecmp("keepalive_interval", key) == 0)
@@ -400,7 +403,7 @@ reload_parts(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 	err = SPI_execute_plan(partlist_plan, &dname, NULL, false, 0);
 	if (err != SPI_OK_SELECT)
 		plproxy_error(func, "get_partlist: spi error");
-	if (!check_valid_partcount(SPI_processed))
+	if (!check_valid_partcount(&cluster->config, SPI_processed))
 		plproxy_error(func, "get_partlist: invalid part count");
 
 	/* check column types */
@@ -484,6 +487,8 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	Oid			catalog = PG_GETARG_OID(1);
 	ListCell   *cell;
 	int			part_count = 0;
+	ProxyConfig config;
+
 
 	/* Pre 8.4.3 databases have broken validator interface, warn the user */
 	if (catalog == InvalidOid)
@@ -517,6 +522,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 			else
 			{
 				validate_cluster_option(def->defname, arg);
+				set_config_key(0, &config, def->defname, arg);
 			}
 		}
 		else if (catalog == UserMappingRelationId)
@@ -534,12 +540,13 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 		else if (catalog == ForeignDataWrapperRelationId)
 		{
 			validate_cluster_option(def->defname, arg);
+			set_config_key(0, &config, def->defname, arg);
 		}
 	}
 
 	if (catalog == ForeignServerRelationId)
 	{
-		if (!check_valid_partcount(part_count))
+		if (!check_valid_partcount(&config, part_count))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("Pl/Proxy: invalid number of partitions"),
@@ -692,7 +699,7 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 			set_config_key(func, &cluster->config, def->defname, strVal(def->arg));
 	}
 
-	if (!check_valid_partcount(part_count))
+	if (!check_valid_partcount(&cluster->config, part_count))
 		plproxy_error(func, "invalid partition count");
 
 	/*
@@ -864,8 +871,8 @@ reload_plproxy_cluster(ProxyFunction *func, ProxyCluster *cluster)
 	/* update if needed */
 	if (cur_version != cluster->version || cluster->needs_reload)
 	{
-		reload_parts(cluster, dname, func);
 		get_config(cluster, dname, func);
+		reload_parts(cluster, dname, func);
 		cluster->version = cur_version;
 	}
 }
