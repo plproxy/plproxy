@@ -150,6 +150,21 @@ plproxy_split_all_arrays(ProxyFunction *func)
 	}
 }
 
+/* Add execute by identifier */
+bool
+plproxy_execute_ident(ProxyFunction *func, const char *ident)
+{
+	int		argindex;
+
+	if ((argindex = plproxy_get_parameter_index(func, ident)) < 0)
+		return false;
+
+	func->is_execute = true;
+	func->execute_arg = argindex;
+
+	return true;
+}
+
 /* Initialize PL/Proxy function cache */
 void
 plproxy_function_cache_init(void)

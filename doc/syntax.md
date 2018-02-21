@@ -149,6 +149,44 @@ will run following query on remote side:
 
     SELECT * FROM other_function(username, num);
 
+## EXECUTE
+
+    EXECUTE argname ;
+
+Executes the specified argument as a query on remote side. The argument
+datatype must be text. Cannot be combined with `TARGET` or `SELECT`. 
+
+For more flexibility can be combined with `SPLIT` and `RUN ON`. For example
+with the following function each node can run different queries:
+
+    CREATE FUNCTION run_query(partitions int[], queries text[])
+    RETURNS SETOF my_record_type AS $$
+        CLUSTER 'userdb';
+        SPLIT partitions, queries;
+        RUN ON partitions;
+        EXECUTE queries;
+    $$ LANGUAGE plproxy;
+
+The partition and queries can then be passed in as 2 arrays:
+
+    SELECT * FROM run_query(array[0, 2], array[
+        'SELECT * FROM table_in_partition0',
+        'SELECT * FROM table_in_partition2'
+    ]);
+
+To execute the same query on all nodes:
+
+    CREATE FUNCTION run_query(query text)
+    RETURNS SETOF my_record_type AS $$
+        CLUSTER 'userdb';
+        RUN ON ALL;
+        EXECUTE query;
+    $$ LANGUAGE plproxy;
+
+The main benefit of this approach is that it avoid a function call on the
+remote side which would disable parallel execution.
+
+
 ## SELECT
 
     SELECT .... ;

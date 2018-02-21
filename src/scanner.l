@@ -184,6 +184,7 @@ all			{ return ALL; }
 any			{ return ANY; }
 split		{ return SPLIT; }
 target		{ return TARGET; }
+execute     { return EXECUTE; }
 select			{ BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* function call */

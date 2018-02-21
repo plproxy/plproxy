@@ -62,6 +62,9 @@ static int geterrcode(void)
 }
 #endif
 
+/* Forward declarations */
+static void prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo);
+
 /* some error happened */
 static void
 conn_error(ProxyFunction *func, ProxyConnection *conn, const char *desc)
@@ -182,7 +185,7 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 {
 	int			res;
 	struct timeval now;
-	ProxyQuery *q = func->remote_sql;
+	ProxyQuery *q = conn->remote_sql;
 	ProxyConfig *cf = &func->cur_cluster->config;
 	int			binary_result = 0;
 
@@ -192,6 +195,10 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 	tune_connection(func, conn);
 	if (conn->cur->tuning)
 		return;
+
+	/* If no query is specified, we are immediately done */
+	if (!q)
+		conn->cur->state = C_DONE;
 
 	/* use binary result only on same backend ver */
 	if (cf->disable_binary == 0 && conn->cur->same_ver)
@@ -1144,6 +1151,83 @@ prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 }
 
+
+static char *
+extract_query_from_split(ProxyFunction* func, Datum query_array)
+{
+	ArrayType *arr = DatumGetArrayTypeP(query_array);
+	Datum	*queries;
+	bool	*nulls;
+	int		 nitems, i;
+	char 	*result = 0;
+
+	if (ARR_ELEMTYPE(arr) != TEXTOID)
+		plproxy_error(func, "Query array for EXECUTE must be of type text[]");
+
+	deconstruct_array(arr,
+					  TEXTOID, -1, false, 'i',
+					  &queries, &nulls, &nitems);
+
+	for (i = 0; i < nitems; i++)
+	{
+		if (nulls[i])
+			continue;
+
+		if (result)
+			plproxy_error(func, "All partitions must get at most one query");
+
+		result = TextDatumGetCString(queries[i]);
+	}
+
+	return result;
+}
+
+static void
+prepare_queries(ProxyFunction* func, FunctionCallInfo fcinfo)
+{
+	int part;
+	ProxyCluster   *cluster = func->cur_cluster;
+
+	if (func->is_execute)
+	{
+		/* Add the parameters to partitions */
+		for (part = 0; part < cluster->active_count; part++) {
+			char *query;
+			QueryBuffer* qb;
+			ProxyConnection* conn = cluster->active_list[part];
+
+			conn->remote_sql = 0;
+
+			if (!conn->run_tag)
+				continue;
+
+			if (PG_ARGISNULL(func->execute_arg))
+				continue;
+
+
+			if (IS_SPLIT_ARG(func, func->execute_arg))
+				query = extract_query_from_split(func, conn->split_params[func->execute_arg]);
+			else
+				query = text_to_cstring(PG_GETARG_TEXT_P(func->execute_arg));
+
+			if (query)
+			{
+				qb = plproxy_query_start(func, false);
+				plproxy_query_add_const(qb, query);
+				conn->remote_sql = plproxy_query_finish(qb);
+			}
+		}
+	}
+	else
+	{
+		for (part = 0; part < cluster->active_count; part++)
+			cluster->active_list[part]->remote_sql = func->remote_sql;
+
+		/* prepare the target query parameters */
+		prepare_query_parameters(func, fcinfo);
+	}
+}
+
 /*
  * Prepare parameters for the query.
  */
@@ -1152,6 +1236,8 @@ prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
 	int				i;
 	ProxyCluster   *cluster = func->cur_cluster;
+	/* Parameters for EXECUTE not supported yet */
+	Assert(!func->is_execute);
 
 	for (i = 0; i < func->remote_sql->arg_count; i++)
 	{
@@ -1274,8 +1360,8 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 		/* tag the partitions and prepare per-partition parameters */
 		prepare_and_tag_partitions(func, fcinfo);
 
-		/* prepare the target query parameters */
-		prepare_query_parameters(func, fcinfo);
+		/* prepare target queries */
+		prepare_queries(func, fcinfo);
 
 		remote_execute(func);
 

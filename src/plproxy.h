@@ -160,6 +160,21 @@
  */
 #define PLPROXY_IDLE_CONN_CHECK		2
 
+/* Temp structure for query parsing */
+typedef struct QueryBuffer QueryBuffer;
+
+/*
+ * Parsed query where references to function arguments
+ * are replaced with local args numbered sequentially: $1..$n.
+ */
+typedef struct ProxyQuery
+{
+	char	   *sql;			/* Prepared SQL string */
+	int			arg_count;		/* Argument count for ->sql */
+	int		   *arg_lookup;		/* Maps local references to function args */
+	void	   *plan;			/* Optional prepared plan for local queries */
+} ProxyQuery;
+
 /* Flag indicating where function should be executed */
 typedef enum RunOnType
 {
@@ -249,6 +264,7 @@ typedef struct ProxyConnection
 
 	Datum			   *split_params;					/* Split array parameters */
 	ArrayBuildState	  **bstate;							/* Temporary build state */
+	ProxyQuery  	   *remote_sql;							/* Query to execute */
 	const char		   *param_values[FUNC_MAX_ARGS];	/* Parameter values */
 	int					param_lengths[FUNC_MAX_ARGS];	/* Parameter lengths (binary io) */
 	int					param_formats[FUNC_MAX_ARGS];	/* Parameter formats (binary io) */
@@ -352,21 +368,6 @@ typedef struct ProxyComposite
 	RowStamp	stamp;
 } ProxyComposite;
 
-/* Temp structure for query parsing */
-typedef struct QueryBuffer QueryBuffer;
-
-/*
- * Parsed query where references to function arguments
- * are replaced with local args numbered sequentially: $1..$n.
- */
-typedef struct ProxyQuery
-{
-	char	   *sql;			/* Prepared SQL string */
-	int			arg_count;		/* Argument count for ->sql */
-	int		   *arg_lookup;		/* Maps local references to function args */
-	void	   *plan;			/* Optional prepared plan for local queries */
-} ProxyQuery;
-
 /*
  * Deconstructed array parameters
  */
@@ -415,6 +416,9 @@ typedef struct ProxyFunction
 	ProxyQuery *connect_sql;	/* Optional query for CONNECT function */
 	const char *target_name;	/* Optional target function name */
 
+	bool	is_execute;
+	int		execute_arg;
+
 	/*
 	 * calculated data
 	 */
@@ -453,6 +457,7 @@ char	   *plproxy_func_strdup(ProxyFunction *func, const char *s);
 int			plproxy_get_parameter_index(ProxyFunction *func, const char *ident);
 bool		plproxy_split_add_ident(ProxyFunction *func, const char *ident);
 void		plproxy_split_all_arrays(ProxyFunction *func);
+bool		plproxy_execute_ident(ProxyFunction *func, const char *ident);
 ProxyFunction *plproxy_compile_and_cache(FunctionCallInfo fcinfo);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, HeapTuple proc_tuple, bool validate_only);
 
