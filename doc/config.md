@@ -51,8 +51,9 @@ external source such as a configuration table.
 This is called when a new partition configuration needs to be loaded. 
 It should return connect strings to the partitions in the cluster.
 The connstrings should be returned in the correct order.  The total
-number of connstrings returned must be a power of 2.  If two or more
-connstrings are equal then they will use the same connection.
+number of connstrings returned must be a power of 2 unless hashing is
+disabled.  If two or more connstrings are equal then they will use
+the same connection.
 
 If the string `user=` does not appear in a connect string then
 `user=CURRENT_USER` will be appended to the connection string by PL/Proxy.  
@@ -126,6 +127,11 @@ or NULL then the parameter is disabled (a default value will be used).
 * `disable_binary`
 
   Do not use binary I/O for connections to this cluster.
+
+* `disable_hashing`
+
+  Disable mapping of hash values to partition numbers. Partition numbers can
+  still be used directly. Allows for non power-of-2 partition counts. 
 
 * `keepalive_idle`
 
