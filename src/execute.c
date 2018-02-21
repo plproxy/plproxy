@@ -943,7 +943,14 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 		else
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
 
-		hashval &= cluster->part_mask;
+		if (cluster->config.disable_hashing)
+		{
+			if (hashval >= cluster->part_count)
+				plproxy_error(func, "Hash result must be less than partition count");
+		}
+		else
+			hashval &= cluster->part_mask;
+
 		tag_part(cluster, hashval, tag);
 	}
 
@@ -991,8 +998,6 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 	switch (func->run_type)
 	{
 		case R_HASH:
-			if (cluster->config.disable_hashing)
-				plproxy_error(func, "hash based partitioning is disabled");
 			tag_hash_partitions(func, fcinfo, tag, array_params, array_row);
 			break;
 		case R_ALL:
