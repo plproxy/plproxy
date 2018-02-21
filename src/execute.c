@@ -196,10 +196,6 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 	if (conn->cur->tuning)
 		return;
 
-	/* If no query is specified, we are immediately done */
-	if (!q)
-		conn->cur->state = C_DONE;
-
 	/* use binary result only on same backend ver */
 	if (cf->disable_binary == 0 && conn->cur->same_ver)
 	{
@@ -1198,24 +1194,23 @@ prepare_queries(ProxyFunction* func, FunctionCallInfo fcinfo)
 
 			conn->remote_sql = 0;
 
-			if (!conn->run_tag)
-				continue;
-
-			if (PG_ARGISNULL(func->execute_arg))
-				continue;
-
-
-			if (IS_SPLIT_ARG(func, func->execute_arg))
-				query = extract_query_from_split(func, conn->split_params[func->execute_arg]);
-			else
-				query = text_to_cstring(PG_GETARG_TEXT_P(func->execute_arg));
-
-			if (query)
+			if (conn->run_tag && !PG_ARGISNULL(func->execute_arg))
 			{
-				qb = plproxy_query_start(func, false);
-				plproxy_query_add_const(qb, query);
-				conn->remote_sql = plproxy_query_finish(qb);
+				if (IS_SPLIT_ARG(func, func->execute_arg))
+					query = extract_query_from_split(func, conn->split_params[func->execute_arg]);
+				else
+					query = text_to_cstring(PG_GETARG_TEXT_P(func->execute_arg));
+
+				if (query)
+				{
+					qb = plproxy_query_start(func, false);
+					plproxy_query_add_const(qb, query);
+					conn->remote_sql = plproxy_query_finish(qb);
+				}
 			}
+			/* If there is no query we remove run tag to ignore the connection in remote_execute */
+			if (!conn->remote_sql)
+				conn->run_tag = 0;
 		}
 	}
 	else
