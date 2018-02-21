@@ -269,6 +269,9 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 	if (got_execute && got_target)
 		yyerror("EXECUTE cannot be used with TARGET");
 
+	if (got_execute && xfunc->execute_is_array && !IS_SPLIT_ARG(xfunc, xfunc->execute_arg))
+		yyerror("EXECUTE argument is an array, but is not split");
+
 	/* release scanner resources */
 	plproxy_yylex_destroy();
 

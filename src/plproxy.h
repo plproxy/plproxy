@@ -418,6 +418,7 @@ typedef struct ProxyFunction
 
 	bool	is_execute;
 	int		execute_arg;
+	bool	execute_is_array;
 
 	/*
 	 * calculated data
