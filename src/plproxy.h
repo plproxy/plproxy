@@ -144,6 +144,14 @@
 #endif
 
 /*
+ * backwards compatibility with v10.
+ */
+
+#if PG_VERSION_NUM >= 110000
+#define ACL_KIND_FOREIGN_SERVER OBJECT_FOREIGN_SERVER
+#endif
+
+/*
  * Determine if this argument is to SPLIT
  */
 #define IS_SPLIT_ARG(func, arg)	((func)->split_args && (func)->split_args[arg])

@@ -256,9 +256,7 @@ fn_new(HeapTuple proc_tuple)
 
 	f_ctx = AllocSetContextCreate(TopMemoryContext,
 								  "PL/Proxy function context",
-								  ALLOCSET_SMALL_MINSIZE,
-								  ALLOCSET_SMALL_INITSIZE,
-								  ALLOCSET_SMALL_MAXSIZE);
+								  ALLOCSET_SMALL_SIZES);
 
 	old_ctx = MemoryContextSwitchTo(f_ctx);
 
