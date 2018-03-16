@@ -223,6 +223,11 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 	if (!res)
 		conn_error(func, conn, "PQsendQueryParams");
 
+	res = PQsetSingleRowMode(conn->cur->db);
+
+	if (!res)
+		conn_error(func, conn, "PQsetSingleRowMode");
+
 	/* flush it down */
 	flush_connection(func, conn);
 }
@@ -447,15 +452,111 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 }
 
 /*
- * Connection has a resultset avalable, fetch it.
+ * Build a HeapTuple from a single-row query result.
+ */
+static HeapTuple
+tuple_from_result(PGresult *res, TupleDesc tupdesc)
+{
+	int	nfields = PQnfields(res);
+	HeapTuple tuple;
+
+	if (PQnfields(res) != tupdesc->natts)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("remote query result rowtype does not match "
+						"the specified FROM clause rowtype")));
+
+	/*
+	 * We can safely assume that the values are either all binary
+	 * or all textual.
+	 */
+	if (nfields > 0 && PQfformat(res, 0) == 1)
+	{
+		Datum *values = (Datum *) palloc(nfields * sizeof(Datum));
+		bool  *nulls = (bool *) palloc(nfields * sizeof(bool));
+		int    i;
+
+		/* result contains only binary data */
+		for (i = 0; i < nfields; i++)
+		{
+			if (PQgetisnull(res, 0, i))
+				nulls[i] = true;
+			else
+			{
+				Datum d;
+				int typsize;
+
+				nulls[i] = false;
+
+				/* convert binary representation to Datum */
+				if ((typsize = PQfsize(res, i)) == -1)
+				{
+					/* varlena */
+					int dlen = PQgetlength(res, 0, i);
+					struct varlena *v = palloc(dlen + VARHDRSZ);
+
+					SET_VARSIZE(v, dlen + VARHDRSZ);
+					memcpy(VARDATA(v), PQgetvalue(res, 0, i), dlen);
+
+					d = PointerGetDatum(v);
+				}
+				else
+				{
+					/*
+					 * We must distinguish 8-byte types from others
+					 * because they can be pass-by-reference.
+					 */
+					if (typsize == 8)
+						d = Int64GetDatum(*(int64 *)(PQgetvalue(res, 0, i)));
+					else
+						d = Int32GetDatum(*(int32 *)(PQgetvalue(res, 0, i)));
+				}
+
+				values[i] = d;
+			}
+		}
+
+		tuple = heap_form_tuple(tupdesc, values, nulls);
+	}
+	else
+	{
+		int		i;
+		char  **values;
+
+		/* result contains only textual data */
+		if (nfields > 0)
+			values = (char **) palloc(nfields * sizeof(char *));
+		else
+			values = NULL;
+
+		/* tuple consists of textual data */
+		for (i = 0; i < nfields; i++)
+		{
+			if (PQgetisnull(res, 0, i))
+				values[i] = NULL;
+			else
+				values[i] = PQgetvalue(res, 0, i);
+		}
+
+		tuple = BuildTupleFromCStrings(TupleDescGetAttInMetadata(tupdesc),
+										  values);
+	}
+
+	return tuple;
+}
+
+/*
+ * Connection has a result avalable, store it in the result tuplestore.
  *
  * Returns true if there may be more results coming,
  * false if all done.
  */
 static bool
-another_result(ProxyFunction *func, ProxyConnection *conn)
+another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
-	PGresult   *res;
+	PGresult	  *res;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	HeapTuple	   tuple;
 
 	/* got one */
 	res = PQgetResult(conn->cur->db);
@@ -478,29 +579,24 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 
 	switch (PQresultStatus(res))
 	{
-		case PGRES_TUPLES_OK:
-			if (conn->res)
-			{
-				PQclear(res);
-				conn_error(func, conn, "double result?");
-			}
-			conn->res = res;
+		case PGRES_SINGLE_TUPLE:
+			/*
+			 * check result and tuple descriptor have the same number of columns
+			 */
+			tuple = tuple_from_result(res, rsinfo->setDesc);
+
+			tuplestore_puttuple(rsinfo->setResult, tuple);
+
+			PQclear(res);
 			break;
-		case PGRES_COMMAND_OK:
+		case PGRES_TUPLES_OK:		/* this means query is done */
+		case PGRES_COMMAND_OK:		/* no result */
 			PQclear(res);
 			break;
 		case PGRES_FATAL_ERROR:
-			if (conn->res)
-				PQclear(conn->res);
-			conn->res = res;
-
 			plproxy_remote_error(func, conn, res, true);
 			break;
 		default:
-			if (conn->res)
-				PQclear(conn->res);
-			conn->res = res;
-
 			plproxy_error(func, "Unexpected result type: %s", PQresStatus(PQresultStatus(res)));
 			break;
 	}
@@ -513,7 +609,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
  * It should call postgres handlers and then change state if needed.
  */
 static void
-handle_conn(ProxyFunction *func, ProxyConnection *conn)
+handle_conn(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
 	int			res;
 	PostgresPollingStatusType poll_res;
@@ -555,7 +651,7 @@ handle_conn(ProxyFunction *func, ProxyConnection *conn)
 					break;
 
 				/* got one */
-				if (!another_result(func, conn))
+				if (!another_result(func, conn, fcinfo))
 					break;
 			}
 		case C_NONE:
@@ -572,7 +668,7 @@ handle_conn(ProxyFunction *func, ProxyConnection *conn)
  * on small number of sockets.
  */
 static int
-poll_conns(ProxyFunction *func, ProxyCluster *cluster)
+poll_conns(ProxyFunction *func, ProxyCluster *cluster, FunctionCallInfo fcinfo)
 {
 	static struct pollfd *pfd_cache = NULL;
 	static int pfd_allocated = 0;
@@ -671,7 +767,7 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 			elog(WARNING, "fd order from poll() is messed up?");
 
 		if (pf->revents)
-			handle_conn(func, conn);
+			handle_conn(func, conn, fcinfo);
 
 		pf++;
 	}
@@ -710,14 +806,14 @@ check_timeouts(ProxyFunction *func, ProxyCluster *cluster, ProxyConnection *conn
 
 /* Run the query on all tagged connections in parallel */
 static void
-remote_execute(ProxyFunction *func)
+remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
-	ExecStatusType err;
 	ProxyConnection *conn;
 	ProxyCluster *cluster = func->cur_cluster;
 	int			i,
 				pending = 0;
 	struct timeval now;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 
 	/* either launch connection or send query */
 	for (i = 0; i < cluster->active_count; i++)
@@ -742,7 +838,7 @@ remote_execute(ProxyFunction *func)
 		CHECK_FOR_INTERRUPTS();
 
 		/* wait for events */
-		if (poll_conns(func, cluster) == 0)
+		if (poll_conns(func, cluster, fcinfo) == 0)
 			continue;
 
 		/* recheck */
@@ -770,25 +866,16 @@ remote_execute(ProxyFunction *func)
 	{
 		conn = cluster->active_list[i];
 
-		if ((conn->run_tag || conn->res)
-			&& !(conn->run_tag && conn->res))
-			plproxy_error(func, "run_tag does not match res");
-
 		if (!conn->run_tag)
 			continue;
 
 		if (conn->cur->state != C_DONE)
 			plproxy_error(func, "Unfinished connection");
-		if (conn->res == NULL)
-			plproxy_error(func, "Lost result");
-
-		err = PQresultStatus(conn->res);
-		if (err != PGRES_TUPLES_OK)
-			plproxy_error(func, "Remote error: %s",
-						  PQresultErrorMessage(conn->res));
-
-		cluster->ret_total += PQntuples(conn->res);
 	}
+
+	tuplestore_donestoring(rsinfo->setResult);
+
+	cluster->ret_total = tuplestore_tuple_count(rsinfo->setResult);
 }
 
 static void
@@ -823,7 +910,7 @@ remote_wait_for_cancel(ProxyFunction *func)
 			break;
 
 		/* wait for events */
-		poll_conns(func, cluster);
+		poll_conns(func, cluster, NULL);
 	}
 
 	/* review results, calculate total */
@@ -1336,6 +1423,60 @@ void plproxy_disconnect(ProxyConnectionState *cur)
 	cur->waitCancel = 0;
 }
 
+/* Set up tuple descriptor and tuple store */
+void
+plproxy_setup_tuplestore(FunctionCallInfo fcinfo)
+{
+	TupleDesc tupdesc;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	Oid result_type;
+	MemoryContext old_ctx;
+
+	/* check to see if query supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* let the executor know we're sending back a tuplestore */
+	rsinfo->returnMode = SFRM_Materialize;
+
+	switch (get_call_result_type(fcinfo, &result_type, &tupdesc))
+	{
+		case TYPEFUNC_COMPOSITE:
+		case TYPEFUNC_COMPOSITE_DOMAIN:
+			Assert(tupdesc);
+			break;
+		case TYPEFUNC_RECORD:
+			/* don't support generic "record" type */
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("function returning record called in context "
+							"that cannot accept type record")));
+			break;
+		default:
+			Assert(!tupdesc);
+			tupdesc = CreateTemplateTupleDesc(1, false);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 1, "result",
+							   result_type, -1, 0);
+	}
+
+	/* create tuplestore and tuple descriptor in a persisient memory context */
+	old_ctx = MemoryContextSwitchTo(rsinfo->econtext->ecxt_per_query_memory);
+
+	/* create a transaction-only random access tuplestore */
+	rsinfo->setResult = tuplestore_begin_heap(true, false, work_mem);
+
+	/* make sure we have a persistent copy of the tuple descriptor */
+	rsinfo->setDesc = CreateTupleDescCopy(tupdesc);
+
+	MemoryContextSwitchTo(old_ctx);
+}
+
 /* Select partitions and execute query on them */
 void
 plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
@@ -1358,7 +1499,7 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 		/* prepare target queries */
 		prepare_queries(func, fcinfo);
 
-		remote_execute(func);
+		remote_execute(func, fcinfo);
 
 		func->cur_cluster->busy = false;
 	}

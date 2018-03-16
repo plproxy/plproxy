@@ -190,6 +190,10 @@ compile_and_execute(FunctionCallInfo fcinfo)
 	if (cluster->busy)
 		plproxy_error(func, "Nested PL/Proxy calls to the same cluster are not supported.");
 
+	/* set up result tuplestore for table functions if requested */
+	if (fcinfo->flinfo->fn_retset)
+		plproxy_setup_tuplestore(fcinfo);
+
 	/* fetch PGresults */
 	func->cur_cluster = cluster;
 	plproxy_exec(func, fcinfo);
@@ -212,27 +216,11 @@ static Datum
 handle_ret_set(FunctionCallInfo fcinfo)
 {
 	ProxyFunction *func;
-	FuncCallContext *ret_ctx;
 
-	if (SRF_IS_FIRSTCALL())
-	{
-		func = compile_and_execute(fcinfo);
-		ret_ctx = SRF_FIRSTCALL_INIT();
-		ret_ctx->user_fctx = func;
-	}
+	func = compile_and_execute(fcinfo);
 
-	ret_ctx = SRF_PERCALL_SETUP();
-	func = ret_ctx->user_fctx;
-
-	if (func->cur_cluster->ret_total > 0)
-	{
-		SRF_RETURN_NEXT(ret_ctx, plproxy_result(func, fcinfo));
-	}
-	else
-	{
-		plproxy_clean_results(func->cur_cluster);
-		SRF_RETURN_DONE(ret_ctx);
-	}
+	plproxy_clean_results(func->cur_cluster);
+	PG_RETURN_NULL();
 }
 
 /*

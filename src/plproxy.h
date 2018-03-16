@@ -471,6 +471,7 @@ ProxyFunction *plproxy_compile_and_cache(FunctionCallInfo fcinfo);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, HeapTuple proc_tuple, bool validate_only);
 
 /* execute.c */
+void		plproxy_setup_tuplestore(FunctionCallInfo fcinfo);
 void		plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_clean_results(ProxyCluster *cluster);
 void		plproxy_disconnect(ProxyConnectionState *cur);
