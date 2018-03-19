@@ -476,6 +476,10 @@ tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
 	 */
 	if (nfields > 0 && PQfformat(res, 0) == 1)
 	{
+		/*
+		 * This branch is currently dead code, since binary mode has been
+		 * disabled in 4a8a66270b29f78c9d5c082852ca26902517a7e4
+		 */
 		Datum *values = (Datum *) palloc(nfields * sizeof(Datum));
 		bool  *nulls = (bool *) palloc(nfields * sizeof(bool));
 		int    i;
@@ -506,14 +510,34 @@ tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
 				}
 				else
 				{
-					/*
-					 * We must distinguish 8-byte types from others
-					 * because they can be pass-by-reference.
-					 */
-					if (typsize == 8)
-						d = Int64GetDatum(*(int64 *)(PQgetvalue(res, 0, i)));
-					else
-						d = Int32GetDatum(*(int32 *)(PQgetvalue(res, 0, i)));
+					union {
+						int32 i4[2];
+						int64 i8;
+					} x;
+					int32 s;
+
+					/* must convert from network byte order to host byte order */
+					switch(typsize)
+					{
+						case 1:
+							d = Int8GetDatum(*(int32 *)(PQgetvalue(res, 0, i)));
+							break;
+						case 2:
+							d = Int16GetDatum(ntohs(*(int32 *)(PQgetvalue(res, 0, i))));
+							break;
+						case 4:
+							d = Int32GetDatum(ntohl(*(int32 *)(PQgetvalue(res, 0, i))));
+							break;
+						case 8:
+							x.i8 = *(int64 *)(PQgetvalue(res, 0, i));
+#ifndef WORDS_BIGENDIAN
+							s = ntohl(x.i4[0]);
+							x.i4[0] = ntohl(x.i4[1]);
+							x.i4[1] = s;
+#endif
+							d = Int64GetDatum(x.i8);
+							break;
+					}
 				}
 
 				values[i] = d;
