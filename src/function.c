@@ -252,16 +252,23 @@ fn_new(HeapTuple proc_tuple)
 {
 	ProxyFunction *f;
 	MemoryContext f_ctx,
+				tup_ctx,
 				old_ctx;
 
 	f_ctx = AllocSetContextCreate(TopMemoryContext,
 								  "PL/Proxy function context",
 								  ALLOCSET_SMALL_SIZES);
 
+	/* memory context for short-lived memory during tuple creation */
+	tup_ctx = AllocSetContextCreate(f_ctx,
+									"PL/Proxy tuple creation context",
+									ALLOCSET_SMALL_SIZES);
+
 	old_ctx = MemoryContextSwitchTo(f_ctx);
 
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
+	f->tuplectx = tup_ctx;
 	f->oid = HeapTupleGetOid(proc_tuple);
 	plproxy_set_stamp(&f->stamp, proc_tuple);
 

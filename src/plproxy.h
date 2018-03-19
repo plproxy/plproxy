@@ -397,6 +397,7 @@ typedef struct ProxyFunction
 	const char *name;			/* Fully-qualified and quoted function name */
 	Oid			oid;			/* Function OID */
 	MemoryContext ctx;			/* Where runtime allocations should happen */
+	MemoryContext tuplectx;		/* short-lived memory for tuple creation */
 
 	RowStamp	stamp;			/* for pg_proc cache validation */
 
@@ -471,7 +472,6 @@ ProxyFunction *plproxy_compile_and_cache(FunctionCallInfo fcinfo);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, HeapTuple proc_tuple, bool validate_only);
 
 /* execute.c */
-void		plproxy_setup_tuplestore(FunctionCallInfo fcinfo);
 void		plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_clean_results(ProxyCluster *cluster);
 void		plproxy_disconnect(ProxyConnectionState *cur);

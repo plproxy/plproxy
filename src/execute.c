@@ -455,16 +455,20 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
  * Build a HeapTuple from a single-row query result.
  */
 static HeapTuple
-tuple_from_result(PGresult *res, TupleDesc tupdesc)
+tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
 {
 	int	nfields = PQnfields(res);
 	HeapTuple tuple;
+	MemoryContext old_ctx;
 
 	if (PQnfields(res) != tupdesc->natts)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
 				 errmsg("remote query result rowtype does not match "
 						"the specified FROM clause rowtype")));
+
+	/* switch to temporary memory context */
+	old_ctx = MemoryContextSwitchTo(func->tuplectx);
 
 	/*
 	 * We can safely assume that the values are either all binary
@@ -516,12 +520,16 @@ tuple_from_result(PGresult *res, TupleDesc tupdesc)
 			}
 		}
 
+		/* switch back to persistent memory context */
+		(void)MemoryContextSwitchTo(old_ctx);
+
 		tuple = heap_form_tuple(tupdesc, values, nulls);
 	}
 	else
 	{
-		int		i;
-		char  **values;
+		int				i;
+		char		  **values;
+		AttInMetadata  *attinmeta = TupleDescGetAttInMetadata(tupdesc);
 
 		/* result contains only textual data */
 		if (nfields > 0)
@@ -538,9 +546,14 @@ tuple_from_result(PGresult *res, TupleDesc tupdesc)
 				values[i] = PQgetvalue(res, 0, i);
 		}
 
-		tuple = BuildTupleFromCStrings(TupleDescGetAttInMetadata(tupdesc),
-										  values);
+		/* switch back to persistent memory context */
+		(void)MemoryContextSwitchTo(old_ctx);
+
+		tuple = BuildTupleFromCStrings(attinmeta, values);
 	}
+
+	/* clear temporary memory context */
+	MemoryContextReset(func->tuplectx);
 
 	return tuple;
 }
@@ -555,7 +568,7 @@ static bool
 another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
 	PGresult	  *res;
-	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	ReturnSetInfo *rsinfo;
 	HeapTuple	   tuple;
 
 	/* got one */
@@ -577,15 +590,19 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 		return true;
 	}
 
+	rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+
 	switch (PQresultStatus(res))
 	{
 		case PGRES_SINGLE_TUPLE:
 			/*
 			 * check result and tuple descriptor have the same number of columns
 			 */
-			tuple = tuple_from_result(res, rsinfo->setDesc);
+			tuple = tuple_from_result(res, rsinfo->setDesc, func);
 
 			tuplestore_puttuple(rsinfo->setResult, tuple);
+
+			pfree(tuple);
 
 			PQclear(res);
 			break;
@@ -1421,60 +1438,6 @@ void plproxy_disconnect(ProxyConnectionState *cur)
 	cur->same_ver = 0;
 	cur->tuning = 0;
 	cur->waitCancel = 0;
-}
-
-/* Set up tuple descriptor and tuple store */
-void
-plproxy_setup_tuplestore(FunctionCallInfo fcinfo)
-{
-	TupleDesc tupdesc;
-	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
-	Oid result_type;
-	MemoryContext old_ctx;
-
-	/* check to see if query supports us returning a tuplestore */
-	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("set-valued function called in context that cannot accept a set")));
-	if (!(rsinfo->allowedModes & SFRM_Materialize))
-		ereport(ERROR,
-				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-				 errmsg("materialize mode required, but it is not allowed in this context")));
-
-	/* let the executor know we're sending back a tuplestore */
-	rsinfo->returnMode = SFRM_Materialize;
-
-	switch (get_call_result_type(fcinfo, &result_type, &tupdesc))
-	{
-		case TYPEFUNC_COMPOSITE:
-		case TYPEFUNC_COMPOSITE_DOMAIN:
-			Assert(tupdesc);
-			break;
-		case TYPEFUNC_RECORD:
-			/* don't support generic "record" type */
-			ereport(ERROR,
-					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-					 errmsg("function returning record called in context "
-							"that cannot accept type record")));
-			break;
-		default:
-			Assert(!tupdesc);
-			tupdesc = CreateTemplateTupleDesc(1, false);
-			TupleDescInitEntry(tupdesc, (AttrNumber) 1, "result",
-							   result_type, -1, 0);
-	}
-
-	/* create tuplestore and tuple descriptor in a persisient memory context */
-	old_ctx = MemoryContextSwitchTo(rsinfo->econtext->ecxt_per_query_memory);
-
-	/* create a transaction-only random access tuplestore */
-	rsinfo->setResult = tuplestore_begin_heap(true, false, work_mem);
-
-	/* make sure we have a persistent copy of the tuple descriptor */
-	rsinfo->setDesc = CreateTupleDescCopy(tupdesc);
-
-	MemoryContextSwitchTo(old_ctx);
 }
 
 /* Select partitions and execute query on them */
