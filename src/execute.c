@@ -223,10 +223,13 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 	if (!res)
 		conn_error(func, conn, "PQsendQueryParams");
 
-	res = PQsetSingleRowMode(conn->cur->db);
+	if (!func->ret_scalar)
+	{
+		res = PQsetSingleRowMode(conn->cur->db);
 
-	if (!res)
-		conn_error(func, conn, "PQsetSingleRowMode");
+		if (!res)
+			conn_error(func, conn, "PQsetSingleRowMode");
+	}
 
 	/* flush it down */
 	flush_connection(func, conn);
@@ -630,7 +633,21 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 
 			PQclear(res);
 			break;
-		case PGRES_TUPLES_OK:		/* this means query is done */
+		case PGRES_TUPLES_OK:
+			/* in single row mode, this is empty */
+			if (!func->ret_scalar)
+			{
+				PQclear(res);
+				break;
+			}
+
+			if (conn->res)
+			{
+				PQclear(res);
+				conn_error(func, conn, "double result?");
+			}
+			conn->res = res;
+			break;
 		case PGRES_COMMAND_OK:		/* no result */
 			PQclear(res);
 			break;
@@ -907,16 +924,38 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 	{
 		conn = cluster->active_list[i];
 
+		if (func->ret_scalar && (conn->run_tag || conn->res)
+			&& !(conn->run_tag && conn->res))
+			plproxy_error(func, "run_tag does not match res");
+
 		if (!conn->run_tag)
 			continue;
 
 		if (conn->cur->state != C_DONE)
 			plproxy_error(func, "Unfinished connection");
+
+		if (func->ret_scalar)
+		{
+			ExecStatusType err;
+
+			if (conn->res == NULL)
+				plproxy_error(func, "Lost result");
+
+			err = PQresultStatus(conn->res);
+			if (err != PGRES_TUPLES_OK)
+				plproxy_error(func, "Remote error: %s",
+							  PQresultErrorMessage(conn->res));
+
+			cluster->ret_total += PQntuples(conn->res);
+		}
 	}
 
-	tuplestore_donestoring(rsinfo->setResult);
+	if (!func->ret_scalar)
+	{
+		tuplestore_donestoring(rsinfo->setResult);
 
-	cluster->ret_total = tuplestore_tuple_count(rsinfo->setResult);
+		cluster->ret_total = tuplestore_tuple_count(rsinfo->setResult);
+	}
 }
 
 static void
