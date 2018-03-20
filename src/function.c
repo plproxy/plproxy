@@ -422,7 +422,11 @@ fn_get_return_type(ProxyFunction *func,
 	TypeFuncClass rtc;
 	MemoryContext old_ctx;
 	int			natts;
+	Form_pg_proc proc_struct;
 
+	/* is it a set returning function? */
+	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
+	func->retset = proc_struct->proretset;
 
 	/*
 	 * get_call_result_type() will return newly allocated tuple,

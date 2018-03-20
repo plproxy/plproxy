@@ -407,6 +407,8 @@ typedef struct ProxyFunction
 
 	bool	   *split_args;		/* Map of arguments to split */
 
+	bool		retset;			/* set returning function */
+
 	/* if the function returns untyped RECORD that needs AS clause */
 	bool		dynamic_record;
 

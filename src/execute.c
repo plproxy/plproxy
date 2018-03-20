@@ -223,7 +223,7 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 	if (!res)
 		conn_error(func, conn, "PQsendQueryParams");
 
-	if (!func->ret_scalar)
+	if (func->retset)
 	{
 		res = PQsetSingleRowMode(conn->cur->db);
 
@@ -464,6 +464,9 @@ tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
 	HeapTuple tuple;
 	MemoryContext old_ctx;
 
+	/*
+	 * check result and tuple descriptor have the same number of columns
+	 */
 	if (PQnfields(res) != tupdesc->natts)
 		ereport(ERROR,
 				(errcode(ERRCODE_DATATYPE_MISMATCH),
@@ -622,9 +625,8 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 	switch (PQresultStatus(res))
 	{
 		case PGRES_SINGLE_TUPLE:
-			/*
-			 * check result and tuple descriptor have the same number of columns
-			 */
+			Assert(rsinfo->setDesc);
+
 			tuple = tuple_from_result(res, rsinfo->setDesc, func);
 
 			tuplestore_puttuple(rsinfo->setResult, tuple);
@@ -635,7 +637,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 			break;
 		case PGRES_TUPLES_OK:
 			/* in single row mode, this is empty */
-			if (!func->ret_scalar)
+			if (func->retset)
 			{
 				PQclear(res);
 				break;
@@ -924,7 +926,7 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 	{
 		conn = cluster->active_list[i];
 
-		if (func->ret_scalar && (conn->run_tag || conn->res)
+		if (!func->retset && (conn->run_tag || conn->res)
 			&& !(conn->run_tag && conn->res))
 			plproxy_error(func, "run_tag does not match res");
 
@@ -934,7 +936,7 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 		if (conn->cur->state != C_DONE)
 			plproxy_error(func, "Unfinished connection");
 
-		if (func->ret_scalar)
+		if (!func->retset)
 		{
 			ExecStatusType err;
 
@@ -950,7 +952,7 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 		}
 	}
 
-	if (!func->ret_scalar)
+	if (func->retset)
 	{
 		tuplestore_donestoring(rsinfo->setResult);
 
