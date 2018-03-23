@@ -256,6 +256,11 @@ typedef struct ProxyConnection
 
 	/* state */
 	PGresult   *res;			/* last resultset */
+	/*
+	 * Maps result field num to libpq column num.
+	 * NULL when scalar result.
+	 */
+	int		   *result_map;
 	int			pos;			/* Current position inside res */
 	ProxyConnectionState *cur;
 
@@ -446,12 +451,6 @@ typedef struct ProxyFunction
 	 * function's private fake cluster object.
 	 */
 	ProxyCluster *cur_cluster;
-
-	/*
-	 * Maps result field num to libpq column num.
-	 * It is filled for each result.  NULL when scalar result.
-	 */
-	int		   *result_map;
 } ProxyFunction;
 
 /* main.c */
@@ -507,10 +506,11 @@ void		plproxy_syscache_callback_init(void);
 ProxyCluster *plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_cluster_maint(struct timeval * now);
 void		plproxy_activate_connection(struct ProxyConnection *conn);
+void	   *plproxy_allocate_memory(size_t size);
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);
-HeapTuple	plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func);
+HeapTuple	plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func, ProxyConnection *conn);
 
 /* query.c */
 QueryBuffer *plproxy_query_start(ProxyFunction *func, bool add_types);

@@ -293,8 +293,7 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 		elog(ERROR, "PL/Proxy procedures can't be used as triggers");
 
 	/* clean old results */
-	if (!fcinfo->flinfo->fn_retset || SRF_IS_FIRSTCALL())
-		run_maint();
+	run_maint();
 
 	if (fcinfo->flinfo->fn_retset)
 	{
