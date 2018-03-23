@@ -510,7 +510,7 @@ void		plproxy_activate_connection(struct ProxyConnection *conn);
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);
-HeapTuple	tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func);
+HeapTuple	plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func);
 
 /* query.c */
 QueryBuffer *plproxy_query_start(ProxyFunction *func, bool add_types);

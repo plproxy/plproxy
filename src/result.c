@@ -226,7 +226,7 @@ plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo)
  * Build a HeapTuple from a single-row query result.
  */
 HeapTuple
-tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
+plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func)
 {
 	int	nfields = PQnfields(res);
 	HeapTuple tuple;
