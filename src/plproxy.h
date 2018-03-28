@@ -149,6 +149,7 @@
 
 #if PG_VERSION_NUM >= 110000
 #define ACL_KIND_FOREIGN_SERVER OBJECT_FOREIGN_SERVER
+#define heap_attisnull(x, y) heap_attisnull(x, y, NULL)
 #endif
 
 /*
