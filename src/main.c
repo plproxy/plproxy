@@ -160,6 +160,60 @@ run_maint(void)
 	plproxy_cluster_maint(&now);
 }
 
+/* Set up tuple descriptor and tuple store */
+static void
+plproxy_setup_tuplestore(ProxyFunction *func, FunctionCallInfo fcinfo)
+{
+	TupleDesc tupdesc;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+	Oid result_type;
+	MemoryContext old_ctx;
+
+	/* check to see if query supports us returning a tuplestore */
+	if (rsinfo == NULL || !IsA(rsinfo, ReturnSetInfo))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("set-valued function called in context that cannot accept a set")));
+	if (!(rsinfo->allowedModes & SFRM_Materialize))
+		ereport(ERROR,
+				(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+				 errmsg("materialize mode required, but it is not allowed in this context")));
+
+	/* let the executor know we're sending back a tuplestore */
+	rsinfo->returnMode = SFRM_Materialize;
+
+	switch (get_call_result_type(fcinfo, &result_type, &tupdesc))
+	{
+		case TYPEFUNC_COMPOSITE:
+		case TYPEFUNC_COMPOSITE_DOMAIN:
+			Assert(tupdesc);
+			break;
+		case TYPEFUNC_RECORD:
+			/* don't support generic "record" type */
+			ereport(ERROR,
+					(errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
+					 errmsg("function returning record called in context "
+							"that cannot accept type record")));
+			break;
+		default:
+			Assert(!tupdesc);
+			tupdesc = CreateTemplateTupleDesc(1, false);
+			TupleDescInitEntry(tupdesc, (AttrNumber) 1, "result",
+							   result_type, -1, 0);
+	}
+
+	/* create tuplestore and tuple descriptor in a persisient memory context */
+	old_ctx = MemoryContextSwitchTo(rsinfo->econtext->ecxt_per_query_memory);
+
+	/* create a transaction-only random access tuplestore */
+	rsinfo->setResult = tuplestore_begin_heap(true, false, work_mem);
+
+	/* make sure we have a persistent copy of the tuple descriptor */
+	rsinfo->setDesc = CreateTupleDescCopy(tupdesc);
+
+	MemoryContextSwitchTo(old_ctx);
+}
+
 /*
  * Do compilation and execution under SPI.
  *
@@ -190,6 +244,10 @@ compile_and_execute(FunctionCallInfo fcinfo)
 	if (cluster->busy)
 		plproxy_error(func, "Nested PL/Proxy calls to the same cluster are not supported.");
 
+	/* set up result tuplestore for table functions if requested */
+	if (fcinfo->flinfo->fn_retset)
+		plproxy_setup_tuplestore(func, fcinfo);
+
 	/* fetch PGresults */
 	func->cur_cluster = cluster;
 	plproxy_exec(func, fcinfo);
@@ -212,27 +270,11 @@ static Datum
 handle_ret_set(FunctionCallInfo fcinfo)
 {
 	ProxyFunction *func;
-	FuncCallContext *ret_ctx;
 
-	if (SRF_IS_FIRSTCALL())
-	{
-		func = compile_and_execute(fcinfo);
-		ret_ctx = SRF_FIRSTCALL_INIT();
-		ret_ctx->user_fctx = func;
-	}
+	func = compile_and_execute(fcinfo);
 
-	ret_ctx = SRF_PERCALL_SETUP();
-	func = ret_ctx->user_fctx;
-
-	if (func->cur_cluster->ret_total > 0)
-	{
-		SRF_RETURN_NEXT(ret_ctx, plproxy_result(func, fcinfo));
-	}
-	else
-	{
-		plproxy_clean_results(func->cur_cluster);
-		SRF_RETURN_DONE(ret_ctx);
-	}
+	plproxy_clean_results(func->cur_cluster);
+	PG_RETURN_NULL();
 }
 
 /*
@@ -251,8 +293,7 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 		elog(ERROR, "PL/Proxy procedures can't be used as triggers");
 
 	/* clean old results */
-	if (!fcinfo->flinfo->fn_retset || SRF_IS_FIRSTCALL())
-		run_maint();
+	run_maint();
 
 	if (fcinfo->flinfo->fn_retset)
 	{

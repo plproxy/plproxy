@@ -112,6 +112,8 @@ static void conn_free(struct AANode *node, void *arg)
 	aatree_destroy(&conn->userstate_tree);
 	if (conn->res)
 		PQclear(conn->res);
+	if (conn->result_map)
+		pfree(conn->result_map);
 	pfree(conn);
 }
 
@@ -165,9 +167,7 @@ plproxy_cluster_cache_init(void)
 
 	cluster_mem = AllocSetContextCreate(TopMemoryContext,
 										"PL/Proxy cluster context",
-										ALLOCSET_SMALL_MINSIZE,
-										ALLOCSET_SMALL_INITSIZE,
-										ALLOCSET_SMALL_MAXSIZE);
+										ALLOCSET_SMALL_SIZES);
 	aatree_init(&cluster_tree, cluster_name_cmp, NULL);
 	aatree_init(&fake_cluster_tree, cluster_name_cmp, NULL);
 }
@@ -1276,6 +1276,12 @@ static void clean_conn(struct AANode *node, void *arg)
 		conn->res = NULL;
 	}
 
+	if (conn->result_map)
+	{
+		pfree(conn->result_map);
+		conn->result_map = NULL;
+	}
+
 	aatree_walk(&conn->userstate_tree, AA_WALK_IN_ORDER, clean_state, maint);
 }
 
@@ -1297,3 +1303,8 @@ plproxy_cluster_maint(struct timeval * now)
 	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, clean_cluster, now);
 }
 
+void *
+plproxy_allocate_memory(size_t size)
+{
+	return MemoryContextAllocZero(cluster_mem, size);
+}

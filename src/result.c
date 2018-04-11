@@ -38,9 +38,9 @@ name_matches(ProxyFunction *func, const char *aname, PGresult *res, int col)
 	return false;
 }
 
-/* fill func->result_map */
+/* fill conn->result_map */
 static void
-map_results(ProxyFunction *func, PGresult *res)
+map_results(ProxyFunction *func, ProxyConnection *conn, PGresult *res)
 {
 	int			i,  /* non-dropped column index */
 				xi, /* tupdesc index */
@@ -49,6 +49,10 @@ map_results(ProxyFunction *func, PGresult *res)
 				nfields = PQnfields(res);
 	Form_pg_attribute a;
 	const char *aname;
+
+	if (conn->result_map)
+		pfree(conn->result_map);
+	conn->result_map = NULL;
 
 	if (func->ret_scalar)
 	{
@@ -64,12 +68,14 @@ map_results(ProxyFunction *func, PGresult *res)
 	if (nfields > func->ret_composite->nfields)
 		plproxy_error(func, "Got too many fields from remote end");
 
+	conn->result_map = plproxy_allocate_memory(natts * sizeof(int));
+
 	for (i = -1, xi = 0; xi < natts; xi++)
 	{
 		/* ->name_list has quoted names, take unquoted from ->tupdesc */
 		a = TupleDescAttr(func->ret_composite->tupdesc, xi);
 
-		func->result_map[xi] = -1;
+		conn->result_map[xi] = -1;
 
 		if (a->attisdropped)
 			continue;
@@ -78,7 +84,7 @@ map_results(ProxyFunction *func, PGresult *res)
 		aname = NameStr(a->attname);
 		if (name_matches(func, aname, res, i))
 			/* fast case: 1:1 mapping */
-			func->result_map[xi] = i;
+			conn->result_map[xi] = i;
 		else
 		{
 			/* slow case: messed up ordering */
@@ -93,12 +99,12 @@ map_results(ProxyFunction *func, PGresult *res)
 				 */
 				if (name_matches(func, aname, res, j))
 				{
-					func->result_map[xi] = j;
+					conn->result_map[xi] = j;
 					break;
 				}
 			}
 		}
-		if (func->result_map[xi] < 0)
+		if (conn->result_map[xi] < 0)
 			plproxy_error(func,
 						  "Field %s does not exists in result", aname);
 	}
@@ -121,7 +127,7 @@ walk_results(ProxyFunction *func, ProxyCluster *cluster)
 
 		/* first time on this connection? */
 		if (conn->pos == 0)
-			map_results(func, conn->res);
+			map_results(func, conn, conn->res);
 
 		return conn;
 	}
@@ -148,7 +154,7 @@ return_composite(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fc
 
 	for (i = 0; i < meta->tupdesc->natts; i++)
 	{
-		col = func->result_map[i];
+		col = conn->result_map[i];
 		if (col < 0 || PQgetisnull(conn->res, conn->pos, col))
 		{
 			values[i] = NULL;
@@ -220,4 +226,143 @@ plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo)
 	conn->pos++;
 
 	return dat;
+}
+
+/*
+ * Build a HeapTuple from a single-row query result.
+ */
+HeapTuple
+plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func, ProxyConnection *conn)
+{
+	int	nfields = PQnfields(res);
+	HeapTuple tuple;
+	MemoryContext old_ctx;
+
+	/*
+	 * check result and tuple descriptor have the same number of columns
+	 */
+	if (PQnfields(res) != tupdesc->natts)
+		ereport(ERROR,
+				(errcode(ERRCODE_DATATYPE_MISMATCH),
+				 errmsg("remote query result rowtype does not match "
+						"the specified FROM clause rowtype")));
+
+	/* get the result column mapping when the first row is processed */
+	if (conn->pos == 0)
+		map_results(func, conn, res);
+	++conn->pos;
+
+	/* switch to temporary memory context */
+	old_ctx = MemoryContextSwitchTo(func->tuplectx);
+	/* clear temporary memory context */
+	MemoryContextReset(func->tuplectx);
+
+	/*
+	 * We can safely assume that the values are either all binary
+	 * or all textual.
+	 */
+	if (nfields > 0 && PQfformat(res, 0) == 1)
+	{
+		/*
+		 * This branch is currently dead code, since binary mode has been
+		 * disabled in 4a8a66270b29f78c9d5c082852ca26902517a7e4
+		 */
+		Datum *values = (Datum *) palloc(nfields * sizeof(Datum));
+		bool  *nulls = (bool *) palloc(nfields * sizeof(bool));
+		int    i;
+
+		/* result contains only binary data */
+		for (i = 0; i < nfields; i++)
+		{
+			Datum d;
+			int typsize;
+			int colpos = conn->result_map ? conn->result_map[i] : i;
+
+			if (PQgetisnull(res, 0, colpos))
+			{
+				nulls[i] = true;
+				continue;
+			}
+
+			nulls[i] = false;
+
+			/* convert binary representation to Datum */
+			if ((typsize = PQfsize(res, colpos)) == -1)
+			{
+				/* varlena */
+				int dlen = PQgetlength(res, 0, colpos);
+				struct varlena *v = palloc(dlen + VARHDRSZ);
+
+				SET_VARSIZE(v, dlen + VARHDRSZ);
+				memcpy(VARDATA(v), PQgetvalue(res, 0, colpos), dlen);
+
+				d = PointerGetDatum(v);
+			}
+			else
+			{
+				union {
+					int32 i4[2];
+					int64 i8;
+				} x;
+				int32 s;
+
+				/* must convert from network byte order to host byte order */
+				switch(typsize)
+				{
+					case 1:
+						d = Int8GetDatum(*(int32 *)(PQgetvalue(res, 0, colpos)));
+						break;
+					case 2:
+						d = Int16GetDatum(ntohs(*(int32 *)(PQgetvalue(res, 0, colpos))));
+						break;
+					case 4:
+						d = Int32GetDatum(ntohl(*(int32 *)(PQgetvalue(res, 0, colpos))));
+						break;
+					case 8:
+						x.i8 = *(int64 *)(PQgetvalue(res, 0, colpos));
+#ifndef WORDS_BIGENDIAN
+						s = ntohl(x.i4[0]);
+						x.i4[0] = ntohl(x.i4[1]);
+						x.i4[1] = s;
+#endif
+						d = Int64GetDatum(x.i8);
+						break;
+				}
+			}
+
+			values[i] = d;
+		}
+
+		tuple = heap_form_tuple(tupdesc, values, nulls);
+	}
+	else
+	{
+		int				i;
+		char		  **values;
+		AttInMetadata  *attinmeta = TupleDescGetAttInMetadata(tupdesc);
+
+		/* result contains only textual data */
+		if (nfields > 0)
+			values = (char **) palloc(nfields * sizeof(char *));
+		else
+			values = NULL;
+
+		/* tuple consists of textual data */
+		for (i = 0; i < nfields; i++)
+		{
+			int colpos = conn->result_map ? conn->result_map[i] : i;
+
+			if (PQgetisnull(res, 0, colpos))
+				values[i] = NULL;
+			else
+				values[i] = PQgetvalue(res, 0, colpos);
+		}
+
+		tuple = BuildTupleFromCStrings(attinmeta, values);
+	}
+
+	/* switch back to persistent memory context */
+	(void)MemoryContextSwitchTo(old_ctx);
+
+	return tuple;
 }

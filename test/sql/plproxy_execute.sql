@@ -22,7 +22,7 @@ run on all;
 execute query;
 $$ LANGUAGE plproxy;
 
-SELECT * FROM test_execute_single_on_all('SELECT current_database() AS dbname, 1 AS i') ORDER BY dbname;
+SELECT * FROM test_execute_single_on_all('SELECT current_database() AS dbname, 1 AS i') ORDER BY dbname, i;
 -- Null means nothing gets executed
 SELECT * FROM test_execute_single_on_all(NULL) ORDER BY dbname;
 
@@ -45,7 +45,7 @@ run on nodes;
 execute query;
 $$ LANGUAGE plproxy;
 
-SELECT * FROM test_execute_single_on_some(array[0,2], 'SELECT current_database() AS dbname, 1 AS i');
+SELECT * FROM test_execute_single_on_some(array[0,2], 'SELECT current_database() AS dbname, 1 AS i') ORDER BY dbname, i;
 
 -- All queries on all nodes. Maximum of 1 query for now.
 CREATE OR REPLACE FUNCTION test_execute_multiple_on_all(queries text[]) RETURNS SETOF my_table AS $$
@@ -62,7 +62,7 @@ SELECT * FROM test_execute_multiple_on_all(array[
 SELECT * FROM test_execute_multiple_on_all(array[
 	'SELECT current_database() AS dbname, 1 AS i',
 	NULL
-]);
+]) ORDER BY dbname, i;
 
 -- Specify one query per node
 CREATE OR REPLACE FUNCTION test_execute_multiple_on_specific(queries text[], nodes int[]) RETURNS SETOF my_table AS $$
@@ -75,14 +75,14 @@ $$ LANGUAGE plproxy;
 SELECT * FROM test_execute_multiple_on_specific(array[
 	'SELECT current_database() AS dbname, 1 AS i',
 	'SELECT current_database() AS dbname, 2 AS i'
-], array[3,0]);
+], array[3,0]) ORDER BY dbname, i;
 -- Null queries get skipped 
 SELECT * FROM test_execute_multiple_on_specific(array[
 	NULL,
 	'SELECT current_database() AS dbname, 1 AS i',
 	'SELECT current_database() AS dbname, 2 AS i',
 	NULL
-], array[0,1,2,3]);
+], array[0,1,2,3]) ORDER BY dbname, i;
 
 -- Array of queries not split is validated
 CREATE OR REPLACE FUNCTION test_execute_multiple_no_split(queries text[], nodes int[]) RETURNS SETOF my_table AS $$
