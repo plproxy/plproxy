@@ -5,10 +5,6 @@ set client_min_messages = 'warning';
 
 \i sql/plproxy.sql
 
-set client_min_messages = 'fatal';
-create language plpgsql;
-set client_min_messages = 'warning';
-
 -- create cluster info functions
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)
@@ -64,19 +60,3 @@ create database test_part3;
 
 drop database if exists test_enc_proxy;
 drop database if exists test_enc_part;
-
-\c test_part
-set client_min_messages = 'fatal';
-create language plpgsql;
-\c test_part0
-set client_min_messages = 'fatal';
-create language plpgsql;
-\c test_part1
-set client_min_messages = 'fatal';
-create language plpgsql;
-\c test_part2
-set client_min_messages = 'fatal';
-create language plpgsql;
-\c test_part3
-set client_min_messages = 'fatal';
-create language plpgsql;
