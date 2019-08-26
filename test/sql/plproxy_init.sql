@@ -5,7 +5,7 @@ set client_min_messages = 'warning';
 
 \i sql/plproxy.sql
 
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
 set client_min_messages = 'warning';
 
@@ -66,17 +66,17 @@ drop database if exists test_enc_proxy;
 drop database if exists test_enc_part;
 
 \c test_part
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
 \c test_part0
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
 \c test_part1
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
 \c test_part2
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
 \c test_part3
-set client_min_messages = 'fatal';
+set client_min_messages = 'error';
 create or replace language plpgsql;
