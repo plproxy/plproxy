@@ -55,12 +55,11 @@ static void reset_parser_vars(void)
 
 /*
  * Preferred syntax in Bison 2.0+ is [%name-prefix "plproxy_yy"].
- *
- * Keep using old syntax to keep compatibility with
- * same range of Bison versions that are supported also
- * by PostgreSQL.
+ * Documentation for building PostgreSQL 9.6 states that Bison 1.875 or later
+ * is required, assume it is safe to consider a recent version of Bison.
  */
-%name-prefix="plproxy_yy"
+%define api.prefix {plproxy_yy}
+
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
 %token <str> IDENT NUMBER FNCALL SPLIT STRING
