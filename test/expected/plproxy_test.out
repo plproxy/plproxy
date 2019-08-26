@@ -239,7 +239,7 @@ select * from test_types2('types', 4, (2, 'asd'), array[1,2,3]);
 select * from test_types2('types', NULL, NULL, NULL);
  v_posint | v_struct | arr 
 ----------+----------+-----
-          | (,)      | 
+          |          | 
 (1 row)
 
 -- test CONNECT
