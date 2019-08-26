@@ -417,22 +417,23 @@ fn_get_return_type(ProxyFunction *func,
 	MemoryContextSwitchTo(old_ctx);
 
 	switch (rtc)
-	{
-		case TYPEFUNC_COMPOSITE:
-			func->ret_composite = plproxy_composite_info(func, ret_tup);
-			natts = func->ret_composite->tupdesc->natts;
-			func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
-			break;
-		case TYPEFUNC_SCALAR:
-			func->ret_scalar = plproxy_find_type_info(func, ret_oid, 0);
-			func->result_map = NULL;
-			break;
-		case TYPEFUNC_RECORD:
-		case TYPEFUNC_OTHER:
-			/* fixme: void type here? */
-			plproxy_error(func, "unsupported type");
-			break;
-	}
+	  {
+	  case TYPEFUNC_COMPOSITE:
+	    func->ret_composite = plproxy_composite_info(func, ret_tup);
+	    natts = func->ret_composite->tupdesc->natts;
+	    func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
+	    break;
+	  case TYPEFUNC_SCALAR:
+	    func->ret_scalar = plproxy_find_type_info(func, ret_oid, 0);
+	    func->result_map = NULL;
+	    break;
+	  case TYPEFUNC_RECORD:
+	  case TYPEFUNC_OTHER:
+	  case TYPEFUNC_COMPOSITE_DOMAIN:
+	    /* fixme: void type here? */
+	    plproxy_error(func, "unsupported type");
+	    break;
+	  }
 }
 
 /*
