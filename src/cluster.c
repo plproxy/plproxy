@@ -730,7 +730,12 @@ determine_compat_mode(ProxyCluster *cluster)
 	tup = SearchSysCache(NAMESPACENAME, PointerGetDatum("plproxy"), 0, 0, 0);
 	if (HeapTupleIsValid(tup))
 	{
+#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
 		Oid 		namespaceId = HeapTupleGetOid(tup);
+#else
+    Oid     namespaceId = tup->t_tableOid;
+    elog(ERROR, "Pl/Proxy: cluster: %s oid: %d", cluster->name, namespaceId);
+#endif
 		Oid			paramOids[] = { TEXTOID };
 		oidvector	*parameterTypes = buildoidvector(paramOids, 1);
 		const char	**funcname;

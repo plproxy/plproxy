@@ -251,7 +251,12 @@ fn_new(HeapTuple proc_tuple)
 
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
-	f->oid = HeapTupleGetOid(proc_tuple);
+#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
+  f->oid = HeapTupleGetOid(proc_tuple);
+#else
+  f->oid = proc_tuple->t_tableOid;
+#endif
+
 	plproxy_set_stamp(&f->stamp, proc_tuple);
 
 	if (fn_returns_dynamic_record(proc_tuple))
@@ -522,7 +527,12 @@ plproxy_compile(FunctionCallInfo fcinfo,
 	/* sanity check */
 	if (f->run_type == R_ALL && (fcinfo
 								 ? !fcinfo->flinfo->fn_retset
-								 : !get_func_retset(HeapTupleGetOid(proc_tuple))))
+#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
+                 : !get_func_retset(HeapTupleGetOid(proc_tuple))))
+#else
+                 : !get_func_retset( proc_tuple->t_tableOid ) ) )
+#endif
+
 		plproxy_error(f, "RUN ON ALL requires set-returning function");
 
 	return f;

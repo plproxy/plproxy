@@ -53,7 +53,6 @@ static inline bool plproxy_check_stamp(RowStamp *stamp, HeapTuple tup)
  */
 
 #if PG_VERSION_NUM >= 90200
-
 typedef uint32 SCInvalArg;
 typedef struct SysCacheStamp {
 	uint32 cacheid;
@@ -62,7 +61,11 @@ typedef struct SysCacheStamp {
 
 static inline void scstamp_set(int cache, SysCacheStamp *stamp, HeapTuple tup)
 {
+#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
 	Oid oid = HeapTupleGetOid(tup);
+#else
+  Oid oid = tup->t_tableOid;
+#endif
 	stamp->cacheid = cache;
 	stamp->hashValue = GetSysCacheHashValue1(cache, oid);
 }
