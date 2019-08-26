@@ -588,7 +588,7 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 	 */
 	aclresult = pg_foreign_server_aclcheck(um->serverid, um->userid, ACL_USAGE);
 	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, cluster->name);
+		aclcheck_error(aclresult, OBJECT_FOREIGN_SERVER, cluster->name);
 
 	/* Extract the common connect string elements from user mapping */
 	got_user = false;
@@ -657,7 +657,7 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 	 */
 	aclresult = pg_foreign_server_aclcheck(foreign_server->serverid, info->user_oid, ACL_USAGE);
 	if (aclresult != ACLCHECK_OK)
-		aclcheck_error(aclresult, ACL_KIND_FOREIGN_SERVER, foreign_server->servername);
+		aclcheck_error(aclresult, OBJECT_FOREIGN_SERVER, foreign_server->servername);
 
 	/* drop old config values */
 	clear_config(&cluster->config);
