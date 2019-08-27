@@ -733,8 +733,8 @@ determine_compat_mode(ProxyCluster *cluster)
 #if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
 		Oid 		namespaceId = HeapTupleGetOid(tup);
 #else
-    Oid     namespaceId = tup->t_tableOid;
-    elog(ERROR, "Pl/Proxy: cluster: %s oid: %d", cluster->name, namespaceId);
+    Form_pg_namespace form = (Form_pg_namespace) GETSTRUCT(tup);
+    Oid       namespaceId  = form->oid;
 #endif
 		Oid			paramOids[] = { TEXTOID };
 		oidvector	*parameterTypes = buildoidvector(paramOids, 1);

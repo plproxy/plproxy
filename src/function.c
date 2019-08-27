@@ -524,14 +524,17 @@ plproxy_compile(FunctionCallInfo fcinfo,
 	if (f->dynamic_record && f->remote_sql)
 		plproxy_error(f, "SELECT statement not allowed for dynamic RECORD functions");
 
+#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
+  Oid procOid = HeapTupleGetOid(proc_tuple);
+#else
+  Form_pg_proc form = (Form_pg_proc) GETSTRUCT( proc_tuple );
+  Oid procOid       = form->oid;
+#endif
+
 	/* sanity check */
 	if (f->run_type == R_ALL && (fcinfo
 								 ? !fcinfo->flinfo->fn_retset
-#if PG_VERSION_NUM < 12000 // see PostgreSQL commit 578b229718e8f15fa779e20f086c4b6bb3776106
-                 : !get_func_retset(HeapTupleGetOid(proc_tuple))))
-#else
-                 : !get_func_retset( proc_tuple->t_tableOid ) ) )
-#endif
+                 : !get_func_retset( procOid ) ) )
 
 		plproxy_error(f, "RUN ON ALL requires set-returning function");
 
