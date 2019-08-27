@@ -93,9 +93,9 @@ alter user mapping for test_user_charlie
     options (add user 'test_user_alice');
 set session authorization test_user_bob;
 select * from sqlmed_test_charlie();
-               sqlmed_test_charlie               
--------------------------------------------------
- plproxy: user=test_user_alice dbname=test_part3
+                sqlmed_test_charlie                
+---------------------------------------------------
+ plproxy: user=test_user_charlie dbname=test_part3
 (1 row)
 
 reset session authorization;
@@ -151,6 +151,6 @@ drop server testcluster cascade;
 select * from sqlmed_compat_test();
     sqlmed_compat_test    
 --------------------------
- plproxy: part=test_part0
+ plproxy: part=regression
 (1 row)
 
