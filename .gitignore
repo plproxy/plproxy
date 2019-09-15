@@ -15,8 +15,5 @@ src/scanner.c
 src/scanner.h
 src/parser.tab.c
 src/parser.tab.h
-
-debian/files
-debian/postgresql-plproxy-[0-9].[0-9]
 *.log
 *.substvars

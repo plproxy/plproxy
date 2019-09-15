@@ -1,6 +1,6 @@
 EXTENSION  = plproxy
 
-# sync with NEWS, META.json, plproxy.control, debian/changelog
+# sync with NEWS, META.json, plproxy.control
 DISTVERSION = 2.8
 EXTVERSION = 2.8.0
 UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0
@@ -128,15 +128,4 @@ test: install
 
 ack:
 	cp results/*.out test/expected/
-
-deb:
-	rm -f debian/control
-	make -f debian/rules debian/control
-	debuild -uc -us -b
-
-debclean:
-	$(MAKE) -f debian/rules realclean
-
-orig:
-	make -f debian/rules orig
 
