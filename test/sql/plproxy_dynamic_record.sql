@@ -28,7 +28,9 @@ insert into dynamic_query_test values ( 2, 'user2', 'foo');
 \c regression
 select * from dynamic_query('select * from dynamic_query_test') as (id integer, username text, other text);
 select * from dynamic_query('select id, username from dynamic_query_test') as foo(id integer, username text);
-
+-- invalid usage
+select * from dynamic_query('select count(1) from pg_class');
+select dynamic_query('select count(1) from pg_class');
 
 -- test errors
 create or replace function dynamic_query_select()

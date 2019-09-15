@@ -452,20 +452,16 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	MemoryContext old_ctx;
 	Oid tuple_oid;
 	int natts;
+	TypeFuncClass rtc;
 
 	/*
 	 * Compare cached tuple to current one.
 	 */
 	tuple_cached = func->ret_composite->tupdesc;
-#ifdef USE_ASSERT_CHECKING
-	{
-		TypeFuncClass rtc;
-		rtc = get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
-		Assert(rtc == TYPEFUNC_COMPOSITE);
+	rtc = get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
+	if (rtc != TYPEFUNC_COMPOSITE) {
+		elog(ERROR, "Function used in wrong context");
 	}
-#else
-	get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
-#endif
 	if (equalTupleDescs(tuple_current, tuple_cached))
 		return;
 

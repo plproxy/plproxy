@@ -38,6 +38,13 @@ select * from dynamic_query('select id, username from dynamic_query_test') as fo
   2 | user2
 (2 rows)
 
+-- invalid usage
+select * from dynamic_query('select count(1) from pg_class');
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from dynamic_query('select count(1) from pg_class')...
+                      ^
+select dynamic_query('select count(1) from pg_class');
+ERROR:  Function used in wrong context
 -- test errors
 create or replace function dynamic_query_select()
 returns setof record as $x$

@@ -3,6 +3,11 @@
 
 **2019-09-15  -  PL/Proxy 2.9  -  "Don't Look Into The Eye"**
 
+- Fixes:
+
+  * Dynamic record-type functions can crash backend if called in
+    scalar context.
+
 - Changes:
 
   * Support for PG11 and PG12.
