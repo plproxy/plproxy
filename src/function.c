@@ -201,10 +201,13 @@ fn_cache_insert(ProxyFunction *func)
 static void
 fn_cache_delete(ProxyFunction *func)
 {
+#ifdef USE_ASSERT_CHECKING
 	HashEntry  *hentry;
-
 	hentry = hash_search(fn_cache, &func->oid, HASH_REMOVE, NULL);
 	Assert(hentry != NULL);
+#else
+	hash_search(fn_cache, &func->oid, HASH_REMOVE, NULL);
+#endif
 }
 
 /* check if function returns untyped RECORD which needs the AS clause */
@@ -445,7 +448,6 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 				  HeapTuple proc_tuple) 
 {
 
-	TypeFuncClass rtc;
 	TupleDesc tuple_current, tuple_cached;
 	MemoryContext old_ctx;
 	Oid tuple_oid;
@@ -455,8 +457,15 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	 * Compare cached tuple to current one.
 	 */
 	tuple_cached = func->ret_composite->tupdesc;
-	rtc = get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
-	Assert(rtc == TYPEFUNC_COMPOSITE);
+#ifdef USE_ASSERT_CHECKING
+	{
+		TypeFuncClass rtc;
+		rtc = get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
+		Assert(rtc == TYPEFUNC_COMPOSITE);
+	}
+#else
+	get_call_result_type(fcinfo, &tuple_oid, &tuple_current);
+#endif
 	if (equalTupleDescs(tuple_current, tuple_cached))
 		return;
 
