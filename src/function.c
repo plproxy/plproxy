@@ -214,8 +214,16 @@ fn_returns_dynamic_record(HeapTuple proc_tuple)
 	Form_pg_proc proc_struct;
 	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
 	if (proc_struct->prorettype == RECORDOID
-		&& (heap_attisnull(proc_tuple, Anum_pg_proc_proargmodes)
-		    || heap_attisnull(proc_tuple, Anum_pg_proc_proargnames)))
+		&& (heap_attisnull(proc_tuple, Anum_pg_proc_proargmodes
+#if PG_VERSION_NUM >= 110000
+				, NULL
+#endif
+				)
+		    || heap_attisnull(proc_tuple, Anum_pg_proc_proargnames
+#if PG_VERSION_NUM >= 110000
+					, NULL
+#endif
+					)))
 		return true;
 	return false;
 }
