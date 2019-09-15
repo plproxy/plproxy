@@ -164,9 +164,7 @@ plproxy_cluster_cache_init(void)
 
 	cluster_mem = AllocSetContextCreate(TopMemoryContext,
 										"PL/Proxy cluster context",
-										ALLOCSET_SMALL_MINSIZE,
-										ALLOCSET_SMALL_INITSIZE,
-										ALLOCSET_SMALL_MAXSIZE);
+										ALLOCSET_SMALL_SIZES);
 	aatree_init(&cluster_tree, cluster_name_cmp, NULL);
 	aatree_init(&fake_cluster_tree, cluster_name_cmp, NULL);
 }
