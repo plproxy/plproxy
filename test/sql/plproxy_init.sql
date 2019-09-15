@@ -41,9 +41,6 @@ create or replace function
 plproxy.get_cluster_config(cluster_name text, out key text, out val text)
 returns setof record as $$
 begin
-    key = 'keepalive_idle';     val = '240'; return next;
-    key = 'keepalive_interval'; val = '15'; return next;
-    key = 'keepalive_count';    val = '4'; return next;
     return;
 end; $$ language plpgsql;
 

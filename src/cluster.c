@@ -293,6 +293,7 @@ clear_config(ProxyConfig *cf)
 static void
 set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char *val)
 {
+	static int did_warn = 0;
 	if (pg_strcasecmp(key, "statement_timeout") == 0)
 		/* ignore */ ;
 	else if (pg_strcasecmp("connection_lifetime", key) == 0)
@@ -301,12 +302,15 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->query_timeout = atoi(val);
 	else if (pg_strcasecmp("disable_binary", key) == 0)
 		cf->disable_binary = atoi(val);
-	else if (pg_strcasecmp("keepalive_idle", key) == 0)
-		cf->keepidle = atoi(val);
-	else if (pg_strcasecmp("keepalive_interval", key) == 0)
-		cf->keepintvl = atoi(val);
-	else if (pg_strcasecmp("keepalive_count", key) == 0)
-		cf->keepcnt = atoi(val);
+	else if (pg_strcasecmp("keepalive_idle", key) == 0
+		|| pg_strcasecmp("keepalive_interval", key) == 0
+		|| pg_strcasecmp("keepalive_count", key) == 0)
+	{
+		if (atoi(val) > 0 && !did_warn) {
+			did_warn = 1;
+			elog(WARNING, "Use libpq keepalive options, PL/Proxy keepalive options not supported");
+		}
+	}
 	else if (pg_strcasecmp("default_user", key) == 0)
 		snprintf(cf->default_user, sizeof(cf->default_user), "%s", val);
 	else
