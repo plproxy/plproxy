@@ -66,6 +66,7 @@ static const char *cluster_config_options[] = {
 	"connection_lifetime",
 	"query_timeout",
 	"disable_binary",
+	/* deprecated */
 	"keepalive_idle",
 	"keepalive_interval",
 	"keepalive_count",
