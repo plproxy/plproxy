@@ -31,18 +31,12 @@
 #include <fmgr.h>
 #include <executor/spi.h>
 
-#if PG_VERSION_NUM >= 80400
-#define PLPROXY_USE_SQLMED
 #include <foreign/foreign.h>
 #include <catalog/pg_foreign_data_wrapper.h>
 #include <catalog/pg_foreign_server.h>
 #include <catalog/pg_user_mapping.h>
-#endif
 
-#if PG_VERSION_NUM >= 90300
 #include <access/htup_details.h>
-#endif
-
 #include <access/reloptions.h>
 #include <access/tupdesc.h>
 #include <catalog/pg_namespace.h>
@@ -65,9 +59,8 @@
 #include "aatree.h"
 #include "rowstamp.h"
 
-
-#ifndef PG_MODULE_MAGIC
-#error PL/Proxy requires 8.2+
+#if PG_VERSION_NUM < 90300
+#error PL/Proxy requires 9.3+
 #endif
 
 /* give offset of a field inside struct */

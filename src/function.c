@@ -427,7 +427,9 @@ fn_get_return_type(ProxyFunction *func,
 			break;
 		case TYPEFUNC_RECORD:
 		case TYPEFUNC_OTHER:
+#if PG_VERSION_NUM >= 110000
 		case TYPEFUNC_COMPOSITE_DOMAIN:
+#endif
 			/* fixme: void type here? */
 			plproxy_error(func, "unsupported type");
 			break;
