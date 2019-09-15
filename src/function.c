@@ -249,7 +249,7 @@ fn_new(HeapTuple proc_tuple)
 
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
-	f->oid = HeapTupleGetOid(proc_tuple);
+	f->oid = XProcTupleGetOid(proc_tuple);
 	plproxy_set_stamp(&f->stamp, proc_tuple);
 
 	if (fn_returns_dynamic_record(proc_tuple))
@@ -522,7 +522,7 @@ plproxy_compile(FunctionCallInfo fcinfo,
 	/* sanity check */
 	if (f->run_type == R_ALL && (fcinfo
 								 ? !fcinfo->flinfo->fn_retset
-								 : !get_func_retset(HeapTupleGetOid(proc_tuple))))
+								 : !get_func_retset(XProcTupleGetOid(proc_tuple))))
 		plproxy_error(f, "RUN ON ALL requires set-returning function");
 
 	return f;

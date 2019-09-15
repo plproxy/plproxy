@@ -1,3 +1,24 @@
+
+static inline Oid XProcTupleGetOid(HeapTuple proc_tup) {
+#if PG_VERSION_NUM >= 120000
+	Form_pg_proc proc_struct;
+	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tup);
+	return proc_struct->oid;
+#else
+	return HeapTupleGetOid(proc_tup);
+#endif
+}
+
+static inline Oid XNamespaceTupleGetOid(HeapTuple ns_tup) {
+#if PG_VERSION_NUM >= 120000
+	Form_pg_namespace ns_struct;
+	ns_struct = (Form_pg_namespace) GETSTRUCT(ns_tup);
+	return ns_struct->oid;
+#else
+	return HeapTupleGetOid(ns_tup);
+#endif
+}
+
 /*
  * Row version check
  */
@@ -28,9 +49,8 @@ typedef struct SysCacheStamp {
 	uint32 hashValue;
 } SysCacheStamp;
 
-static inline void scstamp_set(int cache, SysCacheStamp *stamp, HeapTuple tup)
+static inline void scstamp_set(int cache, SysCacheStamp *stamp, Oid oid)
 {
-	Oid oid = HeapTupleGetOid(tup);
 	stamp->cacheid = cache;
 	stamp->hashValue = GetSysCacheHashValue1(cache, oid);
 }

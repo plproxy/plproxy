@@ -552,16 +552,17 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 	ListCell		   *cell;
 	AclResult			aclresult;
 	bool				got_user;
+	Oid				umid;
 
 
 	um = GetUserMapping(userinfo->user_oid, cluster->sqlmed_server_oid);
 
 	/* retry same lookup so we can set cache stamp... */
-    tup = SearchSysCache(USERMAPPINGUSERSERVER,
+	tup = SearchSysCache(USERMAPPINGUSERSERVER,
 						 ObjectIdGetDatum(um->userid),
 						 ObjectIdGetDatum(um->serverid),
 						 0, 0);
-    if (!HeapTupleIsValid(tup))
+	if (!HeapTupleIsValid(tup))
 	{
 		/* Specific mapping not found, try PUBLIC */
 		tup = SearchSysCache(USERMAPPINGUSERSERVER,
@@ -572,7 +573,13 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 			elog(ERROR, "cache lookup failed for user mapping (%u,%u)",
 				um->userid, um->serverid);
 	}
-	scstamp_set(USERMAPPINGOID, &userinfo->umStamp, tup);
+
+#if PG_VERSION_NUM >= 90600
+	umid = um->umid;
+#else
+	umid = HeapTupleGetOid(tup);
+#endif
+	scstamp_set(USERMAPPINGOID, &userinfo->umStamp, umid);
 	ReleaseSysCache(tup);
 
 	/*
@@ -634,14 +641,14 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 	/*
 	 * Look up the server and user mapping TIDs for handling syscache invalidations.
 	 */
-    tup = SearchSysCache(FOREIGNSERVEROID,
+	tup = SearchSysCache(FOREIGNSERVEROID,
 						 ObjectIdGetDatum(foreign_server->serverid),
 						 0, 0, 0);
 
-    if (!HeapTupleIsValid(tup))
-        elog(ERROR, "cache lookup failed for foreign server %u", foreign_server->serverid);
+	if (!HeapTupleIsValid(tup))
+		elog(ERROR, "cache lookup failed for foreign server %u", foreign_server->serverid);
 
-	scstamp_set(FOREIGNSERVEROID, &cluster->clusterStamp, tup);
+	scstamp_set(FOREIGNSERVEROID, &cluster->clusterStamp, foreign_server->serverid);
 	ReleaseSysCache(tup);
 
 	/*
@@ -722,7 +729,7 @@ determine_compat_mode(ProxyCluster *cluster)
 	tup = SearchSysCache(NAMESPACENAME, PointerGetDatum("plproxy"), 0, 0, 0);
 	if (HeapTupleIsValid(tup))
 	{
-		Oid 		namespaceId = HeapTupleGetOid(tup);
+		Oid 		namespaceId = XNamespaceTupleGetOid(tup);
 		Oid			paramOids[] = { TEXTOID };
 		oidvector	*parameterTypes = buildoidvector(paramOids, 1);
 		const char	**funcname;
