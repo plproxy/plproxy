@@ -1,9 +1,9 @@
 EXTENSION  = plproxy
 
-# sync with NEWS, META.json, plproxy.control, debian/changelog
-DISTVERSION = 2.8
-EXTVERSION = 2.8.0
-UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0
+# sync with NEWS, META.json, plproxy.control
+DISTVERSION = 2.9
+EXTVERSION = 2.9.0
+UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0 2.8.0
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -50,34 +50,17 @@ EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql \
 	$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql) \
 	sql/plproxy--unpackaged--$(EXTVERSION).sql
 
-# PostgreSQL version
-PGVER = $(shell $(PG_CONFIG) --version | sed 's/PostgreSQL //')
-PGMAJOR = $(shell echo $(PGVER) | cut -d'.' -f1 | sed -r "s/([0-9]+)([^0-9].*)?/\1/")
-PGMINOR = $(shell echo $(PGVER) | cut -d'.' -f2 | sed -r "s/([0-9]+)([^0-9].*)?/\1/")
-
-SQLMED = $(shell test $(PGMAJOR) -lt 8 -o \( $(PGMAJOR) -eq 8 -a $(PGMINOR) -lt 4 \) && echo "false" || echo "true")
-PG91 = $(shell test $(PGMAJOR) -lt 9 -o \( $(PGMAJOR) -eq 9 -a $(PGMINOR) -lt 1 \) && echo "false" || echo "true")
-PG92 = $(shell test $(PGMAJOR) -lt 9 -o \( $(PGMAJOR) -eq 9 -a $(PGMINOR) -lt 2 \) && echo "false" || echo "true")
-
-# SQL/MED available, add foreign data wrapper and regression tests
-ifeq ($(SQLMED), true)
+# pg84: SQL/MED available, add foreign data wrapper and regression tests
 REGRESS += plproxy_sqlmed plproxy_table
 PLPROXY_SQL += sql/plproxy_fdw.sql
-endif
 
-# SQL for extensions or plain?
-ifeq ($(PG91),true)
+# pg91: SQL for extensions
 DATA_built = $(EXTSQL)
 DATA = $(EXTMISC)
 EXTRA_CLEAN += sql/plproxy.sql
-else
-DATA_built = sql/plproxy.sql
-EXTRA_CLEAN += $(EXTSQL)
-endif
 
-ifeq ($(PG92), true)
+# pg92: range type
 REGRESS += plproxy_range
-endif
 
 #
 # load PGXS makefile
@@ -145,15 +128,4 @@ test: install
 
 ack:
 	cp results/*.out test/expected/
-
-deb:
-	rm -f debian/control
-	make -f debian/rules debian/control
-	debuild -uc -us -b
-
-debclean:
-	$(MAKE) -f debian/rules realclean
-
-orig:
-	make -f debian/rules orig
 

@@ -1,4 +1,4 @@
--- dynamic query support testing 
+-- dynamic query support testing
 create or replace function dynamic_query(q text)
 returns setof record as $x$
     cluster 'map0';
@@ -7,18 +7,18 @@ $x$ language plproxy;
 \c test_part0
 create or replace function dynamic_query(q text)
 returns setof record as $x$
-declare                            
-    ret record;                      
-begin                              
-    for ret in execute q loop   
-        return next ret;               
-    end loop;                        
-    return;                          
-end;    
+declare
+    ret record;
+begin
+    for ret in execute q loop
+        return next ret;
+    end loop;
+    return;
+end;
 $x$ language plpgsql;
 create table dynamic_query_test (
     id integer,
-    username text, 
+    username text,
 		other	text
 );
 insert into dynamic_query_test values ( 1, 'user1', 'blah');
@@ -38,6 +38,13 @@ select * from dynamic_query('select id, username from dynamic_query_test') as fo
   2 | user2
 (2 rows)
 
+-- invalid usage
+select * from dynamic_query('select count(1) from pg_class');
+ERROR:  a column definition list is required for functions returning "record"
+LINE 1: select * from dynamic_query('select count(1) from pg_class')...
+                      ^
+select dynamic_query('select count(1) from pg_class');
+ERROR:  Function used in wrong context
 -- test errors
 create or replace function dynamic_query_select()
 returns setof record as $x$

@@ -2,7 +2,7 @@
 \set VERBOSITY terse
 set client_min_messages = 'warning';
 
-create server sqlmedcluster foreign data wrapper plproxy 
+create server sqlmedcluster foreign data wrapper plproxy
     options (   partition_0 'dbname=test_part3 host=localhost',
                 partition_1 'dbname=test_part2 host=localhost',
                 partition_2 'dbname=test_part1 host=localhost',
@@ -26,7 +26,7 @@ set session authorization test_user_bob;
 select * from sqlmed_test1();
 reset session authorization;
 
--- add a public user mapping 
+-- add a public user mapping
 create user mapping for public server sqlmedcluster
     options (   user        'test_user_bob',
                 password    'secret1');
@@ -91,7 +91,7 @@ alter server sqlmedcluster options (drop partition_2);
 select * from sqlmed_test1();
 
 -- invalid partition count
-alter server sqlmedcluster options 
+alter server sqlmedcluster options
     (drop partition_3,
      add  partition_2 'dbname=test_part1 host=localhost');
 select * from sqlmed_test1();
@@ -109,7 +109,7 @@ select * from sqlmed_compat_test();
 
 -- override the test cluster with a SQL/MED definition
 drop server if exists testcluster cascade;
-create server testcluster foreign data wrapper plproxy 
+create server testcluster foreign data wrapper plproxy
     options (partition_0 'dbname=regression host=localhost');
 create user mapping for public server testcluster;
 

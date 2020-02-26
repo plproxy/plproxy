@@ -1,3 +1,0 @@
-usr/lib/postgresql/9.5/lib/plproxy.so
-usr/share/postgresql/9.5/extension/*.sql
-usr/share/postgresql/9.5/extension/plproxy.control

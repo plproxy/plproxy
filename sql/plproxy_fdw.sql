@@ -1,5 +1,5 @@
 -- validator function
-CREATE FUNCTION plproxy_fdw_validator (text[], oid)
+CREATE OR REPLACE FUNCTION plproxy_fdw_validator (text[], oid)
 RETURNS boolean AS 'plproxy' LANGUAGE C;
 
 -- foreign data wrapper

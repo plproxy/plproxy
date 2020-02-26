@@ -1,6 +1,22 @@
 
 # PL/Proxy Changelog
 
+**2019-09-15  -  PL/Proxy 2.9  -  "Don't Look Into The Eye"**
+
+- Fixes:
+
+  * Dynamic record-type functions can crash backend if called in
+    scalar context.
+
+- Changes:
+
+  * Support for PG11 and PG12.
+  * Drop support for PG9.2 and earlier.
+  * Drop local Debian packaging, it seems unused.
+  * Drop support for keepalive cluster options.  These are
+    replaced by keepalive support in libpq.  Removing OS-specific
+    code makes PL/Proxy also more portable.
+
 **2017-10-08  -  PL/Proxy 2.8  -  "Entropy Always Wins"**
 
 - Fixes:

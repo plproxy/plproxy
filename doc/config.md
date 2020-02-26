@@ -133,20 +133,6 @@ or NULL then the parameter is disabled (a default value will be used).
   Disable mapping of hash values to partition numbers. Partition numbers can
   still be used directly. Allows for non power-of-2 partition counts. 
 
-* `keepalive_idle`
-
-  TCP keepalive - how long the connection needs to be idle,
-  before keepalive packets can be sent.  In seconds.
-
-* `keepalive_interval`
-
-  TCP keepalive - interval between keepalive packets.  In seconds.
-
-* `keepalive_count`
-
-  TCP keepalive - how many packets to send.  If none get answer,
-  connection will be close.
-
 * `connect_timeout`
 
   Initial connect is canceled, if it takes more that this.

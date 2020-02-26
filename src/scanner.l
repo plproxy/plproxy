@@ -23,14 +23,7 @@
 #include "parser.tab.h"
 
 /* import standard_conforming_strings */
-#if PG_VERSION_NUM >= 80500
 #include <parser/parser.h>
-#else
-#ifndef PGDLLIMPORT
-#define PGDLLIMPORT DLLIMPORT
-#endif
-extern PGDLLIMPORT bool standard_conforming_strings;
-#endif
 
 /*
  * Calculare numeric flex version.
