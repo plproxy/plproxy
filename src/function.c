@@ -479,7 +479,6 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	TupleDesc tuple_current, tuple_cached;
 	MemoryContext old_ctx;
 	Oid tuple_oid;
-	int natts;
 	TypeFuncClass rtc;
 
 	/*
