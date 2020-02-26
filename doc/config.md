@@ -131,7 +131,7 @@ or NULL then the parameter is disabled (a default value will be used).
 * `disable_hashing`
 
   Disable mapping of hash values to partition numbers. Partition numbers can
-  still be used directly. Allows for non power-of-2 partition counts. 
+  still be used directly. Allows for non power-of-2 partition counts.
 
 * `connect_timeout`
 

@@ -331,7 +331,7 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 }
 
 /*
- * Connection has a result avalable, store it in the result tuplestore.
+ * Connection has a result available, store it in the result tuplestore.
  *
  * Returns true if there may be more results coming,
  * false if all done.

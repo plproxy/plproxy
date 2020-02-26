@@ -154,7 +154,7 @@ will run following query on remote side:
     EXECUTE argname ;
 
 Executes the specified argument as a query on remote side. The argument
-datatype must be text. Cannot be combined with `TARGET` or `SELECT`. 
+datatype must be text. Cannot be combined with `TARGET` or `SELECT`.
 
 For more flexibility can be combined with `SPLIT` and `RUN ON`. For example
 with the following function each node can run different queries:
