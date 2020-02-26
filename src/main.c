@@ -197,7 +197,11 @@ plproxy_setup_tuplestore(ProxyFunction *func, FunctionCallInfo fcinfo)
 			break;
 		default:
 			Assert(!tupdesc);
-			tupdesc = CreateTemplateTupleDesc(1, false);
+			tupdesc = CreateTemplateTupleDesc(1
+#if PG_VERSION_NUM < 120000
+					, false
+#endif
+			);
 			TupleDescInitEntry(tupdesc, (AttrNumber) 1, "result",
 							   result_type, -1, 0);
 	}
