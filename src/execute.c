@@ -286,10 +286,11 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 	{
 		case C_DONE:
 			conn->cur->state = C_READY;
+			/* fallthrough */
 		case C_READY:
 			if (check_old_conn(func, conn, &now))
 				return;
-
+			/* fallthrough */
 		case C_CONNECT_READ:
 		case C_CONNECT_WRITE:
 		case C_QUERY_READ:
