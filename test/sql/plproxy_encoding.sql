@@ -24,7 +24,6 @@ create database test_enc_part with encoding 'utf-8' template template0;
 \c test_enc_proxy
 set client_encoding = 'utf-8';
 set client_min_messages = 'warning';
-create or replace language plpgsql;
 \set ECHO none
 \i sql/plproxy.sql
 \set ECHO all
@@ -52,7 +51,6 @@ $$ language plproxy;
 -- initialize part db
 \c test_enc_part
 set client_min_messages = 'warning';
-create or replace language plpgsql;
 set client_encoding = 'utf8';
 create table intl_data (id int4, "コラム" text);
 insert into intl_data values (1, 'リモートデータ');
@@ -93,7 +91,6 @@ create database test_enc_part with encoding 'euc_jp' template template0;
 -- initialize proxy db
 \c test_enc_proxy
 set client_min_messages = 'warning';
-create or replace language plpgsql;
 \set ECHO none
 \i sql/plproxy.sql
 \set ECHO all
@@ -123,7 +120,6 @@ $$ language plproxy;
 -- initialize part db
 \c test_enc_part
 set client_min_messages = 'warning';
-create or replace language plpgsql;
 set client_encoding = 'utf8';
 create table intl_data (id int4, "コラム" text);
 insert into intl_data values (1, 'リモートデータ');
