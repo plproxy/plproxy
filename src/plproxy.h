@@ -36,6 +36,7 @@
 #include <catalog/pg_foreign_server.h>
 #include <catalog/pg_user_mapping.h>
 
+#include <access/hash.h>
 #include <access/htup_details.h>
 #include <access/reloptions.h>
 #include <access/tupdesc.h>
