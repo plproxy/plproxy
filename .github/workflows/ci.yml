@@ -12,7 +12,7 @@ on:
 jobs:
 
   linux:
-    name: "Linux / PostgreSQL ${{matrix.PGVER}}"
+    name: "Linux + PostgreSQL ${{matrix.PGVER}}"
     runs-on: ubuntu-18.04
     strategy:
       matrix:
