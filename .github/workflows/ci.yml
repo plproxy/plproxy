@@ -32,14 +32,23 @@ jobs:
           | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo -nH apt-get -q update
           echo "::endgroup::"
+
           echo "::group::apt-get-install"
+
+          # disable new cluster creation
+          sudo -nH mkdir -p /etc/postgresql-common/createcluster.d
+          echo "create_main_cluster = false" | sudo -nH tee /etc/postgresql-common/createcluster.d/no-main.conf
+
           sudo -nH apt-get -qyu install \
             postgresql-${{matrix.PGVER}} \
             postgresql-server-dev-${{matrix.PGVER}} \
             libpq-dev patchutils
           echo "::endgroup::"
+
+          # tune environment
           echo "::add-path::/usr/lib/postgresql/${{matrix.PGVER}}/bin"
           echo "::set-env name=PGHOST::/tmp"
+
           dpkg -l postgres\* libpq\*
 
       - name: "Build"
