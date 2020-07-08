@@ -49,7 +49,7 @@ jobs:
           echo "::add-path::/usr/lib/postgresql/${{matrix.PGVER}}/bin"
           echo "::set-env name=PGHOST::/tmp"
 
-          dpkg -l postgres\* libpq\*
+          dpkg -l postgres\* libpq\* bison\* flex\* gcc\* clang\* libllvm\*
 
       - name: "Build"
         run: make
