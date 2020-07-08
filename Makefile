@@ -126,6 +126,9 @@ zip:
 test: install
 	$(MAKE) installcheck || { filterdiff --format=unified regression.diffs | less; exit 1; }
 
+citest:
+	$(MAKE) installcheck || { filterdiff --format=unified regression.diffs; exit 1; }
+
 ack:
 	cp results/*.out test/expected/
 
