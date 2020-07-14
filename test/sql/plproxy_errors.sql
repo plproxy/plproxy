@@ -10,8 +10,8 @@ select * from test_err1('dat');
 
 create function test_err2(dat text)
 returns text as $$
-    cluster 'testcluster';
-    run on hashtext($2);
+    cLuStEr 'testcluster';
+    rUn oN hAshtext($2);
 $$ language plproxy;
 select * from test_err2('dat');
 

@@ -9,8 +9,8 @@ select * from test_err1('dat');
 ERROR:  column "username" does not exist at character 24
 create function test_err2(dat text)
 returns text as $$
-    cluster 'testcluster';
-    run on hashtext($2);
+    cLuStEr 'testcluster';
+    rUn oN hAshtext($2);
 $$ language plproxy;
 ERROR:  PL/Proxy function public.test_err2(1): Compile error at line 3: invalid argument reference: $2
 select * from test_err2('dat');

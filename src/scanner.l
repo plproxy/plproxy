@@ -121,7 +121,7 @@ static const char *unquote(const char *qstr, bool std);
 
 %}
 
-%option 8bit case-insensitive
+%option 8bit case-sensitive
 %option warn nodefault yylineno
 %option nounput noyywrap never-interactive
 %option prefix="plproxy_yy"
@@ -139,7 +139,7 @@ static const char *unquote(const char *qstr, bool std);
 SPACE		[ \t\n\r]
 
 /* sql ident.  include dotted parts also */
-WORD		[_a-z\200-\377][a-z0-9_\200-\377]*
+WORD		[_a-zA-Z\200-\377][a-zA-Z0-9_\200-\377]*
 IDENT		{WORD}({SPACE}*[.]{SPACE}*{WORD})*
 
 /* argument ref by val: $1 */
@@ -160,28 +160,38 @@ SQLNUM		[0-9][.0-9]*
 SQLSYM		[-!#%&()*+,/:<=>?@\[\]^{|}~.]
 
 /* Dollar quote ID */
-DOLQ_START      [a-z\200-\377_]
-DOLQ_CONT       [a-z\200-\377_0-9]
+DOLQ_START      [a-zA-Z\200-\377_]
+DOLQ_CONT       [a-zA-Z\200-\377_0-9]
 DOLQ		({DOLQ_START}{DOLQ_CONT}*)
+
+CLUSTER		[Cc][Ll][Uu][Ss][Tt][Ee][Rr]
+CONNECT		[Cc][Oo][Nn][Nn][Ee][Cc][Tt]
+RUN			[Rr][Uu][Nn]
+ON			[Oo][Nn]
+ALL			[Aa][Ll][Ll]
+ANY			[Aa][Nn][Yy]
+SPLIT		[Ss][Pp][Ll][Ii][Tt]
+TARGET		[Tt][Aa][Rr][Gg][Ee][Tt]
+SELECT		[Ss][Ee][Ll][Ee][Cc][Tt]
 
 %%
 
 	/* PL/Proxy language keywords */
 
-cluster			{ return CLUSTER; }
-connect			{ return CONNECT; }
-run			{ return RUN; }
-on			{ return ON; }
-all			{ return ALL; }
-any			{ return ANY; }
-split		{ return SPLIT; }
-target		{ return TARGET; }
-select			{ BEGIN(sql); yylval.str = yytext; return SELECT; }
+{CLUSTER}	{ return CLUSTER; }
+{CONNECT}	{ return CONNECT; }
+{RUN}		{ return RUN; }
+{ON}		{ return ON; }
+{ALL}		{ return ALL; }
+{ANY}		{ return ANY; }
+{SPLIT}		{ return SPLIT; }
+{TARGET}	{ return TARGET; }
+{SELECT}	{ BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* function call */
 
 	/* hack to avoid parsing "SELECT (" as function call */
-select{SPACE}*[(]	{ yyless(6); BEGIN(sql); yylval.str = yytext; return SELECT; }
+{SELECT}{SPACE}*[(]	{ yyless(6); BEGIN(sql); yylval.str = yytext; return SELECT; }
 {IDENT}{SPACE}*[(]	{ BEGIN(sql); yylval.str = yytext; return FNCALL; }
 
 	/* PL/Proxy language comments/whitespace */
@@ -239,7 +249,7 @@ select{SPACE}*[(]	{ yyless(6); BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* quoted string start */
 
-<sql>E[']		{ BEGIN(extq); RETPART; }
+<sql>[Ee][']		{ BEGIN(extq); RETPART; }
 <sql>[']		{ if (standard_conforming_strings)
 			    BEGIN(stdq); else BEGIN(extq);
 			  RETPART; }
