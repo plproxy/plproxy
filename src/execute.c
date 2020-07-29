@@ -31,6 +31,9 @@
 
 #include "poll_compat.h"
 
+/* Forward declarations */
+static void prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo);
+
 /* some error happened */
 static void
 conn_error(ProxyFunction *func, ProxyConnection *conn, const char *desc)
@@ -151,7 +154,7 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 {
 	int			res;
 	struct timeval now;
-	ProxyQuery *q = func->remote_sql;
+	ProxyQuery *q = conn->remote_sql;
 	ProxyConfig *cf = &func->cur_cluster->config;
 	int			binary_result = 0;
 
@@ -188,6 +191,14 @@ send_query(ProxyFunction *func, ProxyConnection *conn,
 							binary_result);		/* resultformat, 0-text, 1-bin */
 	if (!res)
 		conn_error(func, conn, "PQsendQueryParams");
+
+	if (func->retset)
+	{
+		res = PQsetSingleRowMode(conn->cur->db);
+
+		if (!res)
+			conn_error(func, conn, "PQsetSingleRowMode");
+	}
 
 	/* flush it down */
 	flush_connection(func, conn);
@@ -321,15 +332,17 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 }
 
 /*
- * Connection has a resultset avalable, fetch it.
+ * Connection has a result available, store it in the result tuplestore.
  *
  * Returns true if there may be more results coming,
  * false if all done.
  */
 static bool
-another_result(ProxyFunction *func, ProxyConnection *conn)
+another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
-	PGresult   *res;
+	PGresult	  *res;
+	ReturnSetInfo *rsinfo;
+	HeapTuple	   tuple;
 
 	/* got one */
 	res = PQgetResult(conn->cur->db);
@@ -350,9 +363,27 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 		return true;
 	}
 
+	rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
+
 	switch (PQresultStatus(res))
 	{
+		case PGRES_SINGLE_TUPLE:
+			Assert(rsinfo->setDesc);
+
+			tuple = plproxy_tuple_from_result(res, rsinfo->setDesc, func, conn);
+
+			tuplestore_puttuple(rsinfo->setResult, tuple);
+
+			PQclear(res);
+			break;
 		case PGRES_TUPLES_OK:
+			/* in single row mode, this is empty */
+			if (func->retset)
+			{
+				PQclear(res);
+				break;
+			}
+
 			if (conn->res)
 			{
 				PQclear(res);
@@ -360,21 +391,13 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
 			}
 			conn->res = res;
 			break;
-		case PGRES_COMMAND_OK:
+		case PGRES_COMMAND_OK:		/* no result */
 			PQclear(res);
 			break;
 		case PGRES_FATAL_ERROR:
-			if (conn->res)
-				PQclear(conn->res);
-			conn->res = res;
-
 			plproxy_remote_error(func, conn, res, true);
 			break;
 		default:
-			if (conn->res)
-				PQclear(conn->res);
-			conn->res = res;
-
 			plproxy_error(func, "Unexpected result type: %s", PQresStatus(PQresultStatus(res)));
 			break;
 	}
@@ -387,7 +410,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn)
  * It should call postgres handlers and then change state if needed.
  */
 static void
-handle_conn(ProxyFunction *func, ProxyConnection *conn)
+handle_conn(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
 	int			res;
 	PostgresPollingStatusType poll_res;
@@ -429,7 +452,7 @@ handle_conn(ProxyFunction *func, ProxyConnection *conn)
 					break;
 
 				/* got one */
-				if (!another_result(func, conn))
+				if (!another_result(func, conn, fcinfo))
 					break;
 			}
 		case C_NONE:
@@ -446,7 +469,7 @@ handle_conn(ProxyFunction *func, ProxyConnection *conn)
  * on small number of sockets.
  */
 static int
-poll_conns(ProxyFunction *func, ProxyCluster *cluster)
+poll_conns(ProxyFunction *func, ProxyCluster *cluster, FunctionCallInfo fcinfo)
 {
 	static struct pollfd *pfd_cache = NULL;
 	static int pfd_allocated = 0;
@@ -545,7 +568,7 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster)
 			elog(WARNING, "fd order from poll() is messed up?");
 
 		if (pf->revents)
-			handle_conn(func, conn);
+			handle_conn(func, conn, fcinfo);
 
 		pf++;
 	}
@@ -584,14 +607,14 @@ check_timeouts(ProxyFunction *func, ProxyCluster *cluster, ProxyConnection *conn
 
 /* Run the query on all tagged connections in parallel */
 static void
-remote_execute(ProxyFunction *func)
+remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
-	ExecStatusType err;
 	ProxyConnection *conn;
 	ProxyCluster *cluster = func->cur_cluster;
 	int			i,
 				pending = 0;
 	struct timeval now;
+	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 
 	/* either launch connection or send query */
 	for (i = 0; i < cluster->active_count; i++)
@@ -616,7 +639,7 @@ remote_execute(ProxyFunction *func)
 		CHECK_FOR_INTERRUPTS();
 
 		/* wait for events */
-		if (poll_conns(func, cluster) == 0)
+		if (poll_conns(func, cluster, fcinfo) == 0)
 			continue;
 
 		/* recheck */
@@ -644,7 +667,7 @@ remote_execute(ProxyFunction *func)
 	{
 		conn = cluster->active_list[i];
 
-		if ((conn->run_tag || conn->res)
+		if (!func->retset && (conn->run_tag || conn->res)
 			&& !(conn->run_tag && conn->res))
 			plproxy_error(func, "run_tag does not match res");
 
@@ -653,15 +676,28 @@ remote_execute(ProxyFunction *func)
 
 		if (conn->cur->state != C_DONE)
 			plproxy_error(func, "Unfinished connection");
-		if (conn->res == NULL)
-			plproxy_error(func, "Lost result");
 
-		err = PQresultStatus(conn->res);
-		if (err != PGRES_TUPLES_OK)
-			plproxy_error(func, "Remote error: %s",
-						  PQresultErrorMessage(conn->res));
+		if (!func->retset)
+		{
+			ExecStatusType err;
 
-		cluster->ret_total += PQntuples(conn->res);
+			if (conn->res == NULL)
+				plproxy_error(func, "Lost result");
+
+			err = PQresultStatus(conn->res);
+			if (err != PGRES_TUPLES_OK)
+				plproxy_error(func, "Remote error: %s",
+							  PQresultErrorMessage(conn->res));
+
+			cluster->ret_total += PQntuples(conn->res);
+		}
+	}
+
+	if (func->retset)
+	{
+		tuplestore_donestoring(rsinfo->setResult);
+
+		cluster->ret_total = tuplestore_tuple_count(rsinfo->setResult);
 	}
 }
 
@@ -697,7 +733,7 @@ remote_wait_for_cancel(ProxyFunction *func)
 			break;
 
 		/* wait for events */
-		poll_conns(func, cluster);
+		poll_conns(func, cluster, NULL);
 	}
 
 	/* review results, calculate total */
@@ -820,7 +856,14 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 		else
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
 
-		hashval &= cluster->part_mask;
+		if (cluster->config.disable_hashing)
+		{
+			if (hashval >= cluster->part_count)
+				plproxy_error(func, "Hash result must be less than partition count");
+		}
+		else
+			hashval &= cluster->part_mask;
+
 		tag_part(cluster, hashval, tag);
 	}
 
@@ -881,7 +924,10 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
-			i = random() & cluster->part_mask;
+			if (cluster->config.disable_hashing)
+				i = random() % cluster->part_count;
+			else
+				i = random() & cluster->part_mask;
 			tag_part(cluster, i, tag);
 			break;
 		default:
@@ -1011,6 +1057,82 @@ prepare_and_tag_partitions(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 }
 
+
+static char *
+extract_query_from_split(ProxyFunction* func, Datum query_array)
+{
+	ArrayType *arr = DatumGetArrayTypeP(query_array);
+	Datum	*queries;
+	bool	*nulls;
+	int		 nitems, i;
+	char 	*result = 0;
+
+	if (ARR_ELEMTYPE(arr) != TEXTOID)
+		plproxy_error(func, "Query array for EXECUTE must be of type text[]");
+
+	deconstruct_array(arr,
+					  TEXTOID, -1, false, 'i',
+					  &queries, &nulls, &nitems);
+
+	for (i = 0; i < nitems; i++)
+	{
+		if (nulls[i])
+			continue;
+
+		if (result)
+			plproxy_error(func, "All partitions must get at most one query");
+
+		result = TextDatumGetCString(queries[i]);
+	}
+
+	return result;
+}
+
+static void
+prepare_queries(ProxyFunction* func, FunctionCallInfo fcinfo)
+{
+	int part;
+	ProxyCluster   *cluster = func->cur_cluster;
+
+	if (func->is_execute)
+	{
+		/* Add the parameters to partitions */
+		for (part = 0; part < cluster->active_count; part++) {
+			char *query;
+			QueryBuffer* qb;
+			ProxyConnection* conn = cluster->active_list[part];
+
+			conn->remote_sql = 0;
+
+			if (conn->run_tag && !PG_ARGISNULL(func->execute_arg))
+			{
+				if (IS_SPLIT_ARG(func, func->execute_arg))
+					query = extract_query_from_split(func, conn->split_params[func->execute_arg]);
+				else
+					query = text_to_cstring(PG_GETARG_TEXT_P(func->execute_arg));
+
+				if (query)
+				{
+					qb = plproxy_query_start(func, false);
+					plproxy_query_add_const(qb, query);
+					conn->remote_sql = plproxy_query_finish(qb);
+				}
+			}
+			/* If there is no query we remove run tag to ignore the connection in remote_execute */
+			if (!conn->remote_sql)
+				conn->run_tag = 0;
+		}
+	}
+	else
+	{
+		for (part = 0; part < cluster->active_count; part++)
+			cluster->active_list[part]->remote_sql = func->remote_sql;
+
+		/* prepare the target query parameters */
+		prepare_query_parameters(func, fcinfo);
+	}
+}
+
 /*
  * Prepare parameters for the query.
  */
@@ -1019,6 +1141,8 @@ prepare_query_parameters(ProxyFunction *func, FunctionCallInfo fcinfo)
 {
 	int				i;
 	ProxyCluster   *cluster = func->cur_cluster;
+	/* Parameters for EXECUTE not supported yet */
+	Assert(!func->is_execute);
 
 	for (i = 0; i < func->remote_sql->arg_count; i++)
 	{
@@ -1141,10 +1265,10 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 		/* tag the partitions and prepare per-partition parameters */
 		prepare_and_tag_partitions(func, fcinfo);
 
-		/* prepare the target query parameters */
-		prepare_query_parameters(func, fcinfo);
+		/* prepare target queries */
+		prepare_queries(func, fcinfo);
 
-		remote_execute(func);
+		remote_execute(func, fcinfo);
 
 		func->cur_cluster->busy = false;
 	}

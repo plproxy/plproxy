@@ -229,6 +229,10 @@ For example, if user needs to spread the load over 3 servers,
 the database can be split to 16 partitions and then 2 servers
 get 5 partitions and last one 6.
 
+If user wants to solve those issues on their own, the `disable_hashing`
+option delegates the responsibility of hash-value to partition mapping
+to the partitioning function.
+
 
 ## Partitioning
 
