@@ -565,8 +565,6 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 		foreach(cell, options_list)
 		{
 			DefElem    *def = lfirst(cell);
-			char	   *arg = strVal(def->arg);
-			int			part_num;
 
 			if (!extract_part_num(def->defname, &part_num))
 				continue;
