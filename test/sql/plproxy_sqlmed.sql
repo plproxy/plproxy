@@ -122,3 +122,22 @@ drop server testcluster cascade;
 -- back on testcluster again
 select * from sqlmed_compat_test();
 
+-- test unordered creation
+create server unordered1 foreign data wrapper plproxy
+    options (   partition_0 'dbname=test_part0 host=localhost',
+                partition_02 'dbname=test_part2 host=localhost',
+                partition_001 'dbname=test_part1 host=localhost',
+                partition_3 'dbname=test_part3 host=localhost');
+
+-- test duplicate numbers
+create server unordered2 foreign data wrapper plproxy
+    options (   partition_1 'dbname=test_part1 host=localhost',
+                partition_01 'dbname=test_part2 host=localhost');
+
+-- test wrong numbers
+create server unordered2 foreign data wrapper plproxy
+    options (   partition_1 'dbname=test_part0 host=localhost',
+                partition_2 'dbname=test_part2 host=localhost',
+                partition_3 'dbname=test_part1 host=localhost',
+                partition_4 'dbname=test_part3 host=localhost');
+

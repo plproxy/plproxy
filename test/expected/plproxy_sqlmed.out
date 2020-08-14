@@ -102,7 +102,7 @@ reset session authorization;
 -- cluster definition validation
 -- partition numbers must be consecutive
 alter server sqlmedcluster options (drop partition_2);
-ERROR:  Pl/Proxy: invalid number of partitions
+ERROR:  Pl/Proxy: partition numbers must start from 0 and be numbered consecutively
 select * from sqlmed_test1();
                  sqlmed_test1                  
 -----------------------------------------------
@@ -154,3 +154,21 @@ select * from sqlmed_compat_test();
  plproxy: part=test_part0
 (1 row)
 
+-- test unordered creation
+create server unordered1 foreign data wrapper plproxy
+    options (   partition_0 'dbname=test_part0 host=localhost',
+                partition_02 'dbname=test_part2 host=localhost',
+                partition_001 'dbname=test_part1 host=localhost',
+                partition_3 'dbname=test_part3 host=localhost');
+-- test duplicate numbers
+create server unordered2 foreign data wrapper plproxy
+    options (   partition_1 'dbname=test_part1 host=localhost',
+                partition_01 'dbname=test_part2 host=localhost');
+ERROR:  Pl/Proxy: duplicate partition number: 1
+-- test wrong numbers
+create server unordered2 foreign data wrapper plproxy
+    options (   partition_1 'dbname=test_part0 host=localhost',
+                partition_2 'dbname=test_part2 host=localhost',
+                partition_3 'dbname=test_part1 host=localhost',
+                partition_4 'dbname=test_part3 host=localhost');
+ERROR:  Pl/Proxy: partition numbers must start from 0 and be numbered consecutively

@@ -248,6 +248,11 @@ add_connection(ProxyCluster *cluster, const char *connstr, int part_num)
 
 		aatree_insert(&cluster->conn_tree, (uintptr_t)connstr, &conn->node);
 	}
+	if (cluster->part_map[part_num])
+		ereport(ERROR,
+			(errcode(ERRCODE_SYNTAX_ERROR),
+			 errmsg("Pl/Proxy: duplicate partition in config: %d", part_num),
+			 errhint("already got number %d", part_num)));
 
 	cluster->part_map[part_num] = conn;
 }
@@ -479,7 +484,8 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	List	   *options_list = untransformRelOptions(PG_GETARG_DATUM(0));
 	Oid			catalog = PG_GETARG_OID(1);
 	ListCell   *cell;
-	int			part_count = 0;
+	int			part_count = 0, part_num;
+	unsigned char *part_set = NULL;
 
 	/* Pre 8.4.3 databases have broken validator interface, warn the user */
 	if (catalog == InvalidOid)
@@ -496,12 +502,26 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	{
 		DefElem    *def = lfirst(cell);
 		char	   *arg = strVal(def->arg);
-		int			part_num;
 
 		if (catalog == ForeignServerRelationId)
 		{
 			if (extract_part_num(def->defname, &part_num))
 			{
+				if (part_set == NULL)
+						part_set = palloc0(options_list->length + 1);
+
+				if (part_num < 0 || part_num >= options_list->length)
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("Pl/Proxy: partition numbers must start from 0 and be numbered consecutively"),
+								 errhint("number of options is %d, got %d",
+										 options_list->length, part_num)));
+				if (part_set[part_num])
+						ereport(ERROR,
+								(errcode(ERRCODE_SYNTAX_ERROR),
+								 errmsg("Pl/Proxy: duplicate partition number: %d", part_num),
+								 errhint("got %d twice", part_num)));
+				part_set[part_num] = 1;
 				++part_count;
 			}
 			else
@@ -529,6 +549,13 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 
 	if (catalog == ForeignServerRelationId)
 	{
+		for (part_num = 0; part_num < part_count; part_num++) {
+			if (!part_set[part_num])
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("Pl/Proxy: missing partition"),
+						 errhint("missing number: %d", part_num)));
+		}
 		if (!check_valid_partcount(part_count))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
@@ -544,8 +571,6 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 			if (!extract_part_num(def->defname, &part_num))
 				continue;
 
-			elog(DEBUG1, "PL/Proxy: foreign server partition read: %s [%d] - %s", def->defname, part_num, arg);
-
 			if (part_num < 0 || part_num >= part_count)
 				ereport(ERROR,
 						(errcode(ERRCODE_SYNTAX_ERROR),
@@ -553,6 +578,9 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 						 errhint("the partitions number in a cluster must be >= 0 and < %d (attempted %d)", part_count, part_num)));
 		}
 	}
+
+	if (part_set)
+		pfree(part_set);
 
 	PG_RETURN_BOOL(true);
 }
@@ -725,17 +753,17 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 		if (!extract_part_num(def->defname, &part_num))
 			continue;
 
-		elog(DEBUG1, "PL/Proxy: foreign server partition read: %s [%d] - %s", def->defname, part_num, arg);
-
 		if (part_num < 0 || part_num >= part_count)
 			plproxy_error(func, "wrong partitions number, must be >= 0 and < %d", part_count);
+
+		if (part_ordered[part_num])
+			plproxy_error(func, "duplicate partition number: %d", part_num);
 
 		part_ordered[part_num] = arg;
 	}
 
 	for(i = 0; i < part_count; i++)
 	{
-		elog(DEBUG1, "PL/Proxy: foreign server partition add: [%d] - %s", i, part_ordered[i]);
 		add_connection(cluster, part_ordered[i], i);
 	}
 
@@ -1088,8 +1116,8 @@ fake_cluster(ProxyFunction *func, const char *connect_str)
 	cluster->version = 1;
 	cluster->part_count = 1;
 	cluster->part_mask = 0;
-	cluster->part_map = palloc(cluster->part_count * sizeof(ProxyConnection *));
-	cluster->active_list = palloc(cluster->part_count * sizeof(ProxyConnection *));
+	cluster->part_map = palloc0(cluster->part_count * sizeof(ProxyConnection *));
+	cluster->active_list = palloc0(cluster->part_count * sizeof(ProxyConnection *));
 
 	MemoryContextSwitchTo(old_ctx);
 
