@@ -1,6 +1,22 @@
 
 # PL/Proxy Changelog
 
+**unreleased**
+
+- Fixes:
+
+  * Allow unordered partitions in CREATE SERVER.
+    [#21](https://github.com/plproxy/plproxy/issues/21)
+    [#22](https://github.com/plproxy/plproxy/pull/22)
+    (Sergey Burladyan)
+
+- Changes
+
+  * Support PG13.
+    (Alexander Kukushkin)
+  * Avoid flex case-insensitive setting, causes warnings
+    on some Flex versions.
+
 **2019-09-15  -  PL/Proxy 2.9  -  "Don't Look Into The Eye"**
 
 - Fixes:
