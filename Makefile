@@ -17,7 +17,7 @@ PQLIB = $(shell $(PG_CONFIG) --libdir)
 # module setup
 MODULE_big = $(EXTENSION)
 SRCS = src/cluster.c src/execute.c src/function.c src/main.c \
-       src/query.c src/result.c src/type.c src/poll_compat.c src/aatree.c
+       src/query.c src/result.c src/type.c src/aatree.c
 OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.* plproxy.so
 SHLIB_LINK = -L$(PQLIB) -lpq
