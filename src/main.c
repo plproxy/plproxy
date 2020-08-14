@@ -49,11 +49,7 @@
 
 #include <sys/time.h>
 
-#ifndef PG_MODULE_MAGIC
-#error PL/Proxy requires 8.2
-#else
 PG_MODULE_MAGIC;
-#endif
 
 PG_FUNCTION_INFO_V1(plproxy_call_handler);
 PG_FUNCTION_INFO_V1(plproxy_validator);

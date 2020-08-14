@@ -74,69 +74,6 @@
 #endif
 
 /*
- * backwards compat with 8.2
- */
-#ifndef VARDATA_ANY
-#define VARDATA_ANY(x) VARDATA(x)
-#endif
-#ifndef VARSIZE_ANY_EXHDR
-#define VARSIZE_ANY_EXHDR(x) (VARSIZE(x) - VARHDRSZ)
-#endif
-#ifndef PG_DETOAST_DATUM_PACKED
-#define PG_DETOAST_DATUM_PACKED(x) PG_DETOAST_DATUM(x)
-#endif
-
-#ifndef PG_PRINTF_ATTRIBUTE
-#ifdef WIN32
-#define PG_PRINTF_ATTRIBUTE gnu_printf
-#else
-#define PG_PRINTF_ATTRIBUTE printf
-#endif
-#endif
-
-/*
- * backwards compat with 8.4
- */
-#ifndef PROARGMODE_IN
-#define PROARGMODE_IN       'i'
-#endif
-#ifndef PROARGMODE_OUT
-#define PROARGMODE_OUT      'o'
-#endif
-#ifndef PROARGMODE_INOUT
-#define PROARGMODE_INOUT    'b'
-#endif
-#ifndef PROARGMODE_VARIADIC
-#define PROARGMODE_VARIADIC 'v'
-#endif
-#ifndef PROARGMODE_TABLE
-#define PROARGMODE_TABLE    't'
-#endif
-
-#ifndef TYPTYPE_BASE
-#define TYPTYPE_BASE 'b'
-#endif
-#ifndef TYPTYPE_COMPOSITE
-#define TYPTYPE_COMPOSITE 'c'
-#endif
-#ifndef TYPTYPE_DOMAIN
-#define TYPTYPE_DOMAIN 'd'
-#endif
-#ifndef TYPTYPE_ENUM
-#define TYPTYPE_ENUM 'e'
-#endif
-#ifndef TYPTYPE_PSEUDO
-#define TYPTYPE_PSEUDO 'p'
-#endif
-#ifndef TYPTYPE_RANGE
-#define TYPTYPE_RANGE 'r'
-#endif
-
-#ifndef TupleDescAttr
-#define TupleDescAttr(tupdesc, i) ((tupdesc)->attrs[(i)])
-#endif
-
-/*
  * backwards compatibility with v10.
  */
 
