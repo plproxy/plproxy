@@ -1,9 +1,9 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control
-DISTVERSION = 2.9
 EXTVERSION = 2.9.0
 UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0 2.8.0
+DISTVERSION = $(EXTVERSION)
 
 # set to 1 to disallow functions containing SELECT
 NO_SELECT = 0
@@ -117,7 +117,7 @@ $(OBJS): $(HDRS)
 tags: $(SRCS) $(HDRS)
 	ctags $(SRCS) $(HDRS)
 
-tgz:
+dist:
 	git archive --prefix=$(DISTNAME)/ HEAD | gzip -9 > $(DISTNAME).tar.gz
 
 zip:
@@ -131,4 +131,21 @@ citest:
 
 ack:
 	cp results/*.out test/expected/
+
+checkver:
+	@echo "Checking version numbers"
+	@test "$(DISTVERSION)" = "$(EXTVERSION)" \
+		|| { echo "ERROR: DISTVERSION <> EXTVERSION"; exit 1; }
+	@grep -q "^default_version *= *'$(EXTVERSION)'" $(EXTENSION).control \
+		|| { echo "ERROR: $(EXTENSION).control has wrong version"; exit 1; }
+	@test -f "doc/notes/v$(EXTVERSION).md" \
+		|| { echo "ERROR: notes missing: doc/notes/v$(EXTVERSION).md"; exit 1; }
+	@grep '"version"' META.json | head -n 1 | grep -q '"$(EXTVERSION)"' \
+		|| { echo "ERROR: META.json has wrong version"; exit 1; }
+
+release: checkver
+	git diff --exit-code
+	git tag v$(EXTVERSION)
+	git push local
+	git push local v$(EXTVERSION):v$(EXTVERSION)
 
