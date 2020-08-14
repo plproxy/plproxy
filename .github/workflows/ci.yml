@@ -11,7 +11,7 @@ on:
 
 jobs:
 
-  linux:
+  test:
     runs-on: ${{matrix.test.os}}
     strategy:
       matrix:
@@ -24,11 +24,14 @@ jobs:
           - {pgver: "11", os: "ubuntu-20.04"}
           - {pgver: "12", os: "ubuntu-20.04"}
           - {pgver: "13", os: "ubuntu-20.04"}
+          - {pgver: "11", os: "macos-10.15"}
+          - {pgver: "12", os: "macos-10.15"}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v2
 
-      - name: "InstallDB"
+      - name: "InstallDB / Linux"
+        if: ${{runner.os == 'Linux'}}
         run: |
           echo "::group::apt-get-update"
           echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main ${{matrix.test.pgver}}" \
@@ -51,21 +54,32 @@ jobs:
           # tune environment
           echo "::add-path::/usr/lib/postgresql/${{matrix.test.pgver}}/bin"
           echo "::set-env name=PGHOST::/tmp"
+          echo "::set-env name=SED::sed"
 
           dpkg -l postgres\* libpq\* bison\* flex\* gcc\* clang\* libllvm\*
 
+      - name: "InstallDB / Mac"
+        if: ${{runner.os == 'macOS'}}
+        run: |
+          echo "::group::install"
+          brew install patchutils bison flex gnu-sed postgresql@${{matrix.test.pgver}}
+          echo "::endgroup::"
+          echo "::add-path::/usr/local/opt/flex/bin"
+          echo "::add-path::/usr/local/opt/bison/bin"
+          echo "::add-path::/usr/local/opt/postgresql@${{matrix.test.pgver}}/bin"
+          echo "::set-env name=SED::gsed"
+
       - name: "Build"
-        run: make
+        run: make BISON=bison FLEX=flex
 
       - name: "Install"
         run: sudo -nH bash -c "PATH='${PATH}' make install"
 
       - name: "StartDB"
         run: |
-          rm -rf data log
           mkdir -p log
-          LANG=C initdb data
-          sed -ri -e "s,^[# ]*(unix_socket_directories).*,\\1='/tmp'," data/postgresql.conf
+          LANG=C LC_ALL=C initdb --no-locale data
+          ${SED} -r -i -e "s,^[# ]*(unix_socket_directories).*,\\1='/tmp'," data/postgresql.conf
           pg_ctl -D data -l log/pg.log start || { cat log/pg.log ; exit 1; }
 
       - name: "Test"
@@ -75,4 +89,50 @@ jobs:
         run: |
           pg_ctl -D data stop
           rm -rf data log /tmp/.s.PGSQL*
+
+  mingw64:
+    runs-on: ${{matrix.test.os}}
+    strategy:
+      matrix:
+        test:
+          - {os: "windows-2016"}
+          - {os: "windows-2019"}
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v2
+
+      - name: "Setup MSYS"
+        shell: cmd
+        run: |
+          echo ::add-path::C:\msys64\usr\bin
+          echo ::add-path::C:\msys64\mingw64\bin
+
+      - name: "InstallDB / mingw64"
+        shell: bash
+        run: |
+          pacman -S --noconfirm --needed mingw-w64-x86_64-postgresql
+          pacman -S --noconfirm --needed patchutils
+          echo "::set-env name=PGHOST::127.0.0.1"
+
+      - name: "Build"
+        shell: bash
+        run: make BISON=bison FLEX=flex
+
+      - name: "Install"
+        shell: bash
+        run: make install
+
+      - name: "StartDB"
+        shell: bash
+        run: |
+          mkdir log
+          initdb.exe --no-locale -U postgres -D data
+          pg_ctl -D data -l log/pg.log start || { cat log/pg.log ; exit 1; }
+
+      - name: "Test"
+        run: make citest
+
+      - name: "StopDB"
+        run: |
+          pg_ctl -D data stop
 
