@@ -51,7 +51,7 @@
 #include <utils/array.h>
 #include <utils/builtins.h>
 #include <utils/hsearch.h>
-#include "utils/inval.h"
+#include <utils/inval.h>
 #include <utils/lsyscache.h>
 #include <utils/memutils.h>
 #include <utils/syscache.h>

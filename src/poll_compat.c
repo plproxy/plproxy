@@ -16,7 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "postgres.h"
+#include <postgres.h>
 
 #include "poll_compat.h"
 
