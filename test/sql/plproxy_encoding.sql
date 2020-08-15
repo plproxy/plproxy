@@ -25,7 +25,7 @@ create database test_enc_part with encoding 'utf-8' template template0;
 set client_encoding = 'utf-8';
 set client_min_messages = 'warning';
 \set ECHO none
-\i sql/plproxy.sql
+create extension plproxy;
 \set ECHO all
 create schema plproxy;
 create or replace function plproxy.get_cluster_version(cluster_name text)
@@ -92,7 +92,7 @@ create database test_enc_part with encoding 'euc_jp' template template0;
 \c test_enc_proxy
 set client_min_messages = 'warning';
 \set ECHO none
-\i sql/plproxy.sql
+create extension plproxy;
 \set ECHO all
 set client_encoding = 'utf8';
 create schema plproxy;

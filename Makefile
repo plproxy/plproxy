@@ -38,29 +38,16 @@ DISTNAME = $(EXTENSION)-$(DISTVERSION)
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
      plproxy_errors plproxy_clustermap plproxy_dynamic_record \
      plproxy_encoding plproxy_split plproxy_target plproxy_alter \
-     plproxy_cancel plproxy_modular
-REGRESS_OPTS = --dbname=regression --inputdir=test
-# pg9.1 ignores --dbname
+     plproxy_cancel plproxy_range plproxy_sqlmed plproxy_table \
+     plproxy_modular
+REGRESS_OPTS = --inputdir=test
+
+# use known db name
 override CONTRIB_TESTDB := regression
 
-# sql source
-PLPROXY_SQL = sql/plproxy_lang.sql
-# Generated SQL files
-EXTSQL = sql/$(EXTENSION)--$(EXTVERSION).sql \
-	$(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql) \
-	sql/plproxy--unpackaged--$(EXTVERSION).sql
-
-# pg84: SQL/MED available, add foreign data wrapper and regression tests
-REGRESS += plproxy_sqlmed plproxy_table
-PLPROXY_SQL += sql/plproxy_fdw.sql
-
-# pg91: SQL for extensions
-DATA_built = $(EXTSQL)
-DATA = $(EXTMISC)
-EXTRA_CLEAN += sql/plproxy.sql
-
-# pg92: range type
-REGRESS += plproxy_range
+PLPROXY_SQL = sql/plproxy_lang.sql sql/plproxy_fdw.sql
+DATA_built = sql/$(EXTENSION)--$(EXTVERSION).sql \
+	     $(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql)
 
 #
 # load PGXS makefile
@@ -90,14 +77,8 @@ src/scanner.c: src/scanner.l
 	@mkdir -p src
 	$(FLEX) -o$@ --header-file=$(@:.c=.h) $<
 
-sql/plproxy.sql: $(PLPROXY_SQL)
-	@mkdir -p sql
-	cat $^ > $@
-
-# plain plproxy.sql is not installed, but used in tests
 sql/$(EXTENSION)--$(EXTVERSION).sql: $(PLPROXY_SQL)
 	@mkdir -p sql
-	echo "create extension plproxy;" > sql/plproxy.sql 
 	cat $^ > $@
 
 $(foreach v,$(UPGRADE_VERS),sql/plproxy--$(v)--$(EXTVERSION).sql): sql/ext_update_validator.sql

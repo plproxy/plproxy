@@ -12,7 +12,7 @@
    "provides": {
       "plproxy": {
          "abstract": "Database partitioning implemented as procedural language",
-         "file": "sql/plproxy.sql",
+         "file": "sql/pgxn.sql",
          "docfile": "doc/tutorial.md",
          "version": "2.9.0"
       }

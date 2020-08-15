@@ -3,7 +3,7 @@
 
 set client_min_messages = 'warning';
 
-\i sql/plproxy.sql
+create extension plproxy;
 
 set client_min_messages = 'warning';
 
