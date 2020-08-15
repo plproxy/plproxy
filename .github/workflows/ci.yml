@@ -140,3 +140,18 @@ jobs:
         run: |
           pg_ctl -D data stop
 
+  pgxn:
+    name: pgxn-tools, PostgreSQL ${{ matrix.pg }}
+    strategy:
+      matrix:
+        pg: [12, 11]
+    runs-on: ubuntu-20.04
+    container: pgxn/pgxn-tools
+    steps:
+      - name: Start PostgreSQL ${{matrix.pg}}
+        run: LANG=C LC_ALL=C pg-start ${{matrix.pg}} bison flex
+      - name: Check out the repo
+        uses: actions/checkout@v2
+      - name: Test on PostgreSQL ${{matrix.pg}}
+        run: pg-build-test
+

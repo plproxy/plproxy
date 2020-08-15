@@ -8,7 +8,7 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
 
       - name: Checkout code
@@ -49,4 +49,18 @@ jobs:
           asset_path: ${{env.TGZ}}
           asset_name: ${{env.TGZ}}
           asset_content_type: application/x-gzip
+
+  pgxn_upload:
+    name: Upload to PGXN
+    needs: [release]
+    runs-on: ubuntu-20.04
+    container:
+      image: pgxn/pgxn-tools
+      env:
+        PGXN_USERNAME: ${{secrets.PGXN_USERNAME}}
+        PGXN_PASSWORD: ${{secrets.PGXN_PASSWORD}}
+    steps:
+      - uses: actions/checkout@v2
+      - run: pgxn-bundle
+      - run: pgxn-release
 
