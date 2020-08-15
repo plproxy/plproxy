@@ -51,7 +51,8 @@ external source such as a configuration table.
 This is called when a new partition configuration needs to be loaded. 
 It should return connect strings to the partitions in the cluster.
 The connstrings should be returned in the correct order.  The total
-number of connstrings returned must be a power of 2.  If two or more
+number of connstrings returned must be a power of 2 unless `modular_mapping`
+is used.  If two or more
 connstrings are equal then they will use the same connection.
 
 If the string `user=` does not appear in a connect string then
@@ -108,6 +109,18 @@ consist of any of the following configuration parameters.  All of them are
 optional. Timeouts/lifetime values are given in seconds.  If the value is 0
 or NULL then the parameter is disabled (a default value will be used).
 
+
+* `modular_mapping`
+
+  Switches from bitmasking to modulus for mapping hash to partition number.
+
+  By default mapping happens via bitmasking via '&' operator.  PL/Proxy
+  requires the number of partitions to be power of two, then does
+  `index = (hash & (part_count - 1))`.  When `modular_mapping` is set to 1,
+  PL/Proxy instead allows any number of partitions and maps hash partition
+  via modulus operator '%'.  Exact expression is:
+
+  ```index = abs(hash % part_count)```
 
 * `connection_lifetime`
 

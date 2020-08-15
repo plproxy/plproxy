@@ -211,24 +211,7 @@ There is no deep reason, mostly because of following points:
   likely need to write their own code for splitting and sanity checking
   their data, the algorithm should be as simple as possible.
 
-It would be easy to use mod N internally, but:
-
-- We would lose the sanity checking.
-- We would need to define mod function for negative integers that
-  maps to positive range.  This sounds like a source for confusion and bugs.
-
-So it seems it's preferable to keep the power-of-2 requirement.
-
-This may seem to require that the number of servers be also power of 2,
-but this is not so - to make future administration easier it is
-always preferable to split database into more parts than you
-immediately need.  Such splitting also overcomes the power-of-2
-requirement.
-
-For example, if user needs to spread the load over 3 servers,
-the database can be split to 16 partitions and then 2 servers
-get 5 partitions and last one 6.
-
+There is now `modular_mapping` option to switch away from power-of-two requirement.
 
 ## Partitioning
 
@@ -242,8 +225,6 @@ to distribute load on several servers
   wrapper functions that do several remote calls into other databases are needed.
 - Horizontal partitioning.   Using hashtext function any field can be
   converted into integer. In simpler case you can use just your id field.
-  Number of partitions must be power of two in cluster and PL/Proxy uses
-  bitwise and to get number of partition from given integer.
 - Two-level vertical partitioning.  PL/Proxy allows the cluster name also
   be calculated on function arguments.  So it is possible to dedicate
   different clusters to different categories or one cluster to read-queries,

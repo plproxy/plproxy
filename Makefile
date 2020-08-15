@@ -38,7 +38,7 @@ DISTNAME = $(EXTENSION)-$(DISTVERSION)
 REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
      plproxy_errors plproxy_clustermap plproxy_dynamic_record \
      plproxy_encoding plproxy_split plproxy_target plproxy_alter \
-     plproxy_cancel
+     plproxy_cancel plproxy_modular
 REGRESS_OPTS = --dbname=regression --inputdir=test
 # pg9.1 ignores --dbname
 override CONTRIB_TESTDB := regression

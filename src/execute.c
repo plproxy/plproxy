@@ -775,9 +775,21 @@ remote_cancel(ProxyFunction *func)
  * Tag & move tagged connections to active list
  */
 
-static void tag_part(struct ProxyCluster *cluster, int i, int tag)
+static void tag_part(struct ProxyCluster *cluster, int64 hash, int tag)
 {
-	ProxyConnection *conn = cluster->part_map[i];
+	ProxyConnection *conn;
+	int64 idx;
+
+	/* map hash to connection index */
+	if (cluster->config.modular_mapping) {
+		if (hash < 0)
+			idx = -(hash % cluster->part_count);
+		else
+			idx = hash % cluster->part_count;
+	} else {
+		idx = hash & cluster->part_mask;
+	}
+	conn = cluster->part_map[idx];
 
 	if (!conn->run_tag)
 		plproxy_activate_connection(conn);
@@ -786,7 +798,7 @@ static void tag_part(struct ProxyCluster *cluster, int i, int tag)
 }
 
 /*
- * Run hash function and tag connections. If any of the hash function 
+ * Run hash function and tag connections. If any of the hash function
  * arguments are mentioned in the split_arrays an element of the array
  * is used instead of the actual array.
  */
@@ -810,7 +822,7 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 	for (i = 0; i < SPI_processed; i++)
 	{
 		bool		isnull;
-		uint32		hashval = 0;
+		int64		hashval = 0;
 		HeapTuple	row = SPI_tuptable->vals[i];
 		Datum		val = SPI_getbinval(row, desc, 1, &isnull);
 
@@ -826,7 +838,6 @@ tag_hash_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 		else
 			plproxy_error(func, "Hash result must be int2, int4 or int8");
 
-		hashval &= cluster->part_mask;
 		tag_part(cluster, hashval, tag);
 	}
 
@@ -887,8 +898,7 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
-			i = random() & cluster->part_mask;
-			tag_part(cluster, i, tag);
+			tag_part(cluster, random(), tag);
 			break;
 		default:
 			plproxy_error(func, "uninitialized run_type");
@@ -896,7 +906,7 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 }
 
 /*
- * Tag the partitions to be run on, if split is requested prepare the 
+ * Tag the partitions to be run on, if split is requested prepare the
  * per-partition split array parameters.
  *
  * This is done by looping over all of the split arrays side-by-side, for each
@@ -1168,5 +1178,4 @@ plproxy_exec(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 	PG_END_TRY();
 }
-
 

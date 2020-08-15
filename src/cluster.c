@@ -65,6 +65,7 @@ static const char *cluster_config_options[] = {
 	"connection_lifetime",
 	"query_timeout",
 	"disable_binary",
+	"modular_mapping",
 	/* deprecated */
 	"keepalive_idle",
 	"keepalive_interval",
@@ -79,8 +80,10 @@ PG_FUNCTION_INFO_V1(plproxy_fdw_validator);
  * Connection count should be non-zero and power of 2.
  */
 static bool
-check_valid_partcount(int n)
+check_valid_partcount(int n, int modular_mapping)
 {
+	if (modular_mapping)
+		return n > 0;
 	return (n > 0) && !(n & (n - 1));
 }
 
@@ -307,6 +310,8 @@ set_config_key(ProxyFunction *func, ProxyConfig *cf, const char *key, const char
 		cf->query_timeout = atoi(val);
 	else if (pg_strcasecmp("disable_binary", key) == 0)
 		cf->disable_binary = atoi(val);
+	else if (pg_strcasecmp("modular_mapping", key) == 0)
+		cf->modular_mapping = atoi(val);
 	else if (pg_strcasecmp("keepalive_idle", key) == 0
 		|| pg_strcasecmp("keepalive_interval", key) == 0
 		|| pg_strcasecmp("keepalive_count", key) == 0)
@@ -403,7 +408,7 @@ reload_parts(ProxyCluster *cluster, Datum dname, ProxyFunction *func)
 	err = SPI_execute_plan(partlist_plan, &dname, NULL, false, 0);
 	if (err != SPI_OK_SELECT)
 		plproxy_error(func, "get_partlist: spi error");
-	if (!check_valid_partcount(SPI_processed))
+	if (!check_valid_partcount(SPI_processed, cluster->config.modular_mapping))
 		plproxy_error(func, "get_partlist: invalid part count");
 
 	/* check column types */
@@ -486,6 +491,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	ListCell   *cell;
 	int			part_count = 0, part_num;
 	unsigned char *part_set = NULL;
+	int			modular_mapping = 0;
 
 	/* Pre 8.4.3 databases have broken validator interface, warn the user */
 	if (catalog == InvalidOid)
@@ -527,6 +533,8 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 			else
 			{
 				validate_cluster_option(def->defname, arg);
+				if (pg_strcasecmp(def->defname, "modular_mapping") == 0)
+					modular_mapping = atoi(arg);
 			}
 		}
 		else if (catalog == UserMappingRelationId)
@@ -556,7 +564,7 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 						 errmsg("Pl/Proxy: missing partition"),
 						 errhint("missing number: %d", part_num)));
 		}
-		if (!check_valid_partcount(part_count))
+		if (!check_valid_partcount(part_count, modular_mapping))
 			ereport(ERROR,
 					(errcode(ERRCODE_SYNTAX_ERROR),
 					 errmsg("Pl/Proxy: invalid number of partitions"),
@@ -732,7 +740,7 @@ reload_sqlmed_cluster(ProxyFunction *func, ProxyCluster *cluster,
 			set_config_key(func, &cluster->config, def->defname, strVal(def->arg));
 	}
 
-	if (!check_valid_partcount(part_count))
+	if (!check_valid_partcount(part_count, cluster->config.modular_mapping))
 		plproxy_error(func, "invalid partition count");
 
 	/*

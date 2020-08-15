@@ -81,7 +81,8 @@ The following is an example
     $$ LANGUAGE plpgsql;
  
 A production application might query some configuration tables to return the
-connstrings. The number of partitions must be a power of 2.
+connstrings. The number of partitions must be a power of 2 unless `modular_mapping`
+is set.
 
 Next define a `plproxy.get_cluster_version(cluster_name)` function.  This is 
 called on each request and determines if the output from a cached
