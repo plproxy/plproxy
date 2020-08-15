@@ -22,7 +22,7 @@ OBJS = src/scanner.o src/parser.tab.o $(SRCS:.c=.o)
 EXTRA_CLEAN = src/scanner.[ch] src/parser.tab.[ch] libplproxy.* plproxy.so
 SHLIB_LINK = -L$(PQLIB) -lpq
 
-HDRS = src/plproxy.h src/rowstamp.h src/aatree.h src/poll_compat.h
+HDRS = src/plproxy.h src/rowstamp.h src/aatree.h
 
 # Server include must come before client include, because there could
 # be mismatching libpq-dev and postgresql-server-dev installed.

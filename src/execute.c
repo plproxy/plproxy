@@ -28,7 +28,14 @@
 
 #include <sys/time.h>
 
-#include "poll_compat.h"
+/* find poll() */
+#if defined(HAVE_POLL_H)
+#include <poll.h>
+#elif defined(WIN32)
+#define poll(fds, nfds, timeout_ms) WSAPoll(fds, nfds, timeout_ms)
+#elif !defined(POLLIN)
+#error "PL/Proxy requires poll() API"
+#endif
 
 /* some error happened */
 static void
