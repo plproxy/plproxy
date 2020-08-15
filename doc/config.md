@@ -18,7 +18,7 @@ to be defined, either by the cluster configuration API or SQL/MED.
 
 The following plproxy schema functions are used to define the clusters:
 
-### plproxy.get_cluster_version(cluster_name)
+### plproxy.get\_cluster\_version(cluster\_name)
 
     plproxy.get_cluster_version(cluster_name text)
     returns integer
@@ -43,7 +43,7 @@ external source such as a configuration table.
     $$ LANGUAGE plpgsql;
 
 
-### plproxy.get_cluster_partitions(cluster_name)
+### plproxy.get\_cluster\_partitions(cluster\_name)
 
     plproxy.get_cluster_partitions(cluster_name text)
     returns setof text
@@ -96,7 +96,7 @@ An example function without the use of separate configuration tables:
     END;
     $$ LANGUAGE plpgsql;
 
-### plproxy.get_cluster_config(cluster)
+### plproxy.get\_cluster\_config(cluster)
  
     plproxy.get_cluster_config(
             IN cluster_name text,
@@ -115,8 +115,11 @@ or NULL then the parameter is disabled (a default value will be used).
   Switches from bitmasking to modulus for mapping hash to partition number.
 
   By default mapping happens via bitmasking via '&' operator.  PL/Proxy
-  requires the number of partitions to be power of two, then does
-  `index = (hash & (part_count - 1))`.  When `modular_mapping` is set to 1,
+  requires the number of partitions to be power of two, then does:
+
+  ```index = (hash & (part_count - 1))```
+
+  When `modular_mapping` is set to 1,
   PL/Proxy instead allows any number of partitions and maps hash partition
   via modulus operator '%'.  Exact expression is:
 
@@ -195,7 +198,6 @@ your cluster definitions.
 
 Note: the validation function is known to be broken in PostgreSQL 8.4.2 and
 below.
-
 
     CREATE FOREIGN DATA WRAPPER plproxy
             [ VALIDATOR plproxy_fdw_validator ]
