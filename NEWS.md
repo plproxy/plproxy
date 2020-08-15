@@ -3,6 +3,11 @@
 
 **unreleased**
 
+- Features:
+
+  * New `modular_mapping` option.  Allows non-power-of-2
+    number of partitions.
+
 - Fixes:
 
   * Allow unordered partitions in CREATE SERVER.
@@ -39,9 +44,7 @@
 
   * PG10: Support more than one digit versions in Makefile.
     (Luis Bosque)
-
   * PG10: Use TupleDescAttr() to handle changed type in tupdesc.
-
   * Use corrent <sys/socket.h> detection macro.
     (Christoph Moench-Tegeder)
 
@@ -50,7 +53,6 @@
 - Fixes
   * Update to newer `heap_form_tuple()` API.
     (Peter Eisentraut)
-
   * Handle 64-bit `SPI_processed`.
     (Peter Eisentraut)
 
@@ -60,7 +62,6 @@
 
   * Language validator.
     (Peter Eisentraut)
-
   * Support Postgres 9.5.
     (Peter Eisentraut)
 
@@ -68,17 +69,14 @@
 
   * Query cancel fixes.
     (Fazal Majid, Tarvi Pillessaar)
-
   * Fix `yy_scan_bytes()` prototype.
     (Peter Eisentraut)
-
   * Use a proper sqlstate with non-setof function errors.
     (Oskari Saarenmaa)
 
 - Cleanups
 
   * Convert docs to markdown.
-
   * Debian packaging cleanup.
 
 **2012-11-27  -  PL/Proxy 2.5  -  "With Extra Leg For Additional Stability"**
@@ -86,9 +84,7 @@
 - Features
 
   * Support `RETURNS TABLE` syntax.
-
   * Support range types.
-
   * Make it build against 9.3dev.  (Peter Eisentraut)
 
 - Fixes
@@ -97,12 +93,9 @@
     and discard it.  Without waiting the local backend might
     be killed and cancel request dropped before it reaches
     remote server - eg. when there is pgbouncer in the middle.
-
   * When return record is based on type or table, detect changes
     and reload the type.
-
   * Allow type or table to have dropped fields.
-
   * Fix crash when `RETURNS TABLE` syntax is used.
 
 **2012-05-07  -  PL/Proxy 2.4  -  "Light Eater"**
@@ -112,13 +105,9 @@
   * Use `current_user` as default user for remote connections.
     Allow access with different users to same cluster in same backend.
     Old default was `session_user`, but that does not seem useful anymore.
-
   * Support ENUM types.  (Zoltán Böszörményi)
-
   * Support building as Postgres extension on 9.1+.  (David E. Wheeler)
-
   * Support building as [PGXN](http://pgxn.org) extension.  (David E. Wheeler)
-
   * Support Postgres 9.2.
 
 
@@ -128,7 +117,6 @@
 
   * Global SQL/MED options: `ALTER FOREIGN DATA WRAPPER plproxy OPTIONS ... ;`
     (Petr Jelinek)
-
   * New config options: `keepalive_idle`, `keepalive_interval`, `keepalive_count`.
     For TCP keepalive tuning.  Alternative to libpq keepalive options
     when older libpq is used or when central tuning is preferrable.
@@ -147,7 +135,6 @@
 
   * New TARGET statement to specify different function to call
     on remote side.
-
   * Make possible to compile out support for SELECT statement:
 
         $ make all NO_SELECT=1
@@ -157,13 +144,10 @@
   * Fix returning of many-column (>100) result rows.  Old code assumed
     FUNC_MAX_ARGS is max, but that does not apply to result columns.
     (Hans-Jürgen Schönig)
-
   * Survive missing sqlstate field on error messages.
     Local libpq errors do not set it.
-
   * More portable workaround for empty FLEX/BISON.
     (Peter Eisentraut)
-
   * win32: Fix poll compat to work with large amount of fds.
     Old compat assument bitmap representation for fd_set,
     but win32 uses array.
@@ -174,34 +158,25 @@
 
   * SPLIT: New `SPLIT` statement to convert incoming array arguments
     into smaller per-partition arrays.
-
     (Martin Pihlak)
-
   * SQL/MED: Cluster can be defined with SQL/MED facilities,
     instead of old-style plproxy.* functions.
-
     (Martin Pihlak)
 
 - Minor fixes/features
 
   * Allow to customize location to `pg_config` via `PG_CONFIG` make variable.
     (David E. Wheeler)
-
   * Remote errors and notices are now passed upwards with all details.
     Previously only error message pas passed and notices were ignored.
-
   * Show remote database name in error messages.
-
   * Compatible with Postgres 9.0.
-
   * Compatible with flex 2.5.35+ - it now properly defines it's
     own functions, so PL/Proxy does not need to do it.  Otherwise
     compilation will fail if flex definitions are hacked (MacOS).
-
   * Rework regests to make them work across 8.2..9.0 and decrease
     chance of spurious failures.  The encoding test still fails
     if Postgres instance is not created with LANG=C.
-
   * deb: per-version packaging: `make debXY` will create
     `postgresql-plproxy-X.Y` package.
 
@@ -226,14 +201,11 @@
   * Avoid parsing `SELECT (` as function call.  Otherwise following query
     fails to parse: `SELECT (0*0);`
     (Peter Eisentraut)
-
   * Make scanner accept dot as standalone symbol.  Otherwise following query
     fails to parse: `SELECT (ret_numtuple(1)).num, (ret_numtuple(1)).name;`
     (Peter Eisentraut)
-
   * Argument type name length over 32 could cause buffer overflow.
     (Ian Sollars)
-
   * Fix crash with incoming NULL value in function containing SELECT
     with different argument order.  Due to thinko, NULL check was done
     with query arg index, instead of function arg index.
@@ -247,10 +219,8 @@
 
   * If query is canceled, send cancel request to remote db too.
     (Ye Wenbin)
-
   * Allow direct argument references in RUN ON statement.
     Now this works: `RUN ON $1;` and  `RUN ON arg;`
-
   * Add FAQ to docs which answers few common questions.
 
 - Fixes
@@ -383,21 +353,15 @@
 
     Only downside is that existing functions with wildly different signatures
     stop working, but as they work on pure luck anyway, I'm not worried.
-
   * Quote function and result column names properly.
-
   * Set `client_encoding` on remote database to be equal to local one.
-
   * Tutorial by Steve Singer.
 
 - Fixes
 
   * Support 8.3 (handle short varlena header)
-
   * Support old flex (2.5.4)  Previously flex >= 2.5.33 was required.
-
   * Fix `make deb`, include actual debian/changelog.
-
   * Remove config paramenter `statement_timeout`.
 
     It was ignored previously and it cannot be made work in live env
@@ -409,7 +373,6 @@
 - Cleanups
 
   * Include plproxy.sql.in in tgz.
-
   * Clean `add_connection()` function by using StringInfo instead
     open-coded string shuffling.
 
@@ -418,7 +381,6 @@
 - Fixes
 
   * Support for 8.3
-
   * Seems v2.0 invalidated cache more than intended. Fix.
 
 **2007-03-13  -  PL/Proxy 2.0 - "Skype Presents"**
