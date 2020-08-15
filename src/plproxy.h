@@ -424,6 +424,7 @@ void		plproxy_syscache_callback_init(void);
 ProxyCluster *plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo);
 void		plproxy_cluster_maint(struct timeval * now);
 void		plproxy_activate_connection(struct ProxyConnection *conn);
+void		plproxy_append_cstr_option(StringInfo cstr, const char *name, const char *val);
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);

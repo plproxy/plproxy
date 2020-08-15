@@ -591,6 +591,19 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	PG_RETURN_BOOL(true);
 }
 
+void
+plproxy_append_cstr_option(StringInfo cstr, const char *name, const char *val)
+{
+	/* apply libpq connect string quoting */
+	appendStringInfo(cstr, " %s='", name);
+	for (; *val; val++) {
+		if (*val == '\'' || *val == '\\')
+			appendStringInfoChar(cstr, '\\');
+		appendStringInfoChar(cstr, *val);
+	}
+	appendStringInfoChar(cstr, '\'');
+}
+
 static void
 reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 {
@@ -649,12 +662,12 @@ reload_sqlmed_user(ProxyFunction *func, ProxyCluster *cluster)
 		if (strcmp(def->defname, "user") == 0)
 			got_user = true;
 
-		appendStringInfo(&cstr, " %s='%s'", def->defname, strVal(def->arg));
+		plproxy_append_cstr_option(&cstr, def->defname, strVal(def->arg));
 	}
 
 	/* make sure we have 'user=' in connect string */
 	if (!got_user)
-		appendStringInfo(&cstr, " user='%s'", userinfo->username);
+		plproxy_append_cstr_option(&cstr, "user", userinfo->username);
 
 	/* free old string */
 	if (userinfo->extra_connstr)
