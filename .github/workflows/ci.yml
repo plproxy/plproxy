@@ -12,6 +12,7 @@ on:
 jobs:
 
   test:
+    name: ${{matrix.test.os}}, pg-${{matrix.test.pgver}}
     runs-on: ${{matrix.test.os}}
     strategy:
       matrix:
@@ -81,6 +82,7 @@ jobs:
           LANG=C LC_ALL=C initdb --no-locale data
           ${SED} -r -i -e "s,^[# ]*(unix_socket_directories).*,\\1='/tmp'," data/postgresql.conf
           pg_ctl -D data -l log/pg.log start || { cat log/pg.log ; exit 1; }
+          sleep 2
 
       - name: "Test"
         run: make citest
@@ -90,13 +92,14 @@ jobs:
           pg_ctl -D data stop
           rm -rf data log /tmp/.s.PGSQL*
 
-  mingw64:
+  mingw:
+    name: ${{matrix.test.os}}, ${{matrix.test.mingw}}
     runs-on: ${{matrix.test.os}}
     strategy:
       matrix:
         test:
-          - {os: "windows-2016"}
-          - {os: "windows-2019"}
+          - {os: "windows-2016", arch: i686, mingw: mingw32}
+          - {os: "windows-2019", arch: x86_64, mingw: mingw64}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v2
@@ -105,18 +108,16 @@ jobs:
         shell: cmd
         run: |
           echo ::add-path::C:\msys64\usr\bin
-          echo ::add-path::C:\msys64\mingw64\bin
+          echo ::add-path::C:\msys64\${{matrix.test.mingw}}\bin
 
-      - name: "InstallDB / mingw64"
+      - name: "InstallDB / mingw / ${{matrix.test.arch}}"
         shell: bash
         run: |
-          pacman -S --noconfirm --needed mingw-w64-x86_64-postgresql
-          pacman -S --noconfirm --needed patchutils
-          echo "::set-env name=PGHOST::127.0.0.1"
+          pacman -S --noconfirm --needed mingw-w64-${{matrix.test.arch}}-postgresql
 
       - name: "Build"
         shell: bash
-        run: make BISON=bison FLEX=flex
+        run: make
 
       - name: "Install"
         shell: bash
@@ -128,6 +129,7 @@ jobs:
           mkdir log
           initdb.exe --no-locale -U postgres -D data
           pg_ctl -D data -l log/pg.log start || { cat log/pg.log ; exit 1; }
+          sleep 3
 
       - name: "Test"
         shell: bash
