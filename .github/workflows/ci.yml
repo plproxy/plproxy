@@ -1,6 +1,11 @@
 #
 # https://docs.github.com/en/actions
 # https://github.com/actions
+# https://hub.docker.com/r/pgxn/pgxn-tools
+#
+# mac: https://brew.sh/
+# win: https://www.msys2.org/docs/package-management/
+# win: https://www.archlinux.org/pacman/pacman.8.html
 #
 
 name: CI
