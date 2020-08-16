@@ -934,8 +934,8 @@ reload_plproxy_cluster(ProxyFunction *func, ProxyCluster *cluster)
 	/* update if needed */
 	if (cur_version != cluster->version || cluster->needs_reload)
 	{
-		reload_parts(cluster, dname, func);
 		get_config(cluster, dname, func);
+		reload_parts(cluster, dname, func);
 		cluster->version = cur_version;
 	}
 }
