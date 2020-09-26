@@ -115,8 +115,8 @@ checkver:
 		|| { echo "ERROR: DISTVERSION <> EXTVERSION"; exit 1; }
 	@grep -q "^default_version *= *'$(EXTVERSION)'" $(EXTENSION).control \
 		|| { echo "ERROR: $(EXTENSION).control has wrong version"; exit 1; }
-	@test -f "doc/notes/v$(EXTVERSION).md" \
-		|| { echo "ERROR: notes missing: doc/notes/v$(EXTVERSION).md"; exit 1; }
+	@grep -q "Proxy $(EXTVERSION) " NEWS.md \
+		|| { echo "ERROR: NEWS.md needs version"; exit 1; }
 	@grep '"version"' META.json | head -n 1 | grep -q '"$(EXTVERSION)"' \
 		|| { echo "ERROR: META.json has wrong version"; exit 1; }
 
