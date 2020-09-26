@@ -32,7 +32,6 @@ jobs:
           - {pgver: "13", os: "ubuntu-20.04"}
           - {pgver: "11", os: "macos-10.15"}
           - {pgver: "12", os: "macos-10.15"}
-          - {pgver: "13", os: "macos-10.15"}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v2
@@ -150,7 +149,7 @@ jobs:
     name: pgxn-tools, PostgreSQL ${{ matrix.pg }}
     strategy:
       matrix:
-        pg: [13, 12, 11]
+        pg: [12, 11]
     runs-on: ubuntu-20.04
     container: pgxn/pgxn-tools
     steps:
