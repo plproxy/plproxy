@@ -8,7 +8,6 @@ tmp/
 *.tar.gz
 regression.diffs
 regression.out
-sql/plproxy--unpackaged--2*
 sql/plproxy--2*
 sql/plproxy.sql
 src/scanner.c
