@@ -3,6 +3,7 @@ results/
 *.so
 tmp/
 *.o
+*.bc
 *.zip
 *.tgz
 *.tar.gz
