@@ -1,7 +1,7 @@
 
 # PL/Proxy Changelog
 
-**unreleased**
+**2020-09-26 - PL/Proxy 2.10.0 - "Webscale omelet"**
 
 - Features:
 
@@ -14,13 +14,17 @@
     [#21](https://github.com/plproxy/plproxy/issues/21)
     [#22](https://github.com/plproxy/plproxy/pull/22)
     (Sergey Burladyan)
+  * Fix test runs with default utf8 locales.
+    (Ants Aasma)
+  * Stricter connect string quoting.
 
 - Changes
 
   * Support PG13.
     (Alexander Kukushkin)
-  * Avoid flex case-insensitive setting, causes warnings
-    on some Flex versions.
+  * Avoid flex case-insensitive setting, causes warnings on some Flex versions.
+  * Drop support for `unpackaged` extensions.
+  * win32: use `WSAPoll()` instead `select()`.
 
 **2019-09-15  -  PL/Proxy 2.9  -  "Don't Look Into The Eye"**
 
