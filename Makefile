@@ -120,11 +120,12 @@ checkver:
 	@grep '"version"' META.json | head -n 1 | grep -q '"$(EXTVERSION)"' \
 		|| { echo "ERROR: META.json has wrong version"; exit 1; }
 
+REPO = github
 release: checkver
 	git diff --exit-code
 	git tag v$(EXTVERSION)
-	git push local
-	git push local v$(EXTVERSION):v$(EXTVERSION)
+	git push $(REPO)
+	git push $(REPO) v$(EXTVERSION):v$(EXTVERSION)
 
 doc/note.md: Makefile NEWS.md
 	awk -vVER=$(EXTVERSION) -f doc/note.awk NEWS.md > doc/note.md
