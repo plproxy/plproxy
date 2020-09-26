@@ -126,3 +126,6 @@ release: checkver
 	git push local
 	git push local v$(EXTVERSION):v$(EXTVERSION)
 
+doc/note.md: Makefile NEWS.md
+	awk -vVER=$(EXTVERSION) -f doc/note.awk NEWS.md > doc/note.md
+

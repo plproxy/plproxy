@@ -20,6 +20,7 @@ jobs:
         run: |
           make checkver
           make dist
+          make doc/note.md
           EXTENSION=$(grep ^EXTENSION Makefile | sed 's/.*= *//')
           EXT_VERSION=$(grep ^EXTVERSION Makefile | sed 's/.*= *//')
           test "${{github.ref}}" = "refs/tags/v${EXT_VERSION}" || { echo "ERR: tag mismatch"; exit 1; }
@@ -35,7 +36,7 @@ jobs:
         with:
           tag_name: ${{github.ref}}
           release_name: ${{github.event.repository.name}} v${{env.EXT_VERSION}}
-          body_path: doc/notes/v${{env.EXT_VERSION}}.md
+          body_path: doc/note.md
           draft: false
           prerelease: false
 
