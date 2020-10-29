@@ -172,6 +172,7 @@ ALL			[Aa][Ll][Ll]
 ANY			[Aa][Nn][Yy]
 SPLIT		[Ss][Pp][Ll][Ii][Tt]
 TARGET		[Tt][Aa][Rr][Gg][Ee][Tt]
+EXECUTE		[Ee][Xx][Ee][Cc][Uu][Tt][Ee]
 SELECT		[Ss][Ee][Ll][Ee][Cc][Tt]
 
 %%
@@ -186,6 +187,7 @@ SELECT		[Ss][Ee][Ll][Ee][Cc][Tt]
 {ANY}		{ return ANY; }
 {SPLIT}		{ return SPLIT; }
 {TARGET}	{ return TARGET; }
+{EXECUTE}	{ return EXECUTE; }
 {SELECT}	{ BEGIN(sql); yylval.str = yytext; return SELECT; }
 
 	/* function call */

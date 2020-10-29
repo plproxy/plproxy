@@ -149,6 +149,27 @@ plproxy_split_all_arrays(ProxyFunction *func)
 	}
 }
 
+/* Add execute by identifier */
+bool
+plproxy_execute_ident(ProxyFunction *func, const char *ident)
+{
+	int		argindex;
+	ProxyType* type;
+
+	if ((argindex = plproxy_get_parameter_index(func, ident)) < 0)
+		return false;
+
+	type = func->arg_types[argindex];
+	if ((type->is_array ? type->elem_type_oid : type->type_oid) != TEXTOID)
+		plproxy_error(func, "EXECUTE parameter is not text: %s", ident);
+
+	func->is_execute = true;
+	func->execute_arg = argindex;
+	func->execute_is_array = type->is_array;
+
+	return true;
+}
+
 /* Initialize PL/Proxy function cache */
 void
 plproxy_function_cache_init(void)
