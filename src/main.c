@@ -180,7 +180,9 @@ plproxy_setup_tuplestore(ProxyFunction *func, FunctionCallInfo fcinfo)
 	switch (get_call_result_type(fcinfo, &result_type, &tupdesc))
 	{
 		case TYPEFUNC_COMPOSITE:
+#if PG_VERSION_NUM >= 110000
 		case TYPEFUNC_COMPOSITE_DOMAIN:
+#endif
 			Assert(tupdesc);
 			break;
 		case TYPEFUNC_RECORD:
@@ -192,7 +194,11 @@ plproxy_setup_tuplestore(ProxyFunction *func, FunctionCallInfo fcinfo)
 			break;
 		default:
 			Assert(!tupdesc);
-			tupdesc = CreateTemplateTupleDesc(1, false);
+			tupdesc = CreateTemplateTupleDesc(1
+#if PG_VERSION_NUM < 120000
+											  , false
+#endif
+											  );
 			TupleDescInitEntry(tupdesc, (AttrNumber) 1, "result",
 							   result_type, -1, 0);
 	}
@@ -288,8 +294,7 @@ plproxy_call_handler(PG_FUNCTION_ARGS)
 		elog(ERROR, "PL/Proxy procedures can't be used as triggers");
 
 	/* clean old results */
-	if (!fcinfo->flinfo->fn_retset || SRF_IS_FIRSTCALL())
-		run_maint();
+	run_maint();
 
 	if (fcinfo->flinfo->fn_retset)
 	{

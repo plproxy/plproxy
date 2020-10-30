@@ -377,7 +377,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 		case PGRES_SINGLE_TUPLE:
 			Assert(rsinfo->setDesc);
 
-			tuple = plproxy_tuple_from_result(res, rsinfo->setDesc, func);
+			tuple = plproxy_tuple_from_result(res, rsinfo->setDesc, func, conn);
 
 			tuplestore_puttuple(rsinfo->setResult, tuple);
 
