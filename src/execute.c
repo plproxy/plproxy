@@ -341,15 +341,16 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 /*
  * Connection has a result avalable, store it in the result tuplestore.
  *
- * Returns true if there may be more results coming,
- * false if all done.
+ * Returns the number of tuples stored if there may be more results coming,
+ * -1 if all done.
  */
-static bool
+static int
 another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
 	PGresult	  *res;
 	ReturnSetInfo *rsinfo;
 	HeapTuple	   tuple;
+	int			   rc = 0;
 
 	/* got one */
 	res = PQgetResult(conn->cur->db);
@@ -360,14 +361,14 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 			conn->cur->state = C_READY;
 		else
 			conn->cur->state = C_DONE;
-		return false;
+		return -1;
 	}
 
 	/* ignore result when waiting for cancel */
 	if (conn->cur->waitCancel)
 	{
 		PQclear(res);
-		return true;
+		return 0;
 	}
 
 	rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
@@ -380,6 +381,7 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 			tuple = plproxy_tuple_from_result(res, rsinfo->setDesc, func, conn);
 
 			tuplestore_puttuple(rsinfo->setResult, tuple);
+			rc = 1;
 
 			PQclear(res);
 			break;
@@ -408,18 +410,21 @@ another_result(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcin
 			plproxy_error(func, "Unexpected result type: %s", PQresStatus(PQresultStatus(res)));
 			break;
 	}
-	return true;
+	return rc;
 }
 
 /*
  * Called when select() told that conn is avail for reading/writing.
  *
  * It should call postgres handlers and then change state if needed.
+ *
+ * Returns the number of tuples stored.
  */
-static void
+static int64
 handle_conn(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 {
 	int			res;
+	int64		tuples = 0;
 	PostgresPollingStatusType poll_res;
 
 	switch (conn->cur->state)
@@ -459,14 +464,18 @@ handle_conn(ProxyFunction *func, ProxyConnection *conn, FunctionCallInfo fcinfo)
 					break;
 
 				/* got one */
-				if (!another_result(func, conn, fcinfo))
+				res = another_result(func, conn, fcinfo);
+				if (res == -1)
 					break;
+				tuples += res;
 			}
 		case C_NONE:
 		case C_DONE:
 		case C_READY:
 			break;
 	}
+
+	return tuples;
 }
 
 /*
@@ -575,7 +584,7 @@ poll_conns(ProxyFunction *func, ProxyCluster *cluster, FunctionCallInfo fcinfo)
 			elog(WARNING, "fd order from poll() is messed up?");
 
 		if (pf->revents)
-			handle_conn(func, conn, fcinfo);
+			cluster->ret_total += handle_conn(func, conn, fcinfo);
 
 		pf++;
 	}
@@ -621,7 +630,6 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 	int			i,
 				pending = 0;
 	struct timeval now;
-	ReturnSetInfo *rsinfo = (ReturnSetInfo *) fcinfo->resultinfo;
 
 	/* either launch connection or send query */
 	for (i = 0; i < cluster->active_count; i++)
@@ -684,6 +692,7 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 		if (conn->cur->state != C_DONE)
 			plproxy_error(func, "Unfinished connection");
 
+		/* for set returning functions, we already have the result count */
 		if (!func->retset)
 		{
 			ExecStatusType err;
@@ -701,11 +710,7 @@ remote_execute(ProxyFunction *func, FunctionCallInfo fcinfo)
 	}
 
 	if (func->retset)
-	{
 		tuplestore_donestoring(rsinfo->setResult);
-
-		cluster->ret_total = tuplestore_tuple_count(rsinfo->setResult);
-	}
 }
 
 static void
