@@ -61,24 +61,24 @@ select * from test_array(array[array['a1'],array['a2']], array[array['b1'],array
 -- run on array hash, split one array
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split a; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
-select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo') ORDER BY 1;
 
 -- run on text hash, split two arrays (nop split)
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split a, b; cluster 'testcluster'; run on ascii(c);$$ language plproxy;
-select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo') ORDER BY 1;
 
 -- run on array hash, split two arrays
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split a, b; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
-select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo') ORDER BY 1;
 select * from test_array(null, null, null);
 select * from test_array('{}'::text[], '{}'::text[], 'foo');
 
 -- run on text hash, split all arrays
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split all; cluster 'testcluster'; run on ascii(c);$$ language plproxy;
-select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo') ORDER BY 1;
 
 -- run on text hash, attempt to split all arrays but none are present
 create or replace function test_nonarray_split(a text, b text, c text) returns setof text as
@@ -89,15 +89,15 @@ select * from test_nonarray_split('a', 'b', 'c');
 -- run on array hash, split all arrays
 create or replace function test_array(a text[], b text[], c text) returns setof text as
 $$ split all; cluster 'testcluster'; run on ascii(a);$$ language plproxy;
-select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo');
+select * from test_array(array['a','b','c','d'], array['e','f','g','h'], 'foo') ORDER BY 1;
 
 -- run on arg
 create or replace function test_array_direct(a integer[], b text[], c text) returns setof text as
 $$ split a; cluster 'testcluster'; run on a; select test_array('{}'::text[], b, c);$$ language plproxy;
 
-select * from test_array_direct(array[2,3], array['a','b','c','d'], 'foo');
+select * from test_array_direct(array[2,3], array['a','b','c','d'], 'foo') ORDER BY 1;
 
 create or replace function test_array_direct(a integer[], b text[], c text) returns setof text as
 $$ split a, b; cluster 'testcluster'; run on a; select test_array('{}'::text[], b, c);$$ language plproxy;
 
-select * from test_array_direct(array[0,1,2,3], array['a','b','c','d'], 'foo');
+select * from test_array_direct(array[0,1,2,3], array['a','b','c','d'], 'foo') ORDER BY 1;

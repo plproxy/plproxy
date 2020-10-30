@@ -323,6 +323,7 @@ typedef struct ProxyFunction
 	const char *name;			/* Fully-qualified and quoted function name */
 	Oid			oid;			/* Function OID */
 	MemoryContext ctx;			/* Where runtime allocations should happen */
+	MemoryContext tuplectx;		/* short-lived memory for tuple creation */
 
 	RowStamp	stamp;			/* for pg_proc cache validation */
 
@@ -331,6 +332,8 @@ typedef struct ProxyFunction
 	short		arg_count;		/* Argument count of proxy function */
 
 	bool	   *split_args;		/* Map of arguments to split */
+
+	bool		retset;			/* set returning function */
 
 	/* if the function returns untyped RECORD that needs AS clause */
 	bool		dynamic_record;
@@ -434,6 +437,7 @@ void		plproxy_append_cstr_option(StringInfo cstr, const char *name, const char *
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);
+HeapTuple	plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func);
 
 /* query.c */
 QueryBuffer *plproxy_query_start(ProxyFunction *func, bool add_types);
