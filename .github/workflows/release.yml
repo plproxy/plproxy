@@ -34,7 +34,7 @@ jobs:
         env:
           GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
-          title="${EXT_VERSION} v${VERSION}"
+          title="${PACKAGE} v${VERSION}"
           ghf="--notes-file=doc/note.md"
           if test "${DRAFT}" = "true"; then ghf="${ghf} --draft"; fi
           if test "${PRERELEASE}" = "true"; then ghf="${ghf} --prerelease"; fi
