@@ -24,6 +24,11 @@
 
 #include "plproxy.h"
 
+#if PG_VERSION_NUM >= 160000
+#define pg_foreign_server_aclcheck(srv, role, mode) \
+	object_aclcheck(ForeignServerRelationId, srv, role, mode)
+#endif
+
 /* Permanent memory area for cluster info structures */
 static MemoryContext cluster_mem;
 
