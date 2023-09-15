@@ -98,6 +98,21 @@
  */
 #define PLPROXY_IDLE_CONN_CHECK		2
 
+/* Temp structure for query parsing */
+typedef struct QueryBuffer QueryBuffer;
+
+/*
+ * Parsed query where references to function arguments
+ * are replaced with local args numbered sequentially: $1..$n.
+ */
+typedef struct ProxyQuery
+{
+	char	   *sql;			/* Prepared SQL string */
+	int			arg_count;		/* Argument count for ->sql */
+	int		   *arg_lookup;		/* Maps local references to function args */
+	void	   *plan;			/* Optional prepared plan for local queries */
+} ProxyQuery;
+
 /* Flag indicating where function should be executed */
 typedef enum RunOnType
 {
@@ -167,6 +182,11 @@ typedef struct ProxyConnection
 
 	/* state */
 	PGresult   *res;			/* last resultset */
+	/*
+	 * Maps result field num to libpq column num.
+	 * NULL when scalar result.
+	 */
+	int		   *result_map;
 	int			pos;			/* Current position inside res */
 	ProxyConnectionState *cur;
 
@@ -183,6 +203,7 @@ typedef struct ProxyConnection
 
 	Datum			   *split_params;					/* Split array parameters */
 	ArrayBuildState	  **bstate;							/* Temporary build state */
+	ProxyQuery  	   *remote_sql;							/* Query to execute */
 	const char		   *param_values[FUNC_MAX_ARGS];	/* Parameter values */
 	int					param_lengths[FUNC_MAX_ARGS];	/* Parameter lengths (binary io) */
 	int					param_formats[FUNC_MAX_ARGS];	/* Parameter formats (binary io) */
@@ -286,21 +307,6 @@ typedef struct ProxyComposite
 	RowStamp	stamp;
 } ProxyComposite;
 
-/* Temp structure for query parsing */
-typedef struct QueryBuffer QueryBuffer;
-
-/*
- * Parsed query where references to function arguments
- * are replaced with local args numbered sequentially: $1..$n.
- */
-typedef struct ProxyQuery
-{
-	char	   *sql;			/* Prepared SQL string */
-	int			arg_count;		/* Argument count for ->sql */
-	int		   *arg_lookup;		/* Maps local references to function args */
-	void	   *plan;			/* Optional prepared plan for local queries */
-} ProxyQuery;
-
 /*
  * Deconstructed array parameters
  */
@@ -322,6 +328,7 @@ typedef struct ProxyFunction
 	const char *name;			/* Fully-qualified and quoted function name */
 	Oid			oid;			/* Function OID */
 	MemoryContext ctx;			/* Where runtime allocations should happen */
+	MemoryContext tuplectx;		/* short-lived memory for tuple creation */
 
 	RowStamp	stamp;			/* for pg_proc cache validation */
 
@@ -330,6 +337,8 @@ typedef struct ProxyFunction
 	short		arg_count;		/* Argument count of proxy function */
 
 	bool	   *split_args;		/* Map of arguments to split */
+
+	bool		retset;			/* set returning function */
 
 	/* if the function returns untyped RECORD that needs AS clause */
 	bool		dynamic_record;
@@ -349,6 +358,10 @@ typedef struct ProxyFunction
 	ProxyQuery *connect_sql;	/* Optional query for CONNECT function */
 	const char *target_name;	/* Optional target function name */
 
+	bool	is_execute;
+	int		execute_arg;
+	bool	execute_is_array;
+
 	/*
 	 * calculated data
 	 */
@@ -364,12 +377,6 @@ typedef struct ProxyFunction
 	 * function's private fake cluster object.
 	 */
 	ProxyCluster *cur_cluster;
-
-	/*
-	 * Maps result field num to libpq column num.
-	 * It is filled for each result.  NULL when scalar result.
-	 */
-	int		   *result_map;
 } ProxyFunction;
 
 /* main.c */
@@ -387,6 +394,7 @@ char	   *plproxy_func_strdup(ProxyFunction *func, const char *s);
 int			plproxy_get_parameter_index(ProxyFunction *func, const char *ident);
 bool		plproxy_split_add_ident(ProxyFunction *func, const char *ident);
 void		plproxy_split_all_arrays(ProxyFunction *func);
+bool		plproxy_execute_ident(ProxyFunction *func, const char *ident);
 ProxyFunction *plproxy_compile_and_cache(FunctionCallInfo fcinfo);
 ProxyFunction *plproxy_compile(FunctionCallInfo fcinfo, HeapTuple proc_tuple, bool validate_only);
 
@@ -425,9 +433,11 @@ ProxyCluster *plproxy_find_cluster(ProxyFunction *func, FunctionCallInfo fcinfo)
 void		plproxy_cluster_maint(struct timeval * now);
 void		plproxy_activate_connection(struct ProxyConnection *conn);
 void		plproxy_append_cstr_option(StringInfo cstr, const char *name, const char *val);
+void	   *plproxy_allocate_memory(size_t size);
 
 /* result.c */
 Datum		plproxy_result(ProxyFunction *func, FunctionCallInfo fcinfo);
+HeapTuple	plproxy_tuple_from_result(PGresult *res, TupleDesc tupdesc, ProxyFunction *func, ProxyConnection *conn);
 
 /* query.c */
 QueryBuffer *plproxy_query_start(ProxyFunction *func, bool add_types);

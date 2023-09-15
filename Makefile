@@ -39,7 +39,7 @@ REGRESS = plproxy_init plproxy_test plproxy_select plproxy_many \
      plproxy_errors plproxy_clustermap plproxy_dynamic_record \
      plproxy_encoding plproxy_split plproxy_target plproxy_alter \
      plproxy_cancel plproxy_range plproxy_sqlmed plproxy_table \
-     plproxy_modular
+     plproxy_modular plproxy_execute
 REGRESS_OPTS = --inputdir=test
 
 # use known db name

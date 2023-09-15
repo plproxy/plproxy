@@ -115,6 +115,8 @@ static void conn_free(struct AANode *node, void *arg)
 	aatree_destroy(&conn->userstate_tree);
 	if (conn->res)
 		PQclear(conn->res);
+	if (conn->result_map)
+		pfree(conn->result_map);
 	pfree(conn);
 }
 
@@ -1319,6 +1321,12 @@ static void clean_conn(struct AANode *node, void *arg)
 		conn->res = NULL;
 	}
 
+	if (conn->result_map)
+	{
+		pfree(conn->result_map);
+		conn->result_map = NULL;
+	}
+
 	aatree_walk(&conn->userstate_tree, AA_WALK_IN_ORDER, clean_state, maint);
 }
 
@@ -1340,3 +1348,8 @@ plproxy_cluster_maint(struct timeval * now)
 	aatree_walk(&fake_cluster_tree, AA_WALK_IN_ORDER, clean_cluster, now);
 }
 
+void *
+plproxy_allocate_memory(size_t size)
+{
+	return MemoryContextAllocZero(cluster_mem, size);
+}

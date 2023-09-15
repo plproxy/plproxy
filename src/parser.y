@@ -32,7 +32,7 @@
 static ProxyFunction *xfunc;
 
 /* remember what happened */
-static int got_run, got_cluster, got_connect, got_split, got_target;
+static int got_run, got_cluster, got_connect, got_split, got_target, got_execute;
 
 static QueryBuffer *cluster_sql;
 static QueryBuffer *select_sql;
@@ -45,7 +45,7 @@ static QueryBuffer *cur_sql;
 /* keep the resetting code together with variables */
 static void reset_parser_vars(void)
 {
-	got_run = got_cluster = got_connect = got_split = got_target = 0;
+	got_run = got_cluster = got_connect = got_split = got_target = got_execute = 0;
 	cur_sql = select_sql = cluster_sql = hash_sql = connect_sql = NULL;
 	xfunc = NULL;
 }
@@ -62,7 +62,7 @@ static void reset_parser_vars(void)
 
 %token <str> CONNECT CLUSTER RUN ON ALL ANY SELECT
 %token <str> IDENT NUMBER FNCALL SPLIT STRING
-%token <str> SQLIDENT SQLPART TARGET
+%token <str> SQLIDENT SQLPART TARGET EXECUTE
 
 %union
 {
@@ -73,7 +73,7 @@ static void reset_parser_vars(void)
 
 body: | body stmt ;
 
-stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt | target_stmt;
+stmt: cluster_stmt | split_stmt | run_stmt | select_stmt | connect_stmt | target_stmt | execute_stmt;
 
 connect_stmt: CONNECT connect_spec ';'	{
 					if (got_connect)
@@ -148,6 +148,15 @@ split_param: IDENT {
 				if (!plproxy_split_add_ident(xfunc, $1))
 					yyerror("invalid argument reference: %s", $1);
 			}
+
+execute_stmt: EXECUTE execute_direct ';' { 	if (got_execute)
+												yyerror("Only one EXECUTE statement allowed");
+											got_execute = 1; }
+			;
+
+execute_direct: IDENT { if (!plproxy_execute_ident(xfunc, $1))
+							yyerror("invalid argument reference: %s", $1);
+					  }
 
 run_stmt: RUN ON run_spec ';'	{ if (got_run)
 									yyerror("Only one RUN statement allowed");
@@ -251,6 +260,15 @@ void plproxy_run_parser(ProxyFunction *func, const char *body, int len)
 
 	if (select_sql && got_target)
 		yyerror("TARGET cannot be used with SELECT");
+
+	if (select_sql && got_execute)
+		yyerror("EXECUTE cannot be used with SELECT");
+
+	if (got_execute && got_target)
+		yyerror("EXECUTE cannot be used with TARGET");
+
+	if (got_execute && xfunc->execute_is_array && !IS_SPLIT_ARG(xfunc, xfunc->execute_arg))
+		yyerror("EXECUTE argument is an array, but is not split");
 
 	/* release scanner resources */
 	plproxy_yylex_destroy();

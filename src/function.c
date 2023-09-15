@@ -149,6 +149,27 @@ plproxy_split_all_arrays(ProxyFunction *func)
 	}
 }
 
+/* Add execute by identifier */
+bool
+plproxy_execute_ident(ProxyFunction *func, const char *ident)
+{
+	int		argindex;
+	ProxyType* type;
+
+	if ((argindex = plproxy_get_parameter_index(func, ident)) < 0)
+		return false;
+
+	type = func->arg_types[argindex];
+	if ((type->is_array ? type->elem_type_oid : type->type_oid) != TEXTOID)
+		plproxy_error(func, "EXECUTE parameter is not text: %s", ident);
+
+	func->is_execute = true;
+	func->execute_arg = argindex;
+	func->execute_is_array = type->is_array;
+
+	return true;
+}
+
 /* Initialize PL/Proxy function cache */
 void
 plproxy_function_cache_init(void)
@@ -241,16 +262,23 @@ fn_new(HeapTuple proc_tuple)
 {
 	ProxyFunction *f;
 	MemoryContext f_ctx,
+				tup_ctx,
 				old_ctx;
 
 	f_ctx = AllocSetContextCreate(TopMemoryContext,
 								  "PL/Proxy function context",
 								  ALLOCSET_SMALL_SIZES);
 
+	/* memory context for short-lived memory during tuple creation */
+	tup_ctx = AllocSetContextCreate(f_ctx,
+									"PL/Proxy tuple creation context",
+									ALLOCSET_SMALL_SIZES);
+
 	old_ctx = MemoryContextSwitchTo(f_ctx);
 
 	f = palloc0(sizeof(*f));
 	f->ctx = f_ctx;
+	f->tuplectx = tup_ctx;
 	f->oid = XProcTupleGetOid(proc_tuple);
 	plproxy_set_stamp(&f->stamp, proc_tuple);
 
@@ -403,8 +431,11 @@ fn_get_return_type(ProxyFunction *func,
 	TupleDesc	ret_tup;
 	TypeFuncClass rtc;
 	MemoryContext old_ctx;
-	int			natts;
+	Form_pg_proc proc_struct;
 
+	/* is it a set returning function? */
+	proc_struct = (Form_pg_proc) GETSTRUCT(proc_tuple);
+	func->retset = proc_struct->proretset;
 
 	/*
 	 * get_call_result_type() will return newly allocated tuple,
@@ -420,12 +451,9 @@ fn_get_return_type(ProxyFunction *func,
 	{
 		case TYPEFUNC_COMPOSITE:
 			func->ret_composite = plproxy_composite_info(func, ret_tup);
-			natts = func->ret_composite->tupdesc->natts;
-			func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
 			break;
 		case TYPEFUNC_SCALAR:
 			func->ret_scalar = plproxy_find_type_info(func, ret_oid, 0);
-			func->result_map = NULL;
 			break;
 		case TYPEFUNC_RECORD:
 		case TYPEFUNC_OTHER:
@@ -450,7 +478,6 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 	TupleDesc tuple_current, tuple_cached;
 	MemoryContext old_ctx;
 	Oid tuple_oid;
-	int natts;
 	TypeFuncClass rtc;
 
 	/*
@@ -471,13 +498,10 @@ fn_refresh_record(FunctionCallInfo fcinfo,
 
 	/* release old data */
 	plproxy_free_composite(func->ret_composite);
-	pfree(func->result_map);
 	pfree(func->remote_sql);
 
 	/* construct new data */
 	func->ret_composite = plproxy_composite_info(func, tuple_current);
-	natts = func->ret_composite->tupdesc->natts;
-	func->result_map = plproxy_func_alloc(func, natts * sizeof(int));
 	func->remote_sql = plproxy_standard_query(func, true);
 }
 
