@@ -26,7 +26,7 @@ HDRS = src/plproxy.h src/rowstamp.h src/aatree.h
 
 # Server include must come before client include, because there could
 # be mismatching libpq-dev and postgresql-server-dev installed.
-PG_CPPFLAGS = -I$(PQINCSERVER) -I$(PQINC) -DNO_SELECT=$(NO_SELECT)
+PG_CPPFLAGS = -I$(PQINCSERVER) -I$(PQINC) -DNO_SELECT=$(NO_SELECT) $(EXTRA_CPPFLAGS)
 
 ifdef VPATH
 PG_CPPFLAGS += -I$(VPATH)/src

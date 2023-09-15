@@ -8,12 +8,12 @@ on:
 jobs:
   release:
     name: Release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
 
       - name: Checkout code
         id: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Build tarball
         id: build
@@ -21,47 +21,36 @@ jobs:
           make checkver
           make dist
           make doc/note.md
-          EXTENSION=$(grep ^EXTENSION Makefile | sed 's/.*= *//')
-          EXT_VERSION=$(grep ^EXTVERSION Makefile | sed 's/.*= *//')
-          test "${{github.ref}}" = "refs/tags/v${EXT_VERSION}" || { echo "ERR: tag mismatch"; exit 1; }
-          echo "::set-env name=EXTENSION::${EXTENSION}"
-          echo "::set-env name=EXT_VERSION::${EXT_VERSION}"
-          echo "::set-env name=TGZ::${EXTENSION}-${EXT_VERSION}.tar.gz"
+          PACKAGE=$(grep ^EXTENSION Makefile | sed 's/.*= *//')
+          VERSION=$(grep ^EXTVERSION Makefile | sed 's/.*= *//')
+          test "${{github.ref}}" = "refs/tags/v${VERSION}" || { echo "ERR: tag mismatch"; exit 1; }
+          echo "PACKAGE=${PACKAGE}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "TGZ=${PACKAGE}-${VERSION}.tar.gz" >> $GITHUB_ENV
+          echo "DRAFT=false" >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
 
-      - name: Create release
-        id: release
-        uses: actions/create-release@v1
+      - name: "Create Github release"
         env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          tag_name: ${{github.ref}}
-          release_name: ${{github.event.repository.name}} v${{env.EXT_VERSION}}
-          body_path: doc/note.md
-          draft: false
-          prerelease: false
-
-      - name: Upload source
-        id: upload
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        with:
-          upload_url: ${{steps.release.outputs.upload_url}}
-          asset_path: ${{env.TGZ}}
-          asset_name: ${{env.TGZ}}
-          asset_content_type: application/x-gzip
+          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          title="${EXT_VERSION} v${VERSION}"
+          ghf="--notes-file=doc/note.md"
+          if test "${DRAFT}" = "true"; then ghf="${ghf} --draft"; fi
+          if test "${PRERELEASE}" = "true"; then ghf="${ghf} --prerelease"; fi
+          gh release create "v${VERSION}" "${TGZ}" --title="${title}" ${ghf}
 
   pgxn_upload:
     name: Upload to PGXN
     needs: [release]
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     container:
       image: pgxn/pgxn-tools
       env:
         PGXN_USERNAME: ${{secrets.PGXN_USERNAME}}
         PGXN_PASSWORD: ${{secrets.PGXN_PASSWORD}}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - run: pgxn-bundle
       - run: pgxn-release
 

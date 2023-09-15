@@ -22,26 +22,33 @@ jobs:
     strategy:
       matrix:
         test:
-          - {pgver: "9.3", os: "ubuntu-16.04"}
-          - {pgver: "9.4", os: "ubuntu-16.04"}
-          - {pgver: "9.5", os: "ubuntu-18.04"}
-          - {pgver: "9.6", os: "ubuntu-18.04"}
-          - {pgver: "10", os: "ubuntu-20.04"}
-          - {pgver: "11", os: "ubuntu-20.04"}
-          - {pgver: "12", os: "ubuntu-20.04"}
-          - {pgver: "13", os: "ubuntu-20.04"}
-          - {pgver: "11", os: "macos-10.15"}
-          - {pgver: "12", os: "macos-10.15"}
+          - {pgver: "9.4", os: "ubuntu-latest"}
+          - {pgver: "9.5", os: "ubuntu-latest"}
+          - {pgver: "9.6", os: "ubuntu-latest"}
+          - {pgver: "10", os: "ubuntu-latest"}
+          - {pgver: "11", os: "ubuntu-latest"}
+          - {pgver: "12", os: "ubuntu-latest"}
+          - {pgver: "13", os: "ubuntu-latest"}
+          - {pgver: "14", os: "ubuntu-latest"}
+          - {pgver: "15", os: "ubuntu-latest"}
+          - {pgver: "16", os: "ubuntu-latest"}
+          - {pgver: "14", os: "macos-latest"}
+          - {pgver: "15", os: "macos-latest"}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: "InstallDB / Linux"
         if: ${{runner.os == 'Linux'}}
         run: |
           echo "::group::apt-get-update"
-          echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main ${{matrix.test.pgver}}" \
-          | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo -nH apt-get -q update
+          sudo -nH apt-get -q install curl ca-certificates gnupg
+          curl https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+          | gpg --dearmor \
+          | sudo -nH tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg
+          echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main ${{matrix.test.PG}}" \
+          | sudo -nH tee /etc/apt/sources.list.d/pgdg.list
           sudo -nH apt-get -q update
           echo "::endgroup::"
 
@@ -58,9 +65,9 @@ jobs:
           echo "::endgroup::"
 
           # tune environment
-          echo "::add-path::/usr/lib/postgresql/${{matrix.test.pgver}}/bin"
-          echo "::set-env name=PGHOST::/tmp"
-          echo "::set-env name=SED::sed"
+          echo "/usr/lib/postgresql/${{matrix.test.pgver}}/bin" >> $GITHUB_PATH
+          echo "PGHOST=/tmp" >> $GITHUB_ENV
+          echo "SED=sed" >> $GITHUB_ENV
 
           dpkg -l postgres\* libpq\* bison\* flex\* gcc\* clang\* libllvm\*
 
@@ -70,10 +77,10 @@ jobs:
           echo "::group::install"
           brew install patchutils bison flex gnu-sed postgresql@${{matrix.test.pgver}}
           echo "::endgroup::"
-          echo "::add-path::/usr/local/opt/flex/bin"
-          echo "::add-path::/usr/local/opt/bison/bin"
-          echo "::add-path::/usr/local/opt/postgresql@${{matrix.test.pgver}}/bin"
-          echo "::set-env name=SED::gsed"
+          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
+          echo "/usr/local/opt/postgresql@${{matrix.test.pgver}}/bin" >> $GITHUB_PATH
+          echo "SED=gsed" >> $GITHUB_ENV
 
       - name: "Build"
         run: make BISON=bison FLEX=flex
@@ -103,26 +110,31 @@ jobs:
     strategy:
       matrix:
         test:
-          - {os: "windows-2016", arch: i686, mingw: mingw32}
-          - {os: "windows-2019", arch: x86_64, mingw: mingw64}
+          #- {os: "windows-latest", arch: i686, mingw: mingw32}
+          - {os: "windows-latest", arch: x86_64, mingw: mingw64}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: "Setup MSYS"
         shell: cmd
         run: |
-          echo ::add-path::C:\msys64\usr\bin
-          echo ::add-path::C:\msys64\${{matrix.test.mingw}}\bin
+          echo C:\msys64\usr\bin>> %GITHUB_PATH%
+          echo C:\msys64\${{matrix.test.mingw}}\bin>> %GITHUB_PATH%
 
       - name: "InstallDB / mingw / ${{matrix.test.arch}}"
         shell: bash
         run: |
-          pacman -S --noconfirm --needed mingw-w64-${{matrix.test.arch}}-postgresql
+          pacman -S --noconfirm --needed \
+            flex bison \
+            mingw-w64-${{matrix.test.arch}}-gettext \
+            mingw-w64-${{matrix.test.arch}}-postgresql
 
       - name: "Build"
         shell: bash
-        run: make
+        run: |
+          export EXTRA_CPPFLAGS="-fstack-check=no -fno-stack-protector"  # enabled by default but broken
+          make FLEX=flex BISON=bison
 
       - name: "Install"
         shell: bash
@@ -149,14 +161,14 @@ jobs:
     name: pgxn-tools, PostgreSQL ${{ matrix.pg }}
     strategy:
       matrix:
-        pg: [12, 11]
-    runs-on: ubuntu-20.04
+        pg: ["16", "14", "10", "9.6"]
+    runs-on: ubuntu-latest
     container: pgxn/pgxn-tools
     steps:
       - name: Start PostgreSQL ${{matrix.pg}}
         run: LANG=C LC_ALL=C pg-start ${{matrix.pg}} bison flex
       - name: Check out the repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Test on PostgreSQL ${{matrix.pg}}
         run: pg-build-test
 
