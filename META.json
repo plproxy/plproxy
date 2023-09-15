@@ -2,7 +2,7 @@
    "name": "plproxy",
    "abstract": "Database partitioning implemented as procedural language",
    "description": "PL/Proxy is database partitioning system implemented as PL language.",
-   "version": "2.10.0",
+   "version": "2.11.0",
    "maintainer": [
       "Marko Kreen <markokr@gmail.com>"
    ],
@@ -14,7 +14,7 @@
          "abstract": "Database partitioning implemented as procedural language",
          "file": "sql/pgxn.sql",
          "docfile": "doc/tutorial.md",
-         "version": "2.10.0"
+         "version": "2.11.0"
       }
    },
    "prereqs": {

@@ -1,8 +1,8 @@
 EXTENSION  = plproxy
 
 # sync with NEWS, META.json, plproxy.control
-EXTVERSION = 2.10.0
-UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0 2.8.0 2.9.0
+EXTVERSION = 2.11.0
+UPGRADE_VERS = 2.3.0 2.4.0 2.5.0 2.6.0 2.7.0 2.8.0 2.9.0 2.10.0
 DISTVERSION = $(EXTVERSION)
 
 # set to 1 to disallow functions containing SELECT

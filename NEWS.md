@@ -1,6 +1,14 @@
 
 # PL/Proxy Changelog
 
+**2023-09-15 - PL/Proxy 2.11.0 - "Reverse vacuum"**
+
+- Fixes:
+
+  * Support PG16 - use `object_aclcheck()`.
+  * Support PG15+ on win32 - use `pg_prng.h` if available.
+  * Tests: work around noisy messages from libpq.
+
 **2020-09-26 - PL/Proxy 2.10.0 - "Webscale omelet"**
 
 - Features:
