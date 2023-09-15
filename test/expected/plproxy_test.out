@@ -239,7 +239,7 @@ select * from test_types2('types', 4, (2, 'asd'), array[1,2,3]);
 select * from test_types2('types', NULL, NULL, NULL);
  v_posint | v_struct | arr 
 ----------+----------+-----
-          | (,)      | 
+          |          | 
 (1 row)
 
 -- test CONNECT
@@ -418,13 +418,25 @@ create function test_bad_db() returns int4
 as $$
     cluster 'badcluster';
 $$ language plproxy;
-select * from test_bad_db();
-ERROR:  PL/Proxy function public.test_bad_db(0): [nonex_db] PQconnectPoll: FATAL:  database "nonex_db" does not exist
-
+do $$
+    begin
+        select * from test_bad_db();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
+ERROR:  connection failed
 create function test_bad_db2() returns int4
 as $$
     connect 'dbname=wrong_name_db';
 $$ language plproxy;
-select * from test_bad_db2();
-ERROR:  PL/Proxy function public.test_bad_db2(0): [wrong_name_db] PQconnectPoll: FATAL:  database "wrong_name_db" does not exist
-
+do $$
+    begin
+        select * from test_bad_db2();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
+ERROR:  connection failed

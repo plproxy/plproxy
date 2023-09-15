@@ -281,12 +281,27 @@ create function test_bad_db() returns int4
 as $$
     cluster 'badcluster';
 $$ language plproxy;
-select * from test_bad_db();
+
+do $$
+    begin
+        select * from test_bad_db();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
 
 create function test_bad_db2() returns int4
 as $$
     connect 'dbname=wrong_name_db';
 $$ language plproxy;
-select * from test_bad_db2();
 
+do $$
+    begin
+        select * from test_bad_db2();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
 

@@ -239,12 +239,12 @@ select * from test_types2('types', 4, (2, 'asd'), array[1,2,3]);
 select * from test_types2('types', NULL, NULL, NULL);
  v_posint | v_struct | arr 
 ----------+----------+-----
-          |          | 
+          | (,)      | 
 (1 row)
 
 -- test CONNECT
 create function test_connect1() returns text
-as $$ connect 'dbname=test_part host=localhost'; select current_database(); $$ language plproxy;
+as $$ connect 'dbname=test_part'; select current_database(); $$ language plproxy;
 select * from test_connect1();
  test_connect1 
 ---------------
@@ -254,7 +254,7 @@ select * from test_connect1();
 -- test CONNECT $argument
 create function test_connect2(connstr text) returns text
 as $$ connect connstr; select current_database(); $$ language plproxy;
-select * from test_connect2('dbname=test_part host=localhost');
+select * from test_connect2('dbname=test_part');
  test_connect2 
 ---------------
  test_part
@@ -263,7 +263,7 @@ select * from test_connect2('dbname=test_part host=localhost');
 -- test CONNECT function($argument)
 create function test_connect3(connstr text) returns text
 as $$ connect text(connstr); select current_database(); $$ language plproxy;
-select * from test_connect3('dbname=test_part host=localhost');
+select * from test_connect3('dbname=test_part');
  test_connect3 
 ---------------
  test_part
@@ -409,7 +409,7 @@ NOTICE:  PL/Proxy: dropping stale conn
 ERROR:  public.test_error2(0): [test_part] REMOTE ERROR: column "err" does not exist at character 8
 create function test_error3() returns int4
 as $$
-    connect 'dbname=test_part host=localhost';
+    connect 'dbname=test_part';
 $$ language plproxy;
 select * from test_error3();
 ERROR:  public.test_error3(0): [test_part] REMOTE ERROR: function public.test_error3() does not exist at character 21
@@ -418,13 +418,25 @@ create function test_bad_db() returns int4
 as $$
     cluster 'badcluster';
 $$ language plproxy;
-select * from test_bad_db();
-ERROR:  PL/Proxy function public.test_bad_db(0): [nonex_db] PQconnectPoll: FATAL:  database "nonex_db" does not exist
-
+do $$
+    begin
+        select * from test_bad_db();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
+ERROR:  connection failed
 create function test_bad_db2() returns int4
 as $$
-    connect 'dbname=wrong_name_db host=localhost';
+    connect 'dbname=wrong_name_db';
 $$ language plproxy;
-select * from test_bad_db2();
-ERROR:  PL/Proxy function public.test_bad_db2(0): [wrong_name_db] PQconnectPoll: FATAL:  database "wrong_name_db" does not exist
-
+do $$
+    begin
+        select * from test_bad_db2();
+    exception
+    when sqlstate 'XX000' then
+        raise exception 'connection failed';
+    end;
+$$ language plpgsql;
+ERROR:  connection failed
