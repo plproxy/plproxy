@@ -37,6 +37,27 @@
 #error "PL/Proxy requires poll() API"
 #endif
 
+#if PG_VERSION_NUM >= 150000
+
+#include "common/pg_prng.h"
+
+static int64
+plproxy_random(void)
+{
+	return pg_prng_uint32(&pg_global_prng_state) & 0x7FFFFFFF;
+}
+
+#else
+
+static int64
+plproxy_random(void)
+{
+	return random();
+}
+
+#endif
+
+
 /* some error happened */
 static void
 conn_error(ProxyFunction *func, ProxyConnection *conn, const char *desc)
@@ -899,7 +920,7 @@ tag_run_on_partitions(ProxyFunction *func, FunctionCallInfo fcinfo, int tag,
 			tag_part(cluster, i, tag);
 			break;
 		case R_ANY:
-			tag_part(cluster, random(), tag);
+			tag_part(cluster, plproxy_random(), tag);
 			break;
 		default:
 			plproxy_error(func, "uninitialized run_type");
