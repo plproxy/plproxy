@@ -244,7 +244,7 @@ SELECT		[Ss][Ee][Ll][Ee][Cc][Tt]
 
 <sql>["]		{ BEGIN(qident); RETPART; }
 <qident>[^"]+		{ RETPART; }
-<qident>[\\].		{ RETPART; }
+<qident>["]["]		{ RETPART; }
 <qident>["]		{ BEGIN(sql); RETPART; }
 
 	/* quoted string start */

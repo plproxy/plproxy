@@ -8,14 +8,16 @@ returns integer as $x$
     ********** ****/ id from sel_test where username = xuser
      and ';' <> 'as;d''a ; sd'
     and $tmp$ ; 'a' $tmp$ <> 'as;d''a ; sd'
+    and "..""quoted"".." = 'quoted'
     and $tmp$ $ $$  $foo$tmp$ <> 'x';
 $x$ language plproxy;
 \c test_part
 create table sel_test (
     id integer,
-    username text
+    username text,
+    "..""quoted"".." text
 );
-insert into sel_test values ( 1, 'user');
+insert into sel_test values (1, 'user', 'quoted');
 \c regression
 select * from test_select('user', true);
  test_select 
