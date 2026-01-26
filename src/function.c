@@ -149,6 +149,40 @@ plproxy_split_all_arrays(ProxyFunction *func)
 	}
 }
 
+static void close_all_connections(int code, Datum arg)
+{
+	HASH_SEQ_STATUS scan;
+	HashEntry *entry;
+
+	/* iterate through the function cache */
+	hash_seq_init(&scan, fn_cache);
+	while ((entry = (HashEntry *) hash_seq_search(&scan)))
+	{
+		ProxyFunction *func = entry->function;
+		ProxyCluster *cluster = func->cur_cluster;
+		int i;
+
+		if (!cluster)
+			continue;
+
+		/* close all connections of the function's cluster */
+		for (i = 0; i < cluster->part_count; i++)
+		{
+			ProxyConnection *conn = cluster->part_map[i];
+			ProxyConnectionState *cur;
+			struct AANode *node;
+
+			node = aatree_search(&conn->userstate_tree, (uintptr_t)cluster->cur_userinfo->username);
+			if (!node)
+				continue;
+
+			cur = container_of(node, ProxyConnectionState, node);
+			if (cur->db)
+				PQfinish(cur->db);
+		}
+	}
+}
+
 /* Initialize PL/Proxy function cache */
 void
 plproxy_function_cache_init(void)
@@ -166,6 +200,9 @@ plproxy_function_cache_init(void)
 	ctl.hash = oid_hash;
 	flags = HASH_ELEM | HASH_FUNCTION;
 	fn_cache = hash_create("PL/Proxy function cache", max_funcs, &ctl, flags);
+
+	/* make sure all connections are closed properly on exit */
+	on_proc_exit(&close_all_connections, Int32GetDatum(0));
 }
 
 
