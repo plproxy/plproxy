@@ -512,7 +512,16 @@ plproxy_fdw_validator(PG_FUNCTION_ARGS)
 	foreach(cell, options_list)
 	{
 		DefElem    *def = lfirst(cell);
-		char	   *arg = strVal(def->arg);
+		char	   *arg;
+
+        if (def->arg == NULL)
+        {
+            ereport(ERROR,
+                    (errcode(ERRCODE_SYNTAX_ERROR),
+                     errmsg("Pl/Proxy: option \"%s\" requires a value", def->defname)));
+        }
+        arg = strVal(def->arg);
+
 
 		if (catalog == ForeignServerRelationId)
 		{
