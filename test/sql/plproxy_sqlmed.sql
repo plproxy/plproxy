@@ -141,3 +141,8 @@ create server unordered2 foreign data wrapper plproxy
                 partition_3 'dbname=test_part1 host=localhost',
                 partition_4 'dbname=test_part3 host=localhost');
 
+
+select public.plproxy_fdw_validator(
+    ARRAY['test'],
+    'pg_foreign_server'::regclass::oid
+);
