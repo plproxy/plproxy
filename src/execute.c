@@ -114,7 +114,6 @@ flush_connection(ProxyFunction *func, ProxyConnection *conn)
  *
  * Current checks:
  * - Does there happen any encoding conversations?
- * - Difference in standard_conforming_strings.
  */
 static int
 tune_connection(ProxyFunction *func, ProxyConnection *conn)
@@ -314,10 +313,12 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 	{
 		case C_DONE:
 			conn->cur->state = C_READY;
+			pg_fallthrough;
 			/* fallthrough */
 		case C_READY:
 			if (check_old_conn(func, conn, &now))
 				return;
+			pg_fallthrough;
 			/* fallthrough */
 		case C_CONNECT_READ:
 		case C_CONNECT_WRITE:
@@ -326,6 +327,8 @@ prepare_conn(ProxyFunction *func, ProxyConnection *conn)
 			/* close rotten connection */
 			elog(NOTICE, "PL/Proxy: dropping stale conn");
 			plproxy_disconnect(conn->cur);
+			pg_fallthrough;
+			/* fallthrough */
 		case C_NONE:
 			break;
 	}
