@@ -5,6 +5,8 @@
 
 - Fixes:
 
+  * Fix quoted ident parsing in `SELECT` statement.
+  * Fix a null pointer issue in `plproxy_fdw_validator`.
   * Support PG19: hardcode `standard_conforming_strings`, fix some pointer casting.
   * Fix compilation on WIN32
   * Tests: work around verbosity changes in PG19.
