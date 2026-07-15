@@ -18,6 +18,12 @@
  */
 
 #include "plproxy.h"
+
+#ifdef WIN32
+/* avoid type in <winternl.h> */
+#define STRING STRINGVAL
+#endif
+
 #include "scanner.h"
 
 /* avoid permanent allocations */
@@ -27,6 +33,10 @@
 /* remove unused code */
 #define YY_LOCATION_PRINT(File, Loc) (0)
 #define YY_(x) (x)
+
+/* fill missing decls */
+extern int plproxy_yychar;
+extern int plproxy_yynerrs;
 
 /* during parsing, keep reference to function here */
 static ProxyFunction *xfunc;

@@ -19,10 +19,20 @@
  */
 
 #include "plproxy.h"
+
+#ifdef WIN32
+/* avoid type in <winternl.h> */
+#define STRING STRINGVAL
+#endif
+
 #include "parser.tab.h"
 
 /* import standard_conforming_strings */
+#if PG_VERSION_NUM < 190000
 #include <parser/parser.h>
+#else
+#define standard_conforming_strings 1
+#endif
 
 /*
  * Calculare numeric flex version.

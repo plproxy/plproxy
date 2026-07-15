@@ -73,6 +73,10 @@
 #define container_of(ptr, type, field) ((type *)((char *)(ptr) - offsetof(type, field)))
 #endif
 
+#ifndef pg_fallthrough
+#define pg_fallthrough /* fallthrough */
+#endif
+
 /*
  * backwards compatibility with v10.
  */
