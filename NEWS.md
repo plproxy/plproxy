@@ -1,6 +1,14 @@
 
 # PL/Proxy Changelog
 
+**2026-06-15 - PL/Proxy 2.12.0 - "PostModern MapReduce"**
+
+- Fixes:
+
+  * Support PG19: hardcode `standard_conforming_strings`, fix some pointer casting.
+  * Fix compilation on WIN32
+  * Tests: work around verbosity changes in PG19.
+
 **2023-09-15 - PL/Proxy 2.11.0 - "Reverse vacuum"**
 
 - Fixes:
