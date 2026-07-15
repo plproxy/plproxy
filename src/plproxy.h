@@ -47,6 +47,7 @@
 #include <mb/pg_wchar.h>
 #include <miscadmin.h>
 #include <nodes/value.h>
+#include <storage/ipc.h>
 #include <utils/acl.h>
 #include <utils/array.h>
 #include <utils/builtins.h>
