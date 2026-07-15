@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 \c test_part0
 create or replace function test_ret_table(id int)
 returns table(id int, t text) as $$

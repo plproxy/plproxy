@@ -1,3 +1,5 @@
+\set VERBOSITY terse
+
 create or replace function plproxy.get_cluster_version(cluster_name text)
 returns integer as $$
 begin

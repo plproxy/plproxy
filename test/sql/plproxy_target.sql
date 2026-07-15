@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 
 -- test target clause
 
