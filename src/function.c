@@ -322,7 +322,8 @@ static void
 fn_parse(ProxyFunction *func, HeapTuple proc_tuple)
 {
 	bool		isnull;
-	Datum		src_raw, src_detoast;
+	Datum		src_raw;
+	void		*src_detoast;
 	char		*data;
 	int			size;
 
@@ -330,14 +331,14 @@ fn_parse(ProxyFunction *func, HeapTuple proc_tuple)
 	if (isnull)
 		plproxy_error(func, "procedure source datum is null");
 
-	src_detoast = PointerGetDatum(PG_DETOAST_DATUM_PACKED(src_raw));
+	src_detoast = PG_DETOAST_DATUM_PACKED(src_raw);
 	data = VARDATA_ANY(src_detoast);
 	size = VARSIZE_ANY_EXHDR(src_detoast);
 
 	plproxy_run_parser(func, data, size);
 
-	if (src_raw != src_detoast)
-		pfree(DatumGetPointer(src_detoast));
+	if (src_raw != PointerGetDatum(src_detoast))
+		pfree(src_detoast);
 }
 
 /*
