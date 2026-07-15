@@ -1,4 +1,4 @@
-
+\set VERBOSITY terse
 \set ECHO none
 
 set client_min_messages = 'warning';

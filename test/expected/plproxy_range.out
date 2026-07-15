@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 \c test_part0
 CREATE TYPE f8range AS RANGE (
         subtype = float8,

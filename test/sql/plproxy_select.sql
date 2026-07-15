@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 
 -- test regular sql
 create function test_select(xuser text, tmp boolean)

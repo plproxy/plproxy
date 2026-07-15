@@ -1,3 +1,5 @@
+\set VERBOSITY terse
+
 -- partition functions
 \c test_part0
 create or replace function test_array(a text[], b text[], c text) returns text as

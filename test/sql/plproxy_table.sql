@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 
 \c test_part0
 

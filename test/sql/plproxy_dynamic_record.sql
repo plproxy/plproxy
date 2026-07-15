@@ -1,3 +1,5 @@
+\set VERBOSITY terse
+
 -- dynamic query support testing
 create or replace function dynamic_query(q text)
 returns setof record as $x$

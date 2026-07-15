@@ -1,3 +1,4 @@
+\set VERBOSITY terse
 \c test_part0
 create function test_table1(out id int4, out data text, out data2 text, out data3 text)
 as $$
