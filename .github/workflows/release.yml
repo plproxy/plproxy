@@ -13,7 +13,7 @@ jobs:
 
       - name: Checkout code
         id: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build tarball
         id: build
@@ -50,7 +50,7 @@ jobs:
         PGXN_USERNAME: ${{secrets.PGXN_USERNAME}}
         PGXN_PASSWORD: ${{secrets.PGXN_PASSWORD}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: pgxn-bundle
       - run: pgxn-release
 

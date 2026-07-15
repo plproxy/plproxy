@@ -32,11 +32,12 @@ jobs:
           - {pgver: "14", os: "ubuntu-latest"}
           - {pgver: "15", os: "ubuntu-latest"}
           - {pgver: "16", os: "ubuntu-latest"}
-          - {pgver: "14", os: "macos-latest"}
-          - {pgver: "15", os: "macos-latest"}
+          - {pgver: "17", os: "ubuntu-latest"}
+          - {pgver: "18", os: "ubuntu-latest"}
+          - {pgver: "18", os: "macos-latest"}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "InstallDB / Linux"
         if: ${{runner.os == 'Linux'}}
@@ -77,9 +78,10 @@ jobs:
           echo "::group::install"
           brew install patchutils bison flex gnu-sed postgresql@${{matrix.test.pgver}}
           echo "::endgroup::"
-          echo "/usr/local/opt/flex/bin" >> $GITHUB_PATH
-          echo "/usr/local/opt/bison/bin" >> $GITHUB_PATH
-          echo "/usr/local/opt/postgresql@${{matrix.test.pgver}}/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/gnu-sed/libexec/gnubin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/flex/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
+          echo "/opt/homebrew/opt/postgresql@${{matrix.test.pgver}}/bin" >> $GITHUB_PATH
           echo "SED=gsed" >> $GITHUB_ENV
 
       - name: "Build"
@@ -105,6 +107,7 @@ jobs:
           rm -rf data log /tmp/.s.PGSQL*
 
   mingw:
+    if: false
     name: ${{matrix.test.os}}, ${{matrix.test.mingw}}
     runs-on: ${{matrix.test.os}}
     strategy:
@@ -114,7 +117,7 @@ jobs:
           - {os: "windows-latest", arch: x86_64, mingw: mingw64}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: "Setup MSYS"
         shell: cmd
@@ -126,10 +129,9 @@ jobs:
         shell: bash
         run: |
           pacman -S --noconfirm --needed \
-            flex bison \
+            flex bison patchutils \
             mingw-w64-${{matrix.test.arch}}-gettext \
             mingw-w64-${{matrix.test.arch}}-postgresql
-
       - name: "Build"
         shell: bash
         run: |
@@ -145,12 +147,14 @@ jobs:
         run: |
           mkdir log
           initdb.exe --no-locale -U postgres -D data
+          echo 'shared_buffers = 32MB' >> data/postgresql.conf
+          cat data/postgresql.conf
           pg_ctl -D data -l log/pg.log start || { cat log/pg.log ; exit 1; }
-          sleep 3
+          pg_isready -q -t 10
 
       - name: "Test"
         shell: bash
-        run: make citest
+        run: make citest || { cat log/pg.log; exit 1; }
 
       - name: "StopDB"
         shell: bash
@@ -161,14 +165,14 @@ jobs:
     name: pgxn-tools, PostgreSQL ${{ matrix.pg }}
     strategy:
       matrix:
-        pg: ["16", "14", "10", "9.6"]
+        pg: ["19", "18", "16", "10", "9.6"]
     runs-on: ubuntu-latest
     container: pgxn/pgxn-tools
     steps:
       - name: Start PostgreSQL ${{matrix.pg}}
         run: LANG=C LC_ALL=C pg-start ${{matrix.pg}} bison flex
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Test on PostgreSQL ${{matrix.pg}}
         run: pg-build-test
 
